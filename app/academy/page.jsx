@@ -1,9 +1,8 @@
 import AcademyClient from '@/components/AcademyClient';
 
 export const metadata = {
-  title: "Sofe Node Academy — Blockchain Education for Africa",
-  description:
-    "Start free with the Foundation Track. Earn an on-chain NFT certificate. Then unlock the Career Track and launch your Web3 career. Join 5,000+ Sofians.",
+  title: 'Sofe Academy — Web3 Career Courses & Tracks | Sofe Node',
+  description: 'Master blockchain and Web3 with Sofe Node. From foundation to executive — courses designed for the African market.',
 };
 
 export default function AcademyPage() {

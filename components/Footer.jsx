@@ -1,6 +1,13 @@
+'use client';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 export default function Footer() {
+  const pathname = usePathname();
+
+  if (pathname?.startsWith('/admin') || pathname?.startsWith('/dashboard') || pathname?.startsWith('/course-view')) {
+    return null;
+  }
   return (
     <footer>
       <div className="footer-grid">

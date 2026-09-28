@@ -2,8 +2,10 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { usePathname } from 'next/navigation';
 
 export default function Nav() {
+  const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobServOpen, setMobServOpen] = useState(false);
   const [isLight, setIsLight] = useState(false);
@@ -14,6 +16,10 @@ export default function Nav() {
     window.addEventListener('scroll', onScroll);
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
+
+  if (pathname?.startsWith('/admin') || pathname?.startsWith('/dashboard') || pathname?.startsWith('/course-view')) {
+    return null;
+  }
 
   function toggleTheme() {
     const next = !isLight;
