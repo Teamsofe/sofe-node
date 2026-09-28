@@ -1,0 +1,2854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dashboard — Sofe Node</title>
+<link rel="icon" href="./images/favicon.ico" type="image/x-icon" />
+<meta name="description" content="Africa's distribution infrastructure for Web3. Market entry, active users and retention for protocols. Learn, earn, build reputation and get rewarded for talent." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet" />
+<style id="dashboard-styles">
+:root {
+  --black: #04080F;
+  --deep: #080E1A;
+  --panel: #0D1526;
+  --border: rgba(20,40,255,0.18);
+  --blue: #1428FF;
+  --blue-dim: rgba(20,40,255,0.10);
+  --orange: #FF8A00;
+  --orange-dim: rgba(255,138,0,0.12);
+  --white: #EEF4FF;
+  --muted: #EEF4FF;
+  --sidebar-collapsed: 64px;
+  --sidebar-expanded: 220px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--black);
+  color: var(--white);
+  font-family: 'Poppins', sans-serif;
+  overflow-x: hidden;
+  line-height: 1.6;
+}
+
+#hexCanvas {
+  position: fixed; inset: 0; z-index: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+}
+section, footer, #trust, .stats-wrap { position: relative; z-index: 1; }
+
+#sofe-navbar,
+#sofe-navbar * {
+  box-sizing: border-box;
+}
+.sofe-nav {
+  position: fixed !important;
+  top: 0 !important; left: 0 !important; right: 0 !important;
+  z-index: 1000 !important;
+}
+@media (min-width: 981px) {
+  .sofe-nav-logo,
+  .sofe-nav-logo img { display: flex !important; visibility: visible !important; opacity: 1 !important; }
+  .sofe-nav-logo img { display: block !important; height: 1.7rem !important; width: auto !important; }
+  .sofe-nav-cta-group { display: flex !important; visibility: visible !important; opacity: 1 !important; }
+  .sofe-nav-avatar,
+  .sofe-nav-theme-btn,
+  #sofeNavSignIn { visibility: visible !important; opacity: 1 !important; }
+  #sofeNavSignIn { display: inline-block !important; }
+}
+
+@keyframes pulse-dot {
+  0%,100% { box-shadow: 0 0 6px var(--orange); }
+  50% { box-shadow: 0 0 20px var(--orange); }
+}
+.nav-logo {
+  font-family: 'Poppins', sans-serif; font-weight: 800; font-size: 1.25rem;
+  display: flex; align-items: center; gap: .5rem;
+  text-decoration: none; color: var(--white);
+}
+.logo-word-node { color: var(--blue); }
+.logo-img {
+  height: 2rem; width: auto; object-fit: contain; flex-shrink: 0;
+  filter: drop-shadow(0 0 4px rgba(255,138,0,0.25));
+}
+body.light .logo-img { filter: none; }
+.nav-links { display: flex; gap: 1.8rem; list-style: none; align-items: center; }
+.nav-links a {
+  font-family: 'Poppins', sans-serif; font-size: .76rem; font-weight: 500;
+  letter-spacing: .04em; color: var(--muted); text-decoration: none;
+  text-transform: uppercase; transition: color .25s;
+}
+.nav-links a:hover { color: var(--white); }
+.nav-links a.spy-active { color: var(--white); position: relative; }
+.nav-links a.spy-active::after {
+  content: ''; position: absolute; bottom: -4px; left: 0; right: 0;
+  height: 2px; border-radius: 2px; background: var(--orange);
+}
+.mob-links a.spy-active { color: var(--white); }
+body.light .nav-links a.spy-active { color: var(--white); }
+body.light .mob-links a.spy-active { color: rgba(10,15,36,.9); }
+
+.nav-dropdown { position: relative; }
+.nav-dropdown > a { display: flex; align-items: center; gap: .35rem; cursor: pointer; }
+.nav-dropdown > a::after {
+  content: ''; display: inline-block; width: 0; height: 0;
+  border-left: 4px solid transparent; border-right: 4px solid transparent;
+  border-top: 4px solid var(--muted); transition: transform .2s, border-color .2s;
+}
+.nav-dropdown:hover > a::after { transform: rotate(180deg); border-top-color: var(--white); }
+.nav-dropdown-menu {
+  display: none; position: absolute; top: 100%; left: 50%;
+  transform: translateX(-50%); padding-top: 0.8rem; z-index: 300;
+}
+.nav-dropdown-panel {
+  background: rgba(8,14,26,0.97); backdrop-filter: blur(24px);
+  border: 1px solid rgba(20,40,255,0.22); border-radius: 8px;
+  padding: .5rem; min-width: 180px; box-shadow: 0 16px 40px rgba(0,0,0,.5);
+  position: relative;
+}
+.nav-dropdown-panel::before {
+  content: ''; position: absolute; top: -5px; left: 50%;
+  width: 10px; height: 10px; background: rgba(8,14,26,0.97);
+  border-left: 1px solid rgba(20,40,255,0.22); border-top: 1px solid rgba(20,40,255,0.22);
+  transform: translateX(-50%) rotate(45deg);
+}
+.nav-dropdown:hover .nav-dropdown-menu { display: block; animation: dropIn .18s ease; }
+@keyframes dropIn { from { opacity:0; transform: translateX(-50%) translateY(-4px); } to { opacity:1; transform: translateX(-50%) translateY(0); } }
+.nav-dropdown-menu a {
+  display: flex; align-items: center; gap: .7rem;
+  font-family: 'Poppins', sans-serif; font-size: .74rem; font-weight: 500;
+  color: rgba(200,215,240,0.75); text-decoration: none; padding: .6rem .9rem;
+  border-radius: 5px; transition: background .18s, color .18s;
+  text-transform: none; letter-spacing: .02em; white-space: nowrap;
+}
+.nav-dropdown-menu a:hover { background: var(--blue-dim); color: #fff; }
+.nav-dropdown-menu a .dd-icon {
+  width: 28px; height: 28px; border-radius: 6px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: .85rem;
+}
+.nav-dropdown-menu a:first-child .dd-icon { background: rgba(20,40,255,0.15); }
+.nav-dropdown-menu a:last-child .dd-icon { background: rgba(255,138,0,0.15); }
+.dd-sep { height: 1px; background: rgba(20,40,255,0.18); margin: .3rem .5rem; }
+
+.nav-right { display: flex; align-items: center; gap: .8rem; }
+.nav-cta {
+  font-family: 'Poppins', sans-serif; font-size: .74rem; font-weight: 600;
+  letter-spacing: .06em; text-transform: uppercase; padding: .5rem 1.4rem;
+  border: 1px solid var(--blue); color: var(--blue);
+  background: transparent; border-radius: 4px; cursor: pointer;
+  transition: background .25s, color .25s; text-decoration: none;
+}
+.nav-cta:hover { background: var(--blue); color: #fff; }
+
+.theme-toggle {
+  width: 36px; height: 36px; border-radius: 50%;
+  border: 1px solid var(--border); background: transparent;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: 1rem; transition: border-color .2s, background .2s;
+  color: var(--muted); flex-shrink: 0;
+}
+.theme-toggle:hover { border-color: var(--orange); background: var(--orange-dim); color: var(--orange); }
+
+.notif-btn {
+  position: relative; width: 36px; height: 36px; border-radius: 50%;
+  border: 1px solid var(--border); background: transparent;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: .95rem; transition: border-color .2s, background .2s;
+  color: var(--muted); flex-shrink: 0; text-decoration: none;
+}
+.notif-btn:hover { border-color: var(--blue); background: var(--blue-dim); color: var(--white); }
+.notif-badge {
+  position: absolute; top: -3px; right: -3px;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--orange); border: 2px solid var(--black);
+  display: flex; align-items: center; justify-content: center;
+  font-size: .5rem; font-weight: 800; color: #fff;
+  font-family: 'Poppins', sans-serif; line-height: 1;
+}
+.notif-dropdown {
+  display: none; position: absolute; top: calc(100% + .6rem); right: 0;
+  width: 320px; background: rgba(8,14,26,0.98); backdrop-filter: blur(24px);
+  border: 1px solid var(--border); border-radius: 10px;
+  box-shadow: 0 20px 50px rgba(0,0,0,.6); z-index: 300; overflow: hidden;
+}
+.notif-wrap { position: relative; }
+.notif-wrap:hover .notif-dropdown,
+.notif-dropdown.open { display: block; animation: dropIn .18s ease; }
+.notif-head {
+  padding: .85rem 1rem; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.notif-head-title { font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--white); }
+.notif-head-clear { font-size: .64rem; color: var(--blue); cursor: pointer; background: none; border: none; font-family: 'Poppins',sans-serif; font-weight: 600; }
+.notif-head-clear:hover { opacity: .75; }
+.notif-item {
+  display: flex; gap: .8rem; padding: .85rem 1rem;
+  border-bottom: 1px solid var(--border); transition: background .15s; cursor: pointer;
+}
+.notif-item:last-child { border-bottom: none; }
+.notif-item:hover { background: rgba(20,40,255,.06); }
+.notif-item.unread { background: rgba(20,40,255,.05); }
+.notif-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--blue); flex-shrink: 0; margin-top: .35rem; }
+.notif-dot.orange { background: var(--orange); }
+.notif-dot.green { background: #00c864; }
+.notif-dot.read { background: transparent; border: 1px solid var(--border); }
+.notif-text { flex: 1; font-size: .76rem; color: var(--muted); line-height: 1.55; }
+.notif-text strong { color: var(--white); font-weight: 600; }
+.notif-time { font-size: .6rem; color: rgba(200,215,240,.35); margin-top: .2rem; }
+.notif-empty { padding: 2rem 1rem; text-align: center; font-size: .78rem; color: rgba(200,215,240,.35); }
+
+body.light {
+  --black: #F0F4FF;
+  --deep: #E4EAFF;
+  --panel: #FFFFFF;
+  --border: rgba(20,40,255,0.14);
+  --white: #0A0F24;
+  --muted: #04080F;
+  --blue-dim: rgba(20,40,255,0.08);
+  --orange-dim: rgba(255,138,0,0.10);
+}
+body.light footer { background: #E4EAFF; }
+body.light #trust { background: rgba(210,220,255,0.85); border-color: rgba(20,40,255,0.15); }
+body.light .trust-label { color: rgba(10,15,36,0.6); }
+body.light .trust-item span { color: rgba(10,15,36,0.5); }
+body.light .trust-item:hover span { color: rgba(10,15,36,0.9); }
+body.light .stats-wrap { background: rgba(220,228,255,0.6); }
+body.light #value { background: rgba(224,232,255,0.5); }
+body.light #dashboard { background: rgba(224,232,255,0.6); }
+body.light #hexCanvas { opacity: 1; }
+body.light .nav-dropdown-panel { background: #0D1526; border-color: rgba(20,40,255,0.3); box-shadow: 0 16px 40px rgba(0,0,0,.25); }
+body.light .nav-dropdown-panel::before { background: #0D1526; border-color: rgba(20,40,255,0.3); }
+
+#hero {
+  position: relative; min-height: 15vh;
+  display: flex; align-items: center;
+  padding: 0 5vw; padding-top: 80px; overflow: hidden;
+}
+.hero-content { position: relative; z-index: 2; max-width: 680px; }
+.hero-tag {
+  display: inline-flex; align-items: center; gap: .6rem;
+  font-family: 'Poppins', sans-serif; font-size: .7rem; font-weight: 600;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--blue);
+  border: 1px solid var(--border); border-radius: 3px;
+  padding: .35rem .85rem; margin-bottom: 1.2rem; background: var(--blue-dim);
+}
+.hero-tag::before { content: ''; width: 6px; height: 6px; background: var(--orange); border-radius: 50%; box-shadow: 0 0 8px var(--orange); }
+h1 { font-family: 'Poppins', sans-serif; font-size: clamp(1.9rem, 3.8vw, 3.4rem); font-weight: 800; line-height: 1.06; letter-spacing: -.02em; margin-bottom: .9rem; }
+h1 em { font-style: normal; color: var(--blue); }
+.hero-sub { font-family: 'Poppins', sans-serif; font-size: 1.08rem; font-weight: 300; color: var(--muted); max-width: 560px; margin-bottom: 1rem; line-height: 1.78; }
+.hero-tagline { font-family: 'Poppins', sans-serif; font-size: .82rem; font-weight: 600; color: var(--orange); letter-spacing: .06em; margin-bottom: 1.6rem; display: flex; align-items: center; gap: .7rem; }
+.hero-tagline::before { content: ''; flex: 0 0 28px; height: 1px; background: var(--orange); }
+.hero-btns { display: flex; gap: 1rem; flex-wrap: wrap; }
+
+.btn-primary { font-family: 'Poppins', sans-serif; font-size: .78rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; padding: .85rem 2rem; background: var(--blue); color: #fff; border: none; border-radius: 4px; cursor: pointer; transition: transform .2s, box-shadow .2s; text-decoration: none; display: inline-block; }
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(20,40,255,.4); }
+.btn-primary.orange { background: var(--orange); }
+.btn-primary.orange:hover { box-shadow: 0 8px 36px rgba(255,138,0,.45); }
+.btn-outline { font-family: 'Poppins', sans-serif; font-size: .78rem; font-weight: 500; letter-spacing: .06em; text-transform: uppercase; padding: .85rem 2rem; background: transparent; color: var(--white); border: 1px solid rgba(200,215,240,.25); border-radius: 4px; cursor: pointer; transition: border-color .2s; text-decoration: none; display: inline-block; }
+.btn-outline:hover { border-color: var(--white); }
+.btn-ghost { font-family: 'Poppins', sans-serif; font-size: .78rem; font-weight: 500; letter-spacing: .06em; text-transform: uppercase; padding: .75rem 1.6rem; background: transparent; color: var(--muted); border: 1px solid rgba(200,215,240,.15); border-radius: 4px; cursor: pointer; transition: all .2s; text-decoration: none; display: inline-block; }
+.btn-ghost:hover { color: var(--white); border-color: rgba(200,215,240,.35); }
+
+footer { background: var(--deep); border-top: 1px solid var(--border); padding: 4rem 5vw 2rem; }
+.footer-grid { display: grid; grid-template-columns: 1.5fr 1fr 1fr 1.2fr; gap: 3rem; margin-bottom: 3rem; }
+.footer-brand p { font-family: 'Poppins', sans-serif; color: var(--muted); font-size: .86rem; font-weight: 300; margin-top: .8rem; max-width: 220px; line-height: 1.65; }
+.footer-col h4 { font-family: 'Poppins', sans-serif; font-size: .6rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--blue); margin-bottom: 1.2rem; }
+.footer-col ul { list-style: none; }
+.footer-col li { margin-bottom: .6rem; }
+.footer-col a { font-family: 'Poppins', sans-serif; color: var(--muted); text-decoration: none; font-size: .86rem; font-weight: 300; transition: color .2s; }
+.footer-col a:hover { color: var(--white); }
+.newsletter-row { display: flex; gap: .5rem; margin-top: .8rem; }
+.newsletter-input { flex: 1; background: var(--panel); border: 1px solid var(--border); border-radius: 4px; padding: .6rem .8rem; color: var(--white); font-family: 'Poppins', sans-serif; font-size: .82rem; font-weight: 300; outline: none; }
+.newsletter-input::placeholder { color: var(--muted); }
+.newsletter-input:focus { border-color: var(--blue); }
+.newsletter-btn { background: var(--blue); color: #fff; border: none; border-radius: 4px; padding: .6rem 1rem; font-family: 'Poppins', sans-serif; font-size: .62rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; cursor: pointer; transition: opacity .2s; }
+.newsletter-btn:hover { opacity: .85; }
+.social-row { display: flex; gap: .7rem; margin-top: 1.2rem; }
+.social-btn { width: 36px; height: 36px; border: 1px solid var(--border); border-radius: 5px; display: flex; align-items: center; justify-content: center; background: var(--panel); color: var(--muted); font-size: .8rem; text-decoration: none; transition: border-color .2s, color .2s; }
+.social-btn img { width: 24px; height: 24px; }
+.social-btn:hover { border-color: var(--blue); color: var(--blue); }
+.footer-bottom { border-top: 1px solid var(--border); padding-top: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
+.footer-bottom p { font-family: 'Poppins', sans-serif; font-size: .6rem; font-weight: 500; letter-spacing: .08em; color: var(--muted); }
+
+.reveal { opacity: 1; transform: none; transition: opacity .7s, transform .7s; }
+.reveal.visible { opacity: 1; transform: none; }
+
+.hamburger { display: none; flex-direction: column; justify-content: center; gap: 5px; width: 36px; height: 36px; background: transparent; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; padding: 7px; transition: border-color .2s; }
+.hamburger:hover { border-color: var(--blue); }
+.hamburger span { display: block; height: 2px; border-radius: 2px; background: var(--white); transition: transform .3s, opacity .3s, width .3s; transform-origin: center; }
+.hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.hamburger.open span:nth-child(2) { opacity: 0; width: 0; }
+.hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+#mobileMenu { display: none; position: fixed; top: 62px; left: 0; right: 0; z-index: 190; background: rgba(4,8,15,0.98); backdrop-filter: blur(24px); border-bottom: 1px solid var(--border); padding: 1.2rem 5vw 1.6rem; transform: translateY(-8px); opacity: 0; transition: transform .25s ease, opacity .25s ease; }
+#mobileMenu.open { display: block; animation: mobileIn .25s ease forwards; }
+@keyframes mobileIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+.mob-links { list-style: none; margin-bottom: 1.2rem; }
+.mob-links li { border-bottom: 1px solid var(--border); }
+.mob-links li:last-child { border-bottom: none; }
+.mob-links a { display: flex; align-items: center; justify-content: space-between; font-family: 'Poppins', sans-serif; font-size: .88rem; font-weight: 500; color: var(--muted); text-decoration: none; padding: .9rem 0; transition: color .2s; text-transform: uppercase; letter-spacing: .04em; }
+.mob-links a:hover { color: var(--white); }
+.mob-sub { list-style: none; padding: 0 0 .5rem 1rem; display: none; }
+.mob-sub li { border-bottom: none; }
+.mob-sub a { font-size: .8rem; text-transform: none; letter-spacing: .02em; color: rgba(200,215,240,.5); padding: .5rem 0; display: flex; align-items: center; gap: .6rem; }
+.mob-sub a:hover { color: var(--white); }
+.mob-sub .dd-icon { width: 24px; height: 24px; border-radius: 5px; font-size: .75rem; display:flex;align-items:center;justify-content:center; }
+.mob-sub a:first-child .dd-icon { background: var(--blue-dim); }
+.mob-sub a:last-child .dd-icon { background: var(--orange-dim); }
+.mob-services-toggle { cursor: pointer; }
+.mob-chevron { font-size: .6rem; transition: transform .25s; }
+.mob-services-toggle.open .mob-chevron { transform: rotate(180deg); }
+.mob-services-toggle.open + .mob-sub { display: block; }
+.mob-bottom { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-top: .8rem; border-top: 1px solid var(--border); }
+body.light #mobileMenu { background: rgba(225,232,255,0.98); }
+body.light .mob-links a { color: rgba(10,15,36,.5); }
+body.light .mob-links a:hover { color: rgba(10,15,36,.9); }
+body.light .mob-sub a { color: rgba(10,15,36,.4); }
+body.light .mob-sub a:hover { color: rgba(10,15,36,.85); }
+body.light .hamburger span { background: var(--white); }
+
+@media(max-width:900px) {
+  .cs-grid,#about,.dash-grid,.footer-grid,.bce-grid,.cf-grid { grid-template-columns:1fr; }
+  .stats-strip { grid-template-columns:repeat(2,1fr); }
+  .impact-grid { grid-template-columns:repeat(3,1fr); }
+  .feature-grid { grid-template-columns:1fr; }
+  .partners-grid { grid-template-columns:repeat(2,1fr); }
+  .nav-links { display: none; }
+  .hamburger { display: flex; }
+  .nav-right .nav-cta { display: none; }
+  footer { padding-bottom: 80px; }
+}
+@media(max-width:500px) {
+  .partners-grid { grid-template-columns:1fr; }
+  .impact-grid { grid-template-columns:repeat(2,1fr); }
+  .cf-form-row { grid-template-columns:1fr; }
+}
+
+.vp-tabs { display:flex; gap:0; background:var(--deep); border:1px solid var(--border); border-radius:8px; overflow:hidden; padding:3px; }
+.vp-tab { flex:1; background:transparent; border:none; color:var(--muted); font-family:'Poppins',sans-serif; font-size:.78rem; font-weight:700; letter-spacing:.03em; padding:.6rem 1rem; cursor:pointer; border-radius:6px; transition:all .2s; }
+.vp-tab:hover:not(.active) { color:var(--white); background:rgba(255,255,255,.03); }
+.vp-tab.active { background:var(--blue); color:#fff; }
+
+.level-card.active-level { border-color:rgba(255,138,0,.45); background:linear-gradient(135deg,rgba(255,138,0,.08),rgba(20,40,255,.05)); box-shadow:0 4px 16px rgba(255,138,0,.1); }
+.level-card.locked { opacity:.55; }
+.level-card.locked::after { content:"🔒 Locked"; position:absolute; top:.6rem; right:.8rem; font-size:.55rem; background:rgba(200,215,240,.08); color:var(--muted); padding:.2rem .5rem; border-radius:4px; letter-spacing:.06em; }
+.level-card.active-level::after { content:"✓ Active"; position:absolute; top:.6rem; right:.8rem; font-size:.55rem; background:rgba(0,200,100,.12); color:#00c864; padding:.2rem .5rem; border-radius:4px; letter-spacing:.06em; font-weight:700; }
+.level-pct-sub { font-size:.62rem; font-weight:600; color:var(--muted); display:block; margin-top:.15rem; }
+
+.onboarding-empty { background:linear-gradient(135deg,rgba(20,40,255,.05),rgba(255,138,0,.03)); border:1px dashed rgba(200,215,240,.12); border-radius:12px; }
+.onboarding-empty button { transition:transform .15s, filter .15s; }
+.onboarding-empty button:hover { transform:translateY(-1px); filter:brightness(1.1); }
+
+.page-header { padding: 8rem 5vw 4rem; text-align: center; }
+.page-tag { font-family: 'Poppins', sans-serif; font-size: .62rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--blue); display: inline-flex; align-items: center; gap: .6rem; border: 1px solid var(--border); border-radius: 3px; padding: .35rem .85rem; margin-bottom: 1.5rem; background: var(--blue-dim); }
+.page-tag::before { content: ''; width: 6px; height: 6px; background: var(--orange); border-radius: 50%; box-shadow: 0 0 8px var(--orange); }
+.page-header h1 { font-size: clamp(2.2rem, 5vw, 4rem); font-weight: 800; line-height: 1.06; letter-spacing: -.02em; margin-bottom: 1rem; }
+.page-header h1 em { font-style: normal; color: var(--blue); }
+.page-header p { font-size: 1rem; font-weight: 300; color: var(--muted); max-width: 520px; margin: 0 auto; line-height: 1.8; }
+
+.dash-layout { display: grid; grid-template-columns: var(--sidebar-collapsed) 1fr; min-height: calc(100vh - 70px); margin-top: 70px; transition: grid-template-columns .28s ease; }
+.dash-layout.sidebar-open { grid-template-columns: var(--sidebar-expanded) 1fr; }
+
+.dash-sidebar { background: var(--panel); border-right: 1px solid var(--border); padding: .8rem 0; position: sticky; top: 70px; height: calc(100vh - 70px); overflow: hidden; width: var(--sidebar-collapsed); transition: width .28s ease; display: flex; flex-direction: column; z-index: 100; }
+.dash-sidebar.open { width: var(--sidebar-expanded); overflow-y: auto; }
+
+.sidebar-toggle { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 8px; background: transparent; border: 1px solid var(--border); cursor: pointer; color: var(--muted); transition: background .2s, color .2s, border-color .2s; margin: 0 auto .8rem; flex-shrink: 0; }
+.sidebar-toggle:hover { background: var(--blue-dim); color: var(--white); border-color: var(--blue); }
+.sidebar-toggle svg { width: 16px; height: 16px; transition: transform .28s; }
+.dash-sidebar.open .sidebar-toggle svg { transform: rotate(180deg); }
+
+.dash-user { padding: 0 .8rem .8rem; border-bottom: 1px solid var(--border); margin-bottom: .4rem; overflow: hidden; white-space: nowrap; opacity: 0; max-height: 0; transition: opacity .2s, max-height .28s; pointer-events: none; }
+.dash-sidebar.open .dash-user { opacity: 1; max-height: 120px; pointer-events: auto; }
+.dash-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--blue-dim); border: 2px solid var(--blue); display: flex; align-items: center; justify-content: center; font-size: 1rem; font-weight: 800; color: var(--blue); margin-bottom: .5rem; flex-shrink: 0; }
+.dash-user-name { font-size: .82rem; font-weight: 700; color: var(--white); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dash-user-level { font-size: .56rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--orange); background: var(--orange-dim); border-radius: 3px; padding: .12rem .4rem; display: inline-block; margin-top: .15rem; }
+
+.dash-nav-item { display: flex; align-items: center; gap: .75rem; padding: .7rem 0; width: 100%; cursor: pointer; transition: background .2s, color .2s; color: var(--muted); font-size: .78rem; font-weight: 500; border-left: 3px solid transparent; text-decoration: none; white-space: nowrap; overflow: hidden; justify-content: center; position: relative; }
+.dash-sidebar.open .dash-nav-item { justify-content: flex-start; padding: .7rem 1rem; }
+.dash-nav-item:hover { background: var(--blue-dim); color: var(--white); }
+.dash-nav-item.active { background: var(--blue-dim); color: var(--white); border-left-color: var(--blue); }
+.dash-nav-icon { font-size: 1.1rem; width: 22px; text-align: center; flex-shrink: 0; }
+.dash-nav-label { opacity: 0; max-width: 0; overflow: hidden; transition: opacity .2s .05s, max-width .28s; pointer-events: none; }
+.dash-sidebar.open .dash-nav-label { opacity: 1; max-width: 180px; pointer-events: auto; }
+.dash-sidebar:not(.open) .dash-nav-item:hover::after { content: attr(data-label); position: absolute; left: calc(var(--sidebar-collapsed) - 4px); background: var(--panel); border: 1px solid var(--border); border-radius: 5px; padding: .35rem .7rem; font-size: .72rem; font-weight: 600; color: var(--white); white-space: nowrap; z-index: 200; box-shadow: 4px 4px 12px rgba(0,0,0,.4); pointer-events: none; }
+
+.sidebar-logout { margin-top: auto; padding: .6rem 0; border-top: 1px solid var(--border); flex-shrink: 0; }
+
+.dash-main { padding: 2rem 2.5rem; overflow-y: auto; min-width: 0; }
+.dash-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem; }
+.dash-greeting { font-size: 1.3rem; font-weight: 800; color: var(--white); }
+.dash-greeting span { color: var(--blue); }
+.dash-date { font-size: .78rem; color: var(--muted); }
+
+.dash-panel { display: none !important; }
+.dash-panel.active { display: block !important; }
+
+.progress-card { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:2rem; display:flex; align-items:center; gap:2rem; margin-bottom:1.5rem; }
+.progress-ring-wrap { flex-shrink:0; position:relative; width:110px; height:110px; }
+.progress-ring-wrap svg { transform:rotate(-90deg); }
+.progress-pct { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:1.3rem; font-weight:800; color:var(--white); }
+.progress-ring-bg { fill:none; stroke:var(--border); stroke-width:8; }
+.progress-ring-fill { fill:none; stroke:var(--blue); stroke-width:8; stroke-linecap:round; stroke-dasharray:283; stroke-dashoffset:100; transition:stroke-dashoffset 1s; }
+.progress-info h3 { font-size:1rem; font-weight:700; margin-bottom:.3rem; }
+.progress-info p { font-size:.82rem; color:var(--muted); margin-bottom:1rem; }
+.badge-next { background:var(--orange-dim); border:1px solid rgba(255,138,0,.25); border-radius:6px; padding:.6rem 1rem; font-size:.76rem; color:var(--orange); display:inline-flex; align-items:center; gap:.5rem; }
+.modules-list { display:flex; flex-direction:column; gap:.7rem; }
+.module-item { background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:1rem 1.2rem; display:flex; align-items:center; gap:1rem; }
+.module-status { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.8rem; flex-shrink:0; }
+.status-done { background:rgba(0,200,100,.15); color:#00c864; border:1px solid rgba(0,200,100,.25); }
+.status-active { background:var(--blue-dim); color:var(--blue); border:1px solid rgba(20,40,255,.25); }
+.status-locked { background:var(--deep); color:var(--muted); border:1px solid var(--border); }
+.module-title { font-size:.88rem; font-weight:600; color:var(--white); flex:1; }
+.module-xp { font-size:.68rem; font-weight:700; letter-spacing:.06em; color:var(--orange); }
+
+.aff-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; margin-bottom:1.5rem; }
+.aff-stat { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:1.2rem; text-align:center; }
+.aff-stat-num { font-size:1.6rem; font-weight:800; color:var(--white); line-height:1.1; }
+.aff-stat-label { font-size:.65rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); margin-top:.3rem; }
+.ref-link-card { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:1.5rem; margin-bottom:1.5rem; }
+.ref-link-card h3 { font-size:.88rem; font-weight:700; margin-bottom:.8rem; }
+.ref-link-row { display:flex; gap:.7rem; align-items:center; }
+.ref-link-input { flex:1; background:var(--deep); border:1px solid var(--border); border-radius:5px; padding:.65rem 1rem; font-size:.78rem; color:var(--orange); font-family:'Poppins',sans-serif; outline:none; }
+.copy-btn { background:var(--blue); color:#fff; border:none; border-radius:5px; padding:.65rem 1.2rem; font-family:'Poppins',sans-serif; font-size:.72rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; cursor:pointer; white-space:nowrap; transition:opacity .2s; }
+.copy-btn:hover { opacity:.85; }
+.copy-btn.copied { background:#00c864; }
+.level-cards { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1.5rem; }
+.level-card { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:1.2rem; position:relative; overflow:hidden; }
+.level-card.active-level { border-color:var(--orange); }
+.level-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; }
+.level-card.active-level::before { background:linear-gradient(90deg,var(--orange),#FFB800); }
+.level-name { font-size:.88rem; font-weight:700; color:var(--white); margin-bottom:.2rem; }
+.level-pct { font-size:1.3rem; font-weight:800; color:var(--orange); }
+.level-req { font-size:.72rem; color:var(--muted); margin-top:.3rem; }
+
+.wallet-balance { background:linear-gradient(135deg,var(--blue),rgba(20,40,255,.4)); border-radius:16px; padding:2rem; margin-bottom:1.5rem; position:relative; overflow:hidden; }
+.wallet-balance::before { content:''; position:absolute; top:-30px; right:-30px; width:120px; height:120px; border-radius:50%; background:rgba(255,255,255,.05); }
+.balance-label { font-size:.68rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:rgba(255,255,255,.7); }
+.balance-amount { font-size:2.4rem; font-weight:800; color:#fff; line-height:1.1; margin:.3rem 0; }
+.balance-usd { font-size:.82rem; color:rgba(255,255,255,.6); }
+.payout-btn { margin-top:1.2rem; background:#fff; color:var(--blue); border:none; border-radius:6px; padding:.65rem 1.4rem; font-family:'Poppins',sans-serif; font-size:.78rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase; cursor:pointer; transition:opacity .2s; }
+.payout-btn:hover { opacity:.9; }
+.tx-list { background:var(--panel); border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+.tx-header { padding:1rem 1.2rem; border-bottom:1px solid var(--border); font-size:.72rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
+.tx-item { display:flex; align-items:center; gap:1rem; padding:.9rem 1.2rem; border-bottom:1px solid var(--border); }
+.tx-item:last-child { border-bottom:none; }
+.tx-icon { width:34px; height:34px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:.9rem; flex-shrink:0; }
+.tx-in { background:rgba(0,200,100,.15); }
+.tx-out { background:var(--orange-dim); }
+.tx-desc { font-size:.84rem; font-weight:600; color:var(--white); flex:1; }
+.tx-date { font-size:.72rem; color:var(--muted); }
+.tx-amount { font-size:.88rem; font-weight:700; }
+.tx-pos { color:#00c864; }
+.tx-neg { color:var(--orange); }
+
+.cert-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:1.5rem; }
+.cert-card { background:var(--panel); border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+.cert-preview { background:linear-gradient(135deg,var(--deep),var(--panel)); padding:2.5rem; text-align:center; border-bottom:1px solid var(--border); position:relative; }
+.cert-preview::before { content:''; position:absolute; inset:0; background:radial-gradient(circle at 50% 50%, rgba(20,40,255,.08),transparent 70%); }
+.cert-seal { font-size:2.5rem; margin-bottom:.5rem; position:relative; }
+.cert-title { font-size:.78rem; font-weight:700; color:var(--white); position:relative; }
+.cert-name { font-size:.68rem; color:var(--muted); position:relative; }
+.cert-actions { padding:1rem 1.2rem; display:flex; gap:.6rem; }
+.cert-btn { flex:1; padding:.55rem; border-radius:5px; font-family:'Poppins',sans-serif; font-size:.68rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase; cursor:pointer; text-align:center; text-decoration:none; display:flex; align-items:center; justify-content:center; gap:.3rem; transition:opacity .2s; }
+.cert-btn-dl { background:var(--blue); color:#fff; border:none; }
+.cert-btn-li { background:transparent; color:var(--muted); border:1px solid var(--border); }
+.cert-btn:hover { opacity:.85; }
+
+.profile-section { margin-bottom: 2rem; }
+.profile-section-title { font-size:.72rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-bottom:1rem; padding-bottom:.5rem; border-bottom:1px solid var(--border); }
+.profile-avatar-row { display:flex; align-items:center; gap:1.5rem; background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:1.5rem; margin-bottom:1.5rem; }
+.profile-avatar-lg { width:72px; height:72px; border-radius:50%; background:var(--blue-dim); border:2px solid var(--blue); display:flex; align-items:center; justify-content:center; font-size:1.8rem; font-weight:800; color:var(--blue); flex-shrink:0; position:relative; }
+.avatar-edit-btn { position:absolute; bottom:-2px; right:-2px; width:22px; height:22px; border-radius:50%; background:var(--orange); border:2px solid var(--panel); display:flex; align-items:center; justify-content:center; font-size:.6rem; cursor:pointer; }
+.profile-meta { flex:1; }
+.profile-meta h3 { font-size:1rem; font-weight:700; color:var(--white); margin-bottom:.2rem; }
+.profile-meta p { font-size:.78rem; color:var(--muted); }
+.form-grid { display:grid; grid-template-columns:1fr 1fr; gap:1rem; }
+.form-group { display:flex; flex-direction:column; gap:.4rem; }
+.form-group.full { grid-column:1/-1; }
+.form-label { font-size:.68rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); }
+.form-input { background:var(--deep); border:1px solid var(--border); border-radius:6px; padding:.65rem 1rem; font-size:.84rem; color:var(--white); font-family:'Poppins',sans-serif; outline:none; transition:border-color .2s; }
+.form-input:focus { border-color:var(--blue); }
+.form-input:disabled { opacity:.45; cursor:not-allowed; }
+.form-input::placeholder { color:rgba(200,215,240,.3); }
+.form-hint { font-size:.65rem; color:var(--muted); opacity:.7; }
+.form-card { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:1.5rem; margin-bottom:1.5rem; }
+.form-actions { display:flex; gap:.8rem; justify-content:flex-end; margin-top:1.2rem; flex-wrap:wrap; }
+.notif-row { display:flex; align-items:center; justify-content:space-between; padding:.75rem 0; border-bottom:1px solid var(--border); gap:1rem; }
+.notif-row:last-child { border-bottom:none; }
+.notif-label { font-size:.84rem; font-weight:600; color:var(--white); }
+.notif-desc { font-size:.72rem; color:var(--muted); margin-top:.1rem; }
+.toggle { position:relative; display:inline-block; width:40px; height:22px; flex-shrink:0; }
+.toggle input { opacity:0; width:0; height:0; }
+.toggle-slider { position:absolute; cursor:pointer; inset:0; background:rgba(200,215,240,.15); border-radius:22px; transition:.3s; border:1px solid var(--border); }
+.toggle-slider::before { content:''; position:absolute; height:16px; width:16px; left:2px; bottom:2px; background:rgba(200,215,240,.5); border-radius:50%; transition:.3s; }
+.toggle input:checked + .toggle-slider { background:var(--blue); border-color:var(--blue); }
+.toggle input:checked + .toggle-slider::before { transform:translateX(18px); background:#fff; }
+.danger-zone { background:rgba(255,60,60,.06); border:1px solid rgba(255,60,60,.2); border-radius:12px; padding:1.5rem; }
+.danger-zone h4 { font-size:.82rem; font-weight:700; color:#ff5555; margin-bottom:.4rem; }
+.danger-zone p { font-size:.78rem; color:var(--muted); margin-bottom:1rem; }
+.btn-danger { background:transparent; border:1px solid rgba(255,60,60,.4); color:#ff5555; border-radius:5px; padding:.6rem 1.2rem; font-family:'Poppins',sans-serif; font-size:.74rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase; cursor:pointer; transition:background .2s,border-color .2s; }
+.btn-danger:hover { background:rgba(255,60,60,.12); border-color:#ff5555; }
+
+.xp-claim-widget {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: .75rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: .85rem;
+  min-width: 0;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+.xp-claim-widget::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--orange), #FFB800);
+}
+.xp-claim-left { display: flex; flex-direction: column; gap: .15rem; min-width: 0; }
+.xp-claim-tier {
+  display: flex; align-items: center; gap: .35rem;
+  font-size: .62rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--orange);
+}
+.xp-claim-total {
+  font-size: 1.05rem; font-weight: 800; color: var(--white);
+  display: flex; align-items: baseline; gap: .3rem; line-height: 1;
+}
+.xp-claim-total span { font-size: .6rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.xp-claim-bar-wrap { width: 80px; }
+.xp-claim-bar-row { display: flex; justify-content: space-between; font-size: .5rem; color: var(--muted); margin-bottom: 3px; }
+.xp-claim-bar { height: 4px; background: rgba(200,215,240,.08); border-radius: 2px; overflow: hidden; }
+.xp-claim-bar-fill { height: 100%; background: linear-gradient(90deg, var(--blue), #6b8cff); border-radius: 2px; transition: width .8s ease; }
+.xp-claim-divider { width: 1px; height: 32px; background: var(--border); flex-shrink: 0; }
+.xp-claim-streak { display: flex; flex-direction: column; align-items: center; gap: .1rem; }
+.xp-claim-streak-num { font-size: .88rem; font-weight: 800; color: var(--orange); line-height: 1; }
+.xp-claim-streak-lbl { font-size: .48rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.xp-claim-btn-wrap { display: flex; flex-direction: column; align-items: center; gap: .25rem; }
+.xp-claim-btn {
+  background: var(--orange); color: #000;
+  border: none; border-radius: 6px;
+  padding: .45rem .9rem;
+  font-family: 'Poppins', sans-serif;
+  font-size: .68rem; font-weight: 800;
+  letter-spacing: .04em; text-transform: uppercase;
+  cursor: pointer; white-space: nowrap;
+  display: flex; align-items: center; gap: .3rem;
+  transition: opacity .2s, transform .15s;
+  animation: xp-pulse 2.5s ease-in-out infinite;
+}
+.xp-claim-btn:hover:not(:disabled) { opacity: .88; transform: translateY(-1px); animation: none; }
+.xp-claim-btn:disabled { opacity: .38; cursor: not-allowed; transform: none; animation: none; background: rgba(200,215,240,.12); color: var(--muted); }
+.xp-claim-btn.xp-claimed { background: rgba(0,200,100,.15); color: #00c864; border: 1px solid rgba(0,200,100,.3); }
+@keyframes xp-pulse { 0%,100%{box-shadow:0 0 0 0 rgba(255,138,0,.3);} 50%{box-shadow:0 0 0 5px rgba(255,138,0,0);} }
+.xp-claim-countdown { font-size: .5rem; color: rgba(200,215,240,.35); font-weight: 600; letter-spacing: .04em; }
+
+.xp-streak-expanded {
+  display: none;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 10px 10px;
+  padding: .85rem 1rem 1rem;
+  margin-top: -4px;
+  animation: slideDown .22s ease;
+}
+.xp-streak-expanded.open { display: block; }
+@keyframes slideDown { from{opacity:0;transform:translateY(-6px);} to{opacity:1;transform:none;} }
+.xp-streak-dots { display: flex; gap: 6px; margin-bottom: .7rem; }
+.xp-sdot {
+  width: 30px; height: 30px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .7rem; font-weight: 700;
+  flex-shrink: 0; transition: all .2s;
+}
+.xp-sdot-lbl { font-size: .48rem; text-align: center; color: var(--muted); margin-top: 2px; letter-spacing: .04em; text-transform: uppercase; }
+.xp-sdot.done { background: rgba(20,40,255,.18); border: 1px solid rgba(20,40,255,.4); color: #6b8cff; }
+.xp-sdot.today-ready { background: rgba(255,138,0,.1); border: 2px dashed var(--orange); color: var(--orange); }
+.xp-sdot.today-done { background: rgba(0,200,100,.15); border: 1px solid rgba(0,200,100,.35); color: #00c864; }
+.xp-sdot.future { background: rgba(200,215,240,.04); border: 1px dashed rgba(200,215,240,.1); color: rgba(200,215,240,.18); }
+.xp-streak-info { font-size: .7rem; color: var(--muted); line-height: 1.55; }
+.xp-streak-info strong { color: var(--white); }
+
+.sofian-badges-section { margin-top: 1.5rem; }
+.sofian-badges-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: .85rem; margin-top: 1rem; }
+.sofian-badge-card {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+  padding: 1rem 1.1rem; text-align: center; position: relative; transition: border-color .2s;
+}
+.sofian-badge-card.badge-earned { border-color: rgba(201,168,76,.45); background: rgba(201,168,76,.04); }
+.sofian-badge-card.badge-locked { opacity: .5; }
+.sofian-badge-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; border-radius: 10px 10px 0 0; background: transparent; }
+.sofian-badge-card.badge-earned::before { background: linear-gradient(90deg, #C9A84C, #F0D080); }
+.sofian-badge-icon { font-size: 1.8rem; margin-bottom: .4rem; line-height: 1; }
+.sofian-badge-name { font-size: .78rem; font-weight: 800; color: var(--white); margin-bottom: .25rem; }
+.sofian-badge-range { font-size: .58rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: .45rem; }
+.sofian-badge-desc { font-size: .68rem; color: var(--muted); line-height: 1.5; margin-bottom: .5rem; }
+.sofian-badge-status-tag {
+  display: inline-block; font-size: .52rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+  padding: .18rem .5rem; border-radius: 20px;
+}
+.sbt-earned { background: rgba(201,168,76,.15); color: #C9A84C; border: 1px solid rgba(201,168,76,.3); }
+.sbt-active { background: var(--orange-dim); color: var(--orange); border: 1px solid rgba(255,138,0,.3); }
+.sbt-locked { background: rgba(200,215,240,.06); color: var(--muted); border: 1px solid var(--border); }
+
+.fmod-row {
+  display: flex; align-items: center; gap: 1rem;
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 10px; padding: .85rem 1rem;
+  transition: border-color .2s, transform .15s;
+  text-decoration: none; color: inherit;
+}
+.fmod-row:hover { border-color: rgba(20,40,255,.4); transform: translateX(2px); }
+.fmod-num {
+  width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+  background: rgba(20,40,255,.12); border: 1px solid rgba(20,40,255,.25);
+  display: flex; align-items: center; justify-content: center;
+  font-size: .7rem; font-weight: 800; color: #6b8cff;
+}
+.fmod-num.done { background: rgba(0,200,100,.12); border-color: rgba(0,200,100,.3); color: #00c864; }
+.fmod-num.locked { background: rgba(200,215,240,.04); border-color: var(--border); color: rgba(200,215,240,.25); }
+.fmod-title { font-size: .82rem; font-weight: 700; color: var(--white); margin-bottom: .15rem; }
+.fmod-meta { font-size: .65rem; color: var(--muted); }
+.fmod-badge { margin-left: auto; flex-shrink: 0; font-size: .58rem; font-weight: 700; letter-spacing: .06em; padding: .22rem .55rem; border-radius: 4px; }
+.fmod-badge.done { background: rgba(0,200,100,.12); color: #00c864; border: 1px solid rgba(0,200,100,.25); }
+.fmod-badge.available { background: rgba(20,40,255,.12); color: #6b8cff; border: 1px solid rgba(20,40,255,.25); }
+.fmod-badge.locked { background: rgba(200,215,240,.06); color: rgba(200,215,240,.3); border: 1px dashed rgba(200,215,240,.15); }
+
+.lb-section { margin-bottom: 2rem; }
+.lb-tabs { display: flex; gap: 0; background: var(--deep); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; padding: 3px; max-width: 280px; margin-bottom: 1.2rem; }
+.lb-tab { flex: 1; background: transparent; border: none; color: var(--muted); font-family: 'Poppins', sans-serif; font-size: .76rem; font-weight: 700; padding: .55rem .9rem; cursor: pointer; border-radius: 6px; transition: all .2s; }
+.lb-tab:hover:not(.active) { color: var(--white); background: rgba(255,255,255,.03); }
+.lb-tab.active { background: var(--blue); color: #fff; }
+.lb-table { width: 100%; border-collapse: collapse; font-size: .78rem; }
+.lb-table th { font-size: .58rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: .5rem .75rem; border-bottom: 1px solid var(--border); text-align: left; }
+.lb-table td { padding: .65rem .75rem; border-bottom: 1px solid rgba(200,215,240,.05); }
+.lb-table tr:hover td { background: rgba(255,255,255,.025); }
+.lb-rank { font-weight: 800; color: var(--orange); min-width: 28px; }
+.lb-rank.r1 { color: #FFD700; }
+.lb-rank.r2 { color: #C0C0C0; }
+.lb-rank.r3 { color: #CD7F32; }
+.lb-avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--blue-dim); border: 1px solid rgba(20,40,255,.3); display: inline-flex; align-items: center; justify-content: center; font-size: .62rem; font-weight: 800; color: #6b8cff; margin-right: .5rem; vertical-align: middle; }
+.lb-name { font-weight: 700; color: var(--white); }
+.lb-sub { font-size: .62rem; color: var(--muted); }
+.lb-xp { font-weight: 800; color: var(--orange); }
+.lb-tier { font-size: .6rem; font-weight: 700; letter-spacing: .06em; padding: .2rem .45rem; border-radius: 4px; background: rgba(20,40,255,.1); color: #6b8cff; border: 1px solid rgba(20,40,255,.2); }
+.lb-comm { font-weight: 700; color: #10b981; }
+
+@media(max-width:900px) {
+  .dash-layout { grid-template-columns: 1fr; margin-top: 70px; padding-bottom: 70px; }
+  .dash-layout.sidebar-open { grid-template-columns: 1fr; }
+  .dash-sidebar { position: fixed; bottom: 0; left: 0; right: 0; top: auto; height: 64px; width: 100% !important; flex-direction: row; align-items: stretch; padding: 0; overflow: visible; border-right: none; border-top: 1px solid var(--border); z-index: 190; }
+  .dash-sidebar.open { overflow: visible; }
+  .sidebar-toggle, .dash-user, .sidebar-logout { display: none !important; }
+  .dash-nav-item { flex: 1; flex-direction: column; justify-content: center !important; padding: .4rem .2rem !important; gap: .18rem; border-left: none !important; border-top: 3px solid transparent; font-size: .52rem; letter-spacing: .02em; text-transform: uppercase; font-weight: 600; }
+  .dash-nav-item.active { border-left: none !important; border-top-color: var(--blue); }
+  .dash-nav-icon { font-size: 1.2rem; width: auto; }
+  .dash-nav-label { opacity: 1 !important; max-width: 100% !important; font-size: .52rem; pointer-events: auto; display: block; }
+  .dash-nav-item:hover::after { display: none; }
+  .dash-main { padding: 1.2rem 1rem; }
+  .dash-header { grid-template-columns: 1fr !important; gap: .85rem; }
+  .dash-header > div:last-child { width: 100%; }
+  .dash-header > div:last-child > div:last-child > div { grid-template-columns: repeat(2,1fr) !important; }
+  .aff-stats { grid-template-columns: 1fr 1fr; }
+  .cert-grid { grid-template-columns: 1fr; }
+  .level-cards { grid-template-columns: 1fr; }
+}
+@media(max-width:900px) { .form-grid { grid-template-columns:1fr; } .tracks-grid { grid-template-columns:1fr 1fr !important; } }
+@media(max-width:700px) { .biz-stats-grid { grid-template-columns:1fr 1fr !important; } .tracks-grid { grid-template-columns:1fr !important; } }
+@media(max-width:400px) { .biz-stats-grid { grid-template-columns:1fr !important; } }
+</style>
+<style id="auth-guard">body{opacity:0;transition:opacity .25s;}</style>
+<style id="my-courses-styles">
+.mc-card {
+  background: var(--panel, #0a1628);
+  border: 1px solid var(--border, rgba(200,215,240,.1));
+  border-radius: 14px;
+  padding: 1.4rem;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  transition: transform .2s, border-color .2s, box-shadow .2s;
+  overflow: hidden;
+  min-height: 260px;
+}
+.mc-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255,138,0,.25);
+  box-shadow: 0 12px 28px rgba(0,0,0,.25);
+}
+.mc-card.tier-foundation { border-color: rgba(20,40,255,.18); }
+.mc-card.tier-foundation:hover { border-color: rgba(20,40,255,.4); }
+.mc-card.tier-track { border-color: rgba(255,138,0,.18); }
+.mc-card.tier-executive { border-color: rgba(201,168,76,.25); }
+.mc-card.tier-executive::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:2px;
+  background: linear-gradient(90deg, transparent, #C9A84C, transparent);
+}
+.mc-card.locked {
+  opacity: .82;
+  background: linear-gradient(135deg, rgba(20,40,255,.04), rgba(0,0,0,.2));
+}
+
+.mc-tier-badge {
+  display: inline-flex; align-items: center; gap: .3rem;
+  font-size: .55rem; font-weight: 700;
+  letter-spacing: .12em; text-transform: uppercase;
+  padding: .25rem .6rem; border-radius: 4px;
+  margin-bottom: .8rem;
+  align-self: flex-start;
+}
+.mc-card.tier-foundation .mc-tier-badge { background: rgba(20,40,255,.12); color: #6b8cff; border:1px solid rgba(20,40,255,.25); }
+.mc-card.tier-track .mc-tier-badge { background: rgba(255,138,0,.1); color: var(--orange, #FF8A00); border:1px solid rgba(255,138,0,.25); }
+.mc-card.tier-executive .mc-tier-badge { background: rgba(201,168,76,.12); color: #C9A84C; border:1px solid rgba(201,168,76,.3); }
+
+.mc-title {
+  font-size: 1.05rem; font-weight: 700;
+  color: var(--white, #c8d7f0);
+  line-height: 1.25;
+  margin-bottom: .4rem;
+}
+.mc-desc {
+  font-size: .76rem;
+  color: var(--muted, rgba(200,215,240,.5));
+  line-height: 1.55;
+  margin-bottom: 1.1rem;
+}
+
+.mc-progress-wrap {
+  margin-bottom: 1.1rem;
+}
+.mc-progress-row {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: .4rem;
+  font-size: .68rem;
+  color: var(--muted);
+}
+.mc-progress-row strong { color: var(--white); font-weight: 700; }
+.mc-progress-bar {
+  width: 100%; height: 6px;
+  background: rgba(200,215,240,.06);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.mc-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--orange, #FF8A00), #ffb347);
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+.mc-card.tier-foundation .mc-progress-fill {
+  background: linear-gradient(90deg, var(--blue, #1428FF), #6b8cff);
+}
+
+.mc-cta {
+  background: var(--orange, #FF8A00);
+  color: #000;
+  border: none;
+  padding: .6rem 1.2rem;
+  border-radius: 7px;
+  font-family: 'Poppins', sans-serif;
+  font-size: .76rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+  transition: background 0.18s;
+  margin-top: auto;
+  text-align: center;
+}
+.mc-cta:hover { background: #ffa333; }
+.mc-card.tier-foundation .mc-cta { background: var(--blue, #1428FF); color: #fff; }
+.mc-card.tier-foundation .mc-cta:hover { background: #2a3fff; }
+.mc-cta.locked-cta {
+  background: rgba(200,215,240,.06);
+  color: rgba(200,215,240,.4);
+  cursor: not-allowed;
+  border: 1px dashed rgba(200,215,240,.15);
+}
+
+.mc-lock-overlay {
+  position: absolute; top: 1rem; right: 1rem;
+  font-size: .58rem; font-weight: 700;
+  letter-spacing: .08em;
+  background: rgba(0,0,0,.4);
+  border: 1px solid rgba(200,215,240,.15);
+  color: rgba(200,215,240,.6);
+  padding: .25rem .55rem;
+  border-radius: 4px;
+}
+
+.mc-completed-badge {
+  position: absolute; top: 1rem; right: 1rem;
+  font-size: .58rem; font-weight: 700;
+  letter-spacing: .08em;
+  background: rgba(0,200,100,.12);
+  color: #00c864;
+  border: 1px solid rgba(0,200,100,.25);
+  padding: .25rem .55rem;
+  border-radius: 4px;
+}
+
+.mc-meta {
+  display: flex; gap: .8rem; flex-wrap: wrap;
+  font-size: .65rem;
+  color: var(--muted);
+  margin-bottom: 1rem;
+}
+
+.mc-featured {
+  background: rgba(255,255,255,.02);
+  border: 1px solid rgba(200,215,240,.08);
+  border-radius: 10px;
+  padding: 1rem 1.1rem;
+  display: flex; flex-direction: column; gap: .55rem;
+  transition: border-color .18s, transform .15s;
+  text-decoration: none;
+  color: inherit;
+}
+.mc-featured:hover {
+  border-color: rgba(255,138,0,.3);
+  transform: translateY(-2px);
+}
+.mc-featured-tier {
+  font-size: .55rem; font-weight: 700;
+  letter-spacing: .1em; text-transform: uppercase;
+  color: var(--orange);
+}
+.mc-featured-title {
+  font-size: .92rem; font-weight: 700;
+  color: var(--white);
+}
+.mc-featured-desc {
+  font-size: .7rem; color: var(--muted); line-height: 1.5;
+}
+.mc-featured-foot {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: auto;
+  padding-top: .4rem;
+  font-size: .72rem;
+}
+.mc-featured-price { font-weight: 700; color: var(--white); }
+.mc-featured-cta { color: var(--orange); font-weight: 700; }
+</style>
+<style id="tab-fix">
+.dash-panel { display: none !important; }
+.dash-panel.active { display: block !important; }
+
+.onboarding-empty { background:linear-gradient(135deg,rgba(20,40,255,.05),rgba(255,138,0,.03)); border:1px dashed rgba(200,215,240,.12); border-radius:12px; }
+.onboarding-empty button { transition:transform .15s, filter .15s; }
+.onboarding-empty button:hover { transform:translateY(-1px); filter:brightness(1.1); }
+
+.vp-tabs { display:flex; gap:0; background:var(--deep,#060d1a); border:1px solid var(--border,rgba(200,215,240,.1)); border-radius:8px; overflow:hidden; padding:3px; }
+.vp-tab { flex:1; background:transparent; border:none; color:var(--muted,rgba(200,215,240,.5)); font-family:'Poppins',sans-serif; font-size:.78rem; font-weight:700; letter-spacing:.03em; padding:.6rem 1rem; cursor:pointer; border-radius:6px; transition:all .2s; }
+.vp-tab:hover:not(.active) { color:var(--white,#c8d7f0); background:rgba(255,255,255,.03); }
+.vp-tab.active { background:var(--blue,#1428FF); color:#fff; }
+
+.level-cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:1rem; margin-bottom:1.5rem; }
+.level-card { background:var(--panel,#0a1628); border:1px solid var(--border,rgba(200,215,240,.1)); border-radius:10px; padding:1.1rem 1.2rem; position:relative; transition:all .2s; }
+.level-card.active-level { border-color:rgba(255,138,0,.45); background:linear-gradient(135deg,rgba(255,138,0,.08),rgba(20,40,255,.05)); box-shadow:0 4px 16px rgba(255,138,0,.1); }
+.level-card.locked { opacity:.55; }
+.level-card.locked::after { content:"🔒 Locked"; position:absolute; top:.6rem; right:.8rem; font-size:.55rem; background:rgba(200,215,240,.08); color:var(--muted,rgba(200,215,240,.5)); padding:.2rem .5rem; border-radius:4px; letter-spacing:.06em; }
+.level-card.active-level::after { content:"✓ Active"; position:absolute; top:.6rem; right:.8rem; font-size:.55rem; background:rgba(0,200,100,.12); color:#00c864; padding:.2rem .5rem; border-radius:4px; letter-spacing:.06em; font-weight:700; }
+.level-name { font-size:.82rem; font-weight:700; color:var(--white,#c8d7f0); margin-bottom:.4rem; }
+.level-pct { font-size:1.4rem; font-weight:800; color:var(--orange,#FF8A00); line-height:1; margin-bottom:.5rem; }
+.level-pct-sub { font-size:.62rem; font-weight:600; color:var(--muted,rgba(200,215,240,.5)); display:block; margin-top:.15rem; }
+.level-req { font-size:.72rem; color:var(--muted,rgba(200,215,240,.5)); line-height:1.6; }
+</style>
+<script>setTimeout(function(){
+  document.body.style.opacity='1';
+  var g=document.getElementById('auth-guard');
+  if(g)g.remove();
+  // Also force-reveal everything so content shows even if Firebase fails
+  document.querySelectorAll('.reveal').forEach(function(r){ r.classList.add('visible'); });
+},5000);
+
+
+
+</script>
+<script>
+  // Bridge functions — available immediately so onclick="" on verify banner works
+  // before the type="module" script finishes loading.
+  function resendVerification() {
+    if (typeof window._resendVerification === 'function') { window._resendVerification(); }
+    else { setTimeout(resendVerification, 400); }
+  }
+  function checkVerification() {
+    if (typeof window._checkVerification === 'function') { window._checkVerification(); }
+    else { setTimeout(checkVerification, 400); }
+  }
+</script>
+</head>
+<body data-nav-active="dashboard" class="has-dash-layout">
+<!-- Email verification banner (soft validation — only shown if email_verified == false) -->
+<div id="verifyBanner" style="display:none;background:linear-gradient(90deg,rgba(255,138,0,.15),rgba(255,138,0,.08));border-bottom:1px solid rgba(255,138,0,.3);padding:.75rem 1.5rem;text-align:center;font-size:.78rem;color:#ffb84d;position:sticky;top:70px;z-index:80;">
+  ⚠ Please verify your email address to unlock all features.
+  <button onclick="resendVerification()" style="background:transparent;border:1px solid rgba(255,138,0,.5);color:#ffb84d;padding:.3rem .8rem;border-radius:5px;font-size:.7rem;font-weight:700;margin-left:.6rem;cursor:pointer;">Resend email</button>
+  <button onclick="checkVerification()" style="background:transparent;border:none;color:rgba(255,184,77,.6);font-size:.7rem;font-weight:600;margin-left:.4rem;cursor:pointer;text-decoration:underline;">I've verified</button>
+</div>
+
+<canvas id="hexCanvas"></canvas>
+
+<div id="sofe-navbar"></div>
+
+
+<section id="hero">
+  <div class="hero-content">
+    <div class="hero-tag">Sofian Dashboard &middot; Student Success Portal</div>
+    </div>
+  </div>
+</section>
+
+<!-- DASHBOARD -->
+<div id="dashboard">
+<div class="dash-layout">
+  <!-- SIDEBAR -->
+  <aside class="dash-sidebar" id="dashSidebar">
+    <!-- Toggle button (desktop only) -->
+    <button class="sidebar-toggle" id="sidebarToggle" title="Expand sidebar" aria-label="Toggle sidebar">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="5,3 10,8 5,13"/>
+      </svg>
+    </button>
+
+    <!-- User info (visible when expanded) -->
+    <div class="dash-user">
+      <div class="dash-avatar" id="dashAvatarEl">—</div>
+      <div class="dash-user-name">—</div>
+      <div class="dash-user-level" id="sidebarLevel">—</div>
+    </div>
+
+    <!-- Nav items -->
+    <a class="dash-nav-item active" onclick="showTab('classroom',this,event)" href="#" data-label="Sofe Academy">
+      <span class="dash-nav-icon">📚</span><span class="dash-nav-label">Sofe Academy</span>
+    </a>
+    <a class="dash-nav-item" onclick="showTab('business',this,event)" href="#" data-label="My Business">
+      <span class="dash-nav-icon">💼</span><span class="dash-nav-label">My Business</span>
+    </a>
+    <a class="dash-nav-item" onclick="showTab('wallet',this,event)" href="#" data-label="Wallet">
+      <span class="dash-nav-icon">💰</span><span class="dash-nav-label">Wallet</span>
+    </a>
+    <a class="dash-nav-item" onclick="showTab('hof',this,event)" href="#" data-label="Certificate">
+      <span class="dash-nav-icon">🎓</span><span class="dash-nav-label">Certificate</span>
+    </a>
+    <a class="dash-nav-item" onclick="showTab('leaderboard',this,event)" href="#" data-label="Leaderboard">
+      <span class="dash-nav-icon">🏆</span><span class="dash-nav-label">Leaderboard</span>
+    </a>
+    <a class="dash-nav-item" onclick="showTab('profile',this,event)" href="#" data-label="Settings">
+      <span class="dash-nav-icon">⚙️</span><span class="dash-nav-label">Settings</span>
+    </a>
+
+    <!-- Logout (bottom of sidebar) -->
+    <div class="sidebar-logout">
+      <button onclick="handleNavLogout()" class="dash-nav-item" style="color:rgba(200,215,240,.35);font-size:.75rem;background:transparent;border:none;width:100%;cursor:pointer;text-align:left;">
+        <span class="dash-nav-icon">↩</span><span class="dash-nav-label">Logout</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="dash-main">
+    <!-- ── DASHBOARD HEADER ── -->
+    <div class="dash-header" style="display:grid;grid-template-columns:1fr auto;align-items:start;gap:1.25rem;margin-bottom:2rem;">
+
+      <!-- LEFT: Welcome + Referral -->
+      <div style="min-width:0;">
+        <div class="dash-greeting">Welcome Back, <span>Sofian!</span></div>
+        <div style="font-size:.98rem;font-weight:700;color:var(--white);margin-top:.15rem;" id="welcomeName">—</div>
+        <div class="dash-date" id="dashDate"></div>
+        <!-- Referral Link Quick Copy -->
+        <div id="quickReferralLink" style="margin-top:1rem;padding:0.75rem 1rem;background:rgba(255,138,0,0.08);border:1px solid rgba(255,138,0,0.3);border-radius:8px;display:none;">
+          <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:var(--orange);margin-bottom:0.5rem;">📢 Your Referral Link:</div>
+          <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+            <input type="text" id="quickRefLinkInput" readonly style="flex:1;min-width:180px;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:6px;padding:0.5rem 0.75rem;color:var(--white);font-size:0.8rem;font-family:monospace;" value="Loading..."/>
+            <button onclick="copyQuickRefLink()" style="padding:0.5rem 1rem;background:var(--orange);color:#000;border:none;border-radius:6px;font-size:0.75rem;font-weight:700;cursor:pointer;white-space:nowrap;">Copy Link</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Enroll button + XP widget + Tier table — all stacked, same width -->
+      <div style="display:flex;flex-direction:column;gap:.6rem;min-width:0;align-items:stretch;">
+
+        <!-- Enroll in New Course — top of right column, adjacent to Welcome Sofian -->
+        <a href="./academy.html" class="btn-primary" style="font-size:.72rem;padding:.6rem 1.1rem;text-align:center;white-space:nowrap;display:block;">+ Enroll in New Course</a>
+
+        <!-- XP Claim Widget -->
+        <div style="background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:.75rem 1rem;position:relative;overflow:hidden;" id="xpClaimWidget">
+          <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--orange),#FFB800);"></div>
+          <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:nowrap;">
+
+            <!-- Tier + XP -->
+            <div style="min-width:0;flex:1;">
+              <div style="display:flex;align-items:center;gap:.3rem;font-size:.58rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--orange);margin-bottom:.18rem;">
+                <span id="xpWidgetTierIcon">🌱</span><span id="xpWidgetTierName">Genesis Node</span>
+              </div>
+              <div style="font-size:1rem;font-weight:800;color:var(--white);line-height:1;display:flex;align-items:baseline;gap:.25rem;">
+                <span id="xpWidgetTotal">0</span><span style="font-size:.58rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;">XP</span>
+              </div>
+            </div>
+
+            <!-- Progress bar -->
+            <div style="width:72px;flex-shrink:0;">
+              <div style="display:flex;justify-content:space-between;font-size:.48rem;color:var(--muted);margin-bottom:3px;">
+                <span id="xpWidgetBarLabel">to Validator</span>
+                <span id="xpWidgetBarPct">0%</span>
+              </div>
+              <div style="height:4px;background:rgba(200,215,240,.08);border-radius:2px;overflow:hidden;">
+                <div id="xpWidgetBarFill" style="height:100%;background:linear-gradient(90deg,var(--blue),#6b8cff);border-radius:2px;transition:width .8s ease;width:0%;"></div>
+              </div>
+            </div>
+
+            <div style="width:1px;height:28px;background:var(--border);flex-shrink:0;"></div>
+
+            <!-- Streak -->
+            <div style="text-align:center;flex-shrink:0;cursor:pointer;" onclick="toggleStreakExpanded(event)" title="View streak">
+              <div style="font-size:.85rem;font-weight:800;color:var(--orange);line-height:1;" id="xpWidgetStreakNum">0</div>
+              <div style="font-size:.46rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);">🔥 streak</div>
+            </div>
+
+            <div style="width:1px;height:28px;background:var(--border);flex-shrink:0;"></div>
+
+            <!-- Claim button -->
+            <div style="flex-shrink:0;">
+              <button class="xp-claim-btn" id="xpClaimMainBtn" onclick="handleDailyClaim()">⚡ Claim +2 XP</button>
+              <div id="xpClaimCountdown" style="display:none;font-size:.48rem;color:rgba(200,215,240,.35);font-weight:600;letter-spacing:.04em;margin-top:3px;text-align:center;">Next: <span id="xpClaimCd">—</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Streak expanded panel -->
+        <div class="xp-streak-expanded" id="xpStreakExpanded">
+          <div style="display:flex;gap:6px;margin-bottom:.55rem;">
+            <div style="text-align:center;"><div class="xp-sdot" id="xpDot0">✓</div><div class="xp-sdot-lbl">Mon</div></div>
+            <div style="text-align:center;"><div class="xp-sdot" id="xpDot1">✓</div><div class="xp-sdot-lbl">Tue</div></div>
+            <div style="text-align:center;"><div class="xp-sdot" id="xpDot2">✓</div><div class="xp-sdot-lbl">Wed</div></div>
+            <div style="text-align:center;"><div class="xp-sdot" id="xpDot3">✓</div><div class="xp-sdot-lbl">Thu</div></div>
+            <div style="text-align:center;"><div class="xp-sdot" id="xpDot4">✓</div><div class="xp-sdot-lbl">Fri</div></div>
+            <div style="text-align:center;"><div class="xp-sdot" id="xpDot5">✓</div><div class="xp-sdot-lbl">Sat</div></div>
+            <div style="text-align:center;"><div class="xp-sdot" id="xpDot6">⚡</div><div class="xp-sdot-lbl">Sun</div></div>
+          </div>
+          <div class="xp-streak-info" id="xpStreakHint">🎯 <strong>Claim your 2 XP today</strong> — tap the button above. Log in every day to build your streak and unlock bonus XP.</div>
+        </div>
+
+        <!-- XP Reward Tiers — directly below claim widget, same width -->
+        <div style="background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:.75rem 1rem;">
+          <div style="font-size:.55rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:.6rem;">XP Reward Tiers</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.4rem;">
+            <div style="background:rgba(200,215,240,.03);border:1px solid var(--border);border-radius:7px;padding:.5rem .55rem;text-align:center;">
+              <div style="font-size:.48rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:2px;">Day 1–6</div>
+              <div style="font-size:.88rem;font-weight:800;color:var(--white);line-height:1;">+2 XP</div>
+              <div style="font-size:.46rem;color:var(--muted);margin-top:2px;">Daily base</div>
+            </div>
+            <div style="background:rgba(200,215,240,.03);border:1px solid var(--border);border-radius:7px;padding:.5rem .55rem;text-align:center;">
+              <div style="font-size:.48rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:2px;">7-day</div>
+              <div style="font-size:.88rem;font-weight:800;color:var(--white);line-height:1;">+12 XP</div>
+              <div style="font-size:.46rem;color:var(--orange);margin-top:2px;">+10 bonus</div>
+            </div>
+            <div style="background:rgba(200,215,240,.03);border:1px solid var(--border);border-radius:7px;padding:.5rem .55rem;text-align:center;">
+              <div style="font-size:.48rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:2px;">30-day</div>
+              <div style="font-size:.88rem;font-weight:800;color:var(--white);line-height:1;">+27 XP</div>
+              <div style="font-size:.46rem;color:var(--orange);margin-top:2px;">+25 bonus</div>
+            </div>
+            <div style="background:rgba(200,215,240,.03);border:1px solid var(--border);border-radius:7px;padding:.5rem .55rem;text-align:center;">
+              <div style="font-size:.48rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:2px;">100-day</div>
+              <div style="font-size:.88rem;font-weight:800;color:var(--white);line-height:1;">+52 XP</div>
+              <div style="font-size:.46rem;color:var(--orange);margin-top:2px;">+50 bonus</div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- end right column -->
+    </div><!-- end dash-header -->
+
+    <!-- ─── SOFE ACADEMY TAB ─── -->
+    <div class="dash-panel active" id="tab-classroom">
+      <!-- ════════ MY COURSES TAB — dynamic view ════════ -->
+      <div id="academy-home">
+        <h2 class="section-title reveal" style="font-size:1.1rem;font-weight:800;margin-bottom:.3rem;">My Courses.</h2>
+        <p class="body-text reveal" style="font-size:.84rem;color:var(--muted);margin-bottom:1.5rem;">Your active courses, progress, and learning materials.</p>
+
+        <!-- Loading skeleton -->
+        <div id="myCoursesLoading" class="reveal" style="text-align:center;padding:2rem;color:var(--muted);font-size:.82rem;">
+          <div style="font-size:1.4rem;margin-bottom:.4rem;">⏳</div>
+          Loading your courses…
+        </div>
+
+        <!-- Empty state — featured catalogue mini-list -->
+        <div id="myCoursesEmpty" class="reveal" style="display:none;">
+          <div class="onboarding-empty" style="padding:2.5rem 2rem;text-align:center;margin-bottom:1.5rem;">
+            <div style="font-size:2.5rem;margin-bottom:.75rem;opacity:.8;">🎓</div>
+            <div style="font-size:1rem;font-weight:800;color:var(--white);margin-bottom:.4rem;">Start your Web3 journey</div>
+            <div style="font-size:.82rem;color:var(--muted);max-width:480px;margin:0 auto 1.2rem;line-height:1.65;">Browse our catalogue below — start with the free Foundation Course, or jump straight into a Career Track that includes Foundation.</div>
+            <a href="./academy.html" style="display:inline-block;background:var(--blue);color:#fff;text-decoration:none;border-radius:7px;padding:.7rem 1.4rem;font-family:'Poppins',sans-serif;font-size:.78rem;font-weight:700;">Browse Full Academy →</a>
+          </div>
+
+          <!-- Featured courses (loaded from Firestore) -->
+          <h3 style="font-size:.78rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:1rem;">⭐ Featured Courses</h3>
+          <div id="featuredCoursesGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1rem;"></div>
+        </div>
+
+        <!-- ENROLLED COURSES GRID -->
+        <div id="myCoursesGrid" style="display:none;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:1.25rem;margin-bottom:2rem;"></div>
+
+        <!-- Helpful "Browse more courses" CTA shown ONLY when user has 1+ enrolments -->
+        <div id="browseMoreCard" class="reveal" style="display:none;background:linear-gradient(135deg,rgba(20,40,255,.06),rgba(255,138,0,.04));border:1px dashed rgba(200,215,240,.15);border-radius:12px;padding:1.5rem;text-align:center;">
+          <div style="font-size:.85rem;font-weight:700;color:var(--white);margin-bottom:.4rem;">Looking for more?</div>
+          <div style="font-size:.74rem;color:var(--muted);margin-bottom:1rem;">Explore Career Tracks and the CBIE executive certification.</div>
+          <a href="./academy.html" style="display:inline-block;background:transparent;border:1px solid rgba(255,138,0,.4);color:var(--orange);text-decoration:none;border-radius:6px;padding:.55rem 1.2rem;font-size:.76rem;font-weight:700;">Browse Academy →</a>
+        </div>
+
+      </div><!-- end #academy-home -->
+    </div><!-- end tab-classroom -->
+
+    <!-- ─── BUSINESS TAB ─── -->
+    <div class="dash-panel" id="tab-business">
+      <h2 style="font-size:1.1rem;font-weight:800;margin-bottom:.3rem;">My Business.</h2>
+      <p class="body-text" style="font-size:.84rem;margin-bottom:1.2rem;">Choose your business path below.</p>
+
+      <!-- Current tier callout — shown directly below heading -->
+      <div id="currentTierCallout" class="reveal" style="background:linear-gradient(135deg,rgba(20,40,255,.12),rgba(255,138,0,.08));border:1px solid rgba(255,138,0,.3);border-radius:10px;padding:.9rem 1.2rem;margin-bottom:1.2rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+        <div id="currentTierIcon" style="font-size:1.8rem;line-height:1;flex-shrink:0;">⭐</div>
+        <div style="flex:1;min-width:180px;">
+          <div style="font-size:.58rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:.15rem;">Your Current Tier</div>
+          <div id="currentTierName" style="font-size:.95rem;font-weight:800;color:var(--white);">Newbie — 5% Commission</div>
+          <div id="currentTierHint" style="font-size:.7rem;color:var(--muted);margin-top:.15rem;">Complete the Foundation Course to unlock payouts.</div>
+        </div>
+        <div id="currentTierBadge" style="font-size:.62rem;font-weight:700;background:rgba(0,200,100,.1);color:#00c864;border:1px solid rgba(0,200,100,.2);border-radius:20px;padding:.3rem .8rem;letter-spacing:.04em;">ACTIVE</div>
+      </div>
+
+      <!-- Sub-tab selector -->
+      <div class="vp-tabs" style="max-width:320px;margin-bottom:1.8rem;">
+        <button class="vp-tab active" id="biz-tab-affiliate" onclick="switchBizTab('affiliate',this)">Affiliate</button>
+        <button class="vp-tab" id="biz-tab-ambassador" onclick="switchBizTab('ambassador',this)" style="position:relative;">
+          Ambassador
+          <span style="position:absolute;top:4px;right:6px;font-size:.55rem;background:rgba(200,215,240,.15);border:1px solid var(--border);border-radius:3px;padding:.1rem .3rem;letter-spacing:.04em;color:var(--muted);">🔒</span>
+        </button>
+      </div>
+
+      <!-- AFFILIATE PANEL -->
+      <div id="biz-panel-affiliate">
+        <h2 style="font-size:1.1rem;font-weight:800;margin-bottom:.3rem;">Sponsor Your Own Education.</h2>
+        <p class="body-text" style="font-size:.84rem;margin-bottom:1.5rem;">Refer friends, earn commissions, fund your learning journey.</p>
+
+        <div class="aff-stats reveal" style="grid-template-columns:repeat(3,1fr);">
+          <div class="aff-stat">
+            <div class="aff-stat-num" id="stat-total-referrals">0</div>
+            <div class="aff-stat-label">Total Referrals</div>
+          </div>
+          <div class="aff-stat">
+            <div class="aff-stat-num" id="stat-valid-signups" style="color:#00c864;">0</div>
+            <div class="aff-stat-label">Valid Signups</div>
+            <div style="font-size:.58rem;color:var(--muted);margin-top:.25rem;opacity:.7;">Completed Foundation Course</div>
+          </div>
+          <div class="aff-stat">
+            <div class="aff-stat-num" id="stat-total-earned" style="color:var(--orange);">₦0</div>
+            <div class="aff-stat-label">Total Earned</div>
+          </div>
+          <div class="aff-stat" style="background:rgba(16,185,129,0.06);border-color:rgba(16,185,129,0.25);">
+            <div class="aff-stat-num" id="stat-bounty-earnings" style="color:#10b981;">₦0</div>
+            <div class="aff-stat-label">Bounty Earnings</div>
+            <div style="font-size:.58rem;color:var(--muted);margin-top:.25rem;opacity:.7;">Paid Immediately</div>
+          </div>
+          <div class="aff-stat" style="border-color:rgba(255,60,60,.25);background:rgba(255,60,60,.06);">
+            <div class="aff-stat-num" id="stat-unpaid" style="color:#ff5555;">₦0</div>
+            <div class="aff-stat-label">Unpaid Commissions</div>
+            <div style="font-size:.58rem;color:var(--muted);margin-top:.25rem;opacity:.7;">Paid Monthly (28th-30th)</div>
+          </div>
+          <!-- XP Badge -->
+          <div class="aff-stat" style="grid-column:span 2;background:linear-gradient(135deg,rgba(20,40,255,.12),rgba(255,138,0,.08));border-color:rgba(255,138,0,.3);text-align:left;display:flex;align-items:center;gap:1.2rem;">
+            <div style="width:52px;height:52px;border-radius:50%;background:var(--orange-dim);border:2px solid var(--orange);display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0;">🔥</div>
+            <div>
+              <div style="font-size:.6rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--orange);margin-bottom:.2rem;">Current XP Tier</div>
+              <div id="xpTierName" style="font-size:1rem;font-weight:800;color:var(--white);">Genesis</div>
+              <div id="xpTierRange" style="font-size:.68rem;color:var(--muted);margin-top:.15rem;">0 – 500 XP · <strong id="xpEarned" style="color:var(--orange);">0 XP</strong> earned</div>
+              <div style="margin-top:.5rem;height:4px;background:rgba(255,255,255,.08);border-radius:2px;overflow:hidden;max-width:220px;">
+                <div style="width:35%;height:100%;background:linear-gradient(90deg,var(--orange),#FFB800);border-radius:2px;"></div>
+              </div>
+              <div style="font-size:.58rem;color:var(--muted);margin-top:.2rem;"><span id="xpToNext">500</span> XP to next tier: <strong id="xpNextTier" style="color:var(--white);">Validator</strong></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="ref-link-card reveal">
+          <!-- Locked state (shown until referral_code exists) -->
+          <div id="refLinkLocked" style="background:rgba(200,215,240,.04);border:1px dashed rgba(200,215,240,.15);border-radius:8px;padding:1rem;text-align:center;color:rgba(200,215,240,.4);font-size:.78rem;margin-bottom:.75rem;">
+            🔒 Your referral link will appear here once your account is set up.
+          </div>
+          <!-- Active state (shown when referral_code exists) -->
+          <div id="refLinkActive" style="display:none;">
+          <h3>Your Referral Link</h3>
+          <div class="ref-link-row">
+            <input type="text" class="ref-link-input" value="" id="refLinkInput" readonly />
+            <button class="copy-btn" id="copyBtn" onclick="copyRef()">Copy Link</button>
+          </div>
+          <p style="font-size:.72rem;color:var(--muted);margin-top:.6rem;">Share this link on WhatsApp, Telegram, and social media to earn commissions.</p>
+        </div>
+
+        <div style="background:var(--orange-dim);border:1px solid rgba(255,138,0,.25);border-radius:8px;padding:1rem 1.2rem;margin-bottom:1.5rem;font-size:.82rem;color:var(--white);">
+          🎯 <strong>Refer your friends</strong> to unlock your more <strong style="color:var(--orange);">REWARDS</strong>.
+        </div>
+
+        <h3 style="font-size:.82rem;font-weight:700;margin-bottom:1rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;">Affiliate Levels</h3>
+        <div class="level-cards reveal" id="levelCards">
+          <!-- Level 1: Newbie — default for everyone -->
+          <div class="level-card" id="tier-newbie">
+            <div class="level-name">⭐ Level 1 — Newbie</div>
+            <div class="level-pct">5%<span class="level-pct-sub">Direct referral</span></div>
+            <div class="level-req">Everyone starts here. You earn 5% commission on every successful referral — but you must <strong style="color:var(--orange);">complete the Foundation Course</strong> to receive payouts.</div>
+          </div>
+          <!-- Level 2: Affiliate — unlocked via milestone -->
+          <div class="level-card" id="tier-affiliate">
+            <div class="level-name">🎯 Level 2 — Affiliate</div>
+            <div class="level-pct">10%<span class="level-pct-sub">Direct referral</span></div>
+            <div class="level-req">Refer <strong>10 people</strong> who complete the Foundation Course <strong>and</strong> enrol in at least one Career Track course. Commission rate doubles automatically once the milestone is reached.</div>
+          </div>
+          <!-- Level 3: Ambassador — admin-only unlock -->
+          <div class="level-card" id="tier-ambassador">
+            <div class="level-name">🏆 Level 3 — Ambassador</div>
+            <div class="level-pct">10% + 5%<span class="level-pct-sub">Direct + indirect</span></div>
+            <div class="level-req">For exceptional Sofians, Node Heads, and long-term contributors. <strong>By invitation only</strong> — activated by the Sofe Node team. Earn 10% on direct referrals and 5% on indirect (your referrals' referrals).</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AMBASSADOR PANEL (locked) -->
+      <div id="biz-panel-ambassador" style="display:none;">
+        <div style="background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:3rem 2rem;text-align:center;">
+          <div style="font-size:3rem;margin-bottom:1rem;">🔒</div>
+          <h3 style="font-size:1rem;font-weight:800;color:var(--white);margin-bottom:.5rem;">Ambassador Access — Locked</h3>
+          <p style="font-size:.86rem;color:var(--muted);max-width:460px;margin:0 auto 1.5rem;line-height:1.75;">The Ambassador role is assigned exclusively to Sofe Node Chapter Heads. This access is granted by the Sofe Node team and cannot be self-activated.</p>
+          <div style="background:var(--orange-dim);border:1px solid rgba(255,138,0,.25);border-radius:8px;padding:1rem 1.4rem;display:inline-block;font-size:.82rem;color:var(--orange);">
+            🏅 To become an Ambassador, contact your Node Head or reach out to <strong>info@sofegroup.com</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── SOFIAN BADGES — under Affiliate Levels ── -->
+      <div class="sofian-badges-section reveal" id="sofianBadgesSection" style="margin-top:2rem;">
+        <h3 style="font-size:.88rem;font-weight:800;color:var(--white);margin-bottom:.25rem;">Your Sofian Badges.</h3>
+        <p style="font-size:.76rem;color:var(--muted);margin-bottom:1rem;line-height:1.65;">Every milestone you hit is recognised with a permanent badge on your Sofian profile — visible to protocols, employers, and the community. Badges are tied to your XP total.</p>
+        <div class="sofian-badges-grid" id="sofianBadgesGrid">
+          <div class="sofian-badge-card badge-earned" id="sbadge-genesis">
+            <div class="sofian-badge-icon">🌱</div>
+            <div class="sofian-badge-name">Genesis Node</div>
+            <div class="sofian-badge-range">0 – 499 XP</div>
+            <div class="sofian-badge-desc">Create your Sofe Node account. Welcome to the network — your journey begins here.</div>
+            <span class="sofian-badge-status-tag sbt-earned">✓ Earned on signup</span>
+          </div>
+          <div class="sofian-badge-card" id="sbadge-validator">
+            <div class="sofian-badge-icon">⚡</div>
+            <div class="sofian-badge-name">Validator</div>
+            <div class="sofian-badge-range">500 – 1,499 XP</div>
+            <div class="sofian-badge-desc">Complete the Foundation Course &amp; pass the exam. Earn 500 XP and unlock the full platform.</div>
+            <span class="sofian-badge-status-tag sbt-locked" id="sbadge-validator-tag">Locked</span>
+          </div>
+          <div class="sofian-badge-card badge-locked" id="sbadge-knight">
+            <div class="sofian-badge-icon">⚔️</div>
+            <div class="sofian-badge-name">Crypto Knight</div>
+            <div class="sofian-badge-range">1,500 – 3,999 XP</div>
+            <div class="sofian-badge-desc">Complete 5 Academy modules across the platform. Requires Foundation cert.</div>
+            <span class="sofian-badge-status-tag sbt-locked" id="sbadge-knight-tag">Locked</span>
+          </div>
+          <div class="sofian-badge-card badge-locked" id="sbadge-architect">
+            <div class="sofian-badge-icon">🔥</div>
+            <div class="sofian-badge-name">Chain Architect</div>
+            <div class="sofian-badge-range">4,000 – 7,999 XP</div>
+            <div class="sofian-badge-desc">Complete the full Career Track programme. Mastery recognised on-chain.</div>
+            <span class="sofian-badge-status-tag sbt-locked" id="sbadge-architect-tag">Locked</span>
+          </div>
+          <div class="sofian-badge-card badge-locked" id="sbadge-operator">
+            <div class="sofian-badge-icon">🏆</div>
+            <div class="sofian-badge-name">Node Operator</div>
+            <div class="sofian-badge-range">8,000 – 14,999 XP</div>
+            <div class="sofian-badge-desc">Earn your Certified Blockchain Professional credential. The mark of a professional Sofian.</div>
+            <span class="sofian-badge-status-tag sbt-locked" id="sbadge-operator-tag">Locked</span>
+          </div>
+          <div class="sofian-badge-card badge-locked" id="sbadge-sovereign">
+            <div class="sofian-badge-icon">👑</div>
+            <div class="sofian-badge-name">Node Sovereign</div>
+            <div class="sofian-badge-range">15,000+ XP</div>
+            <div class="sofian-badge-desc">Reach 15,000+ Total XP. The highest rank in the Sofian ecosystem — earned, never given.</div>
+            <span class="sofian-badge-status-tag sbt-locked" id="sbadge-sovereign-tag">Locked</span>
+          </div>
+        </div>
+        <p style="font-size:.66rem;color:var(--muted);margin-top:.85rem;opacity:.7;">⚡ <strong style="color:var(--orange);">Daily XP:</strong> Claim +2 XP every day from the widget on your home screen. Streak bonuses at 7, 30, and 100 days. <a href="https://node.sofegroup.com/talent.html#xp" style="color:var(--blue);text-decoration:none;">See full XP guide →</a></p>
+      </div>
+
+    </div>
+    </div>
+    <!-- ─── WALLET TAB ─── -->
+    <div class="dash-panel" id="tab-wallet">
+      <div class="wallet-balance reveal">
+        <div class="balance-label">Available Balance</div>
+        <div class="balance-amount" id="walletBalanceAmt">₦0</div>
+        <div class="balance-usd" style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin-top:.3rem;">
+          <span>Min. withdrawal: <strong style="color:#fff;">₦10,000</strong></span>
+          <span style="opacity:.4;">·</span>
+          <span style="display:inline-flex;align-items:center;gap:.3rem;">
+            <span title="Payouts are processed monthly between the 28th–30th after your withdrawal request is submitted." style="cursor:help;font-size:.85rem;">ℹ️</span>
+            Payouts processed <strong style="color:#fff;">28th–30th</strong> monthly
+          </span>
+        </div>
+        <button class="payout-btn" onclick="requestPayment()">Request Payment</button>
+      </div>
+
+      <!-- Payout success toast -->
+      <div id="payoutToast" style="display:none;background:rgba(0,200,100,.10);border:1px solid rgba(0,200,100,.3);border-radius:10px;padding:1rem 1.2rem;margin-bottom:1.5rem;display:none;align-items:flex-start;gap:.8rem;">
+        <span style="font-size:1.1rem;flex-shrink:0;">✅</span>
+        <div>
+          <div style="font-size:.84rem;font-weight:700;color:#00c864;margin-bottom:.25rem;">Payment request submitted successfully!</div>
+          <div style="font-size:.76rem;color:var(--muted);display:flex;align-items:flex-start;gap:.4rem;">
+            <span title="Make sure your bank or payment method is set up correctly in Settings." style="cursor:help;font-size:.85rem;flex-shrink:0;">ℹ️</span>
+            <span>Ensure you have updated your <strong style="color:var(--white);">payment methods</strong> in Settings to receive your funds. Payments are processed <strong style="color:var(--white);">28th–30th</strong> monthly.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="tx-list reveal">
+        <div class="tx-header">Transaction History</div>
+        <div id="txList">
+          <!-- Populated by Firestore — shows empty state by default -->
+          <div id="txEmpty" class="onboarding-empty" style="padding:2.5rem 1.5rem;text-align:center;">
+            <div style="font-size:2rem;margin-bottom:.75rem;opacity:.7;">💰</div>
+            <div style="font-size:.88rem;font-weight:700;color:var(--white);margin-bottom:.4rem;">Your earnings will show up here</div>
+            <div style="font-size:.76rem;color:var(--muted);max-width:340px;margin:0 auto 1.2rem;line-height:1.6;">Every time a friend signs up with your referral link and completes the Foundation Course, you'll earn a commission that appears here.</div>
+            <button onclick="copyRefFromWallet()" style="background:var(--blue);color:#fff;border:none;border-radius:6px;padding:.55rem 1.2rem;font-family:'Poppins',sans-serif;font-size:.76rem;font-weight:700;cursor:pointer;">📋 Copy My Referral Link</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── HALL OF FAME TAB ─── -->
+    <div class="dash-panel" id="tab-hof">
+      <h2 style="font-size:1.1rem;font-weight:800;margin-bottom:.3rem;">Your Certificates</h2>
+      <p class="body-text" style="font-size:.84rem;margin-bottom:1.5rem;">Download and share your verified credentials.</p>
+
+      <!-- Loading state -->
+      <div id="certLoading" class="reveal" style="text-align:center;padding:2rem;color:var(--muted);font-size:.82rem;">
+        <div style="width:32px;height:32px;border:3px solid rgba(255,255,255,.1);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto .75rem;"></div>
+        Loading certificates…
+      </div>
+
+      <!-- Empty / locked state -->
+      <div id="certEmpty" class="onboarding-empty" style="display:none;padding:3rem 2rem;text-align:center;">
+        <div style="font-size:3rem;margin-bottom:1rem;opacity:.7;">🎓</div>
+        <div style="font-size:1rem;font-weight:800;color:var(--white);margin-bottom:.5rem;">Your certificates live here</div>
+        <div style="font-size:.82rem;color:var(--muted);max-width:400px;margin:0 auto 1.5rem;line-height:1.65;">Complete the Foundation Course to earn your first Sofe Node certificate — a verifiable credential you can download, share on LinkedIn, and showcase to employers worldwide.</div>
+        <div style="display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap;">
+          <button onclick="goToAcademy()" style="background:var(--blue);color:#fff;border:none;border-radius:7px;padding:.7rem 1.4rem;font-family:'Poppins',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;">Start Foundation Course →</button>
+          <button onclick="goToPayment()" style="background:transparent;color:var(--orange);border:1px solid var(--orange);border-radius:7px;padding:.7rem 1.4rem;font-family:'Poppins',sans-serif;font-size:.8rem;font-weight:700;cursor:pointer;">Apply for Course</button>
+        </div>
+      </div><!-- Certificate cards (populated by JS) -->
+      <div class="cert-grid reveal" id="certGrid" style="display:none;"></div>
+
+      <!-- Inline certificate preview -->
+      <div id="certPreviewWrap" style="display:none;margin-top:1.5rem;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem;flex-wrap:wrap;gap:.5rem;">
+          <span style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);">Certificate preview</span>
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+            <button onclick="downloadCertificate()" class="cert-btn cert-btn-dl">⬇ Download PDF</button>
+            <button onclick="shareLinkedIn()" class="cert-btn cert-btn-li">in LinkedIn</button>
+          </div>
+        </div>
+        <!-- The actual certificate rendered inline -->
+        <div id="inlineCert" style="width:100%;max-width:700px;margin:0 auto;aspect-ratio:1.414/1;background:#fffdf5;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,.4);position:relative;overflow:hidden;">
+          <div style="position:absolute;inset:10px;border:2px solid #C9A84C;border-radius:4px;pointer-events:none;z-index:2;"></div>
+          <div style="position:absolute;inset:16px;border:1px solid rgba(201,168,76,.3);border-radius:2px;pointer-events:none;z-index:2;"></div>
+          <!-- corners -->
+          <div style="position:absolute;top:6px;left:6px;width:24px;height:24px;border-top:3px solid #C9A84C;border-left:3px solid #C9A84C;z-index:3;"></div>
+          <div style="position:absolute;top:6px;right:6px;width:24px;height:24px;border-top:3px solid #C9A84C;border-right:3px solid #C9A84C;z-index:3;"></div>
+          <div style="position:absolute;bottom:6px;left:6px;width:24px;height:24px;border-bottom:3px solid #C9A84C;border-left:3px solid #C9A84C;z-index:3;"></div>
+          <div style="position:absolute;bottom:6px;right:6px;width:24px;height:24px;border-bottom:3px solid #C9A84C;border-right:3px solid #C9A84C;z-index:3;"></div>
+          <!-- Body -->
+          <div style="position:relative;z-index:1;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem 2.5rem;background:linear-gradient(135deg,#fffdf5,#fff9e8,#fffdf5);text-align:center;">
+            <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:7rem;font-weight:900;color:rgba(201,168,76,.05);pointer-events:none;white-space:nowrap;user-select:none;">SOFE</div>
+            <div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.3rem;">
+              <span style="font-size:1.1rem;">⬡</span>
+              <span style="font-size:.9rem;font-weight:900;color:#1a1a2e;letter-spacing:.06em;">SOFE <span style="color:#C9A84C;">NODE</span></span>
+            </div>
+            <div style="font-size:.45rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:rgba(201,168,76,.5);margin-bottom:.8rem;">Africa's Distribution Network for Web3</div>
+            <div style="font-size:.45rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:rgba(100,80,20,.45);margin-bottom:.2rem;">Certificate of Completion</div>
+            <div id="previewCourseTitle" style="font-size:1rem;font-weight:800;color:#1a1a2e;margin-bottom:.6rem;line-height:1.2;">—</div>
+            <div style="font-size:.5rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:rgba(100,80,20,.4);margin-bottom:.2rem;">This certifies that</div>
+            <div id="previewName" style="font-size:1.5rem;font-weight:800;color:#C9A84C;margin-bottom:.15rem;">—</div>
+            <div style="width:50%;max-width:200px;height:1px;background:linear-gradient(90deg,transparent,#C9A84C,transparent);margin:0 auto .6rem;"></div>
+            <div id="previewDesc" style="font-size:.45rem;color:rgba(50,40,10,.5);max-width:340px;line-height:1.6;margin-bottom:.9rem;">has successfully completed all required modules, assessments, and practical exercises and demonstrated proficiency in blockchain fundamentals and Web3 technologies.</div>
+            <div style="display:flex;justify-content:space-between;align-items:flex-end;width:100%;gap:.5rem;">
+              <div style="text-align:center;flex:1;">
+                <div style="font-family:Georgia,serif;font-style:italic;font-size:.7rem;color:rgba(100,80,20,.35);margin-bottom:.15rem;">Shedrack Ekpegbue</div>
+                <div style="width:90px;height:1px;background:rgba(100,80,20,.25);margin:0 auto .2rem;"></div>
+                <div style="font-size:.42rem;font-weight:700;color:#1a1a2e;">Shedrack Ekpegbue</div>
+                <div style="font-size:.38rem;color:rgba(100,80,20,.4);">Founder & CEO</div>
+              </div>
+              <div style="text-align:center;flex:0 0 auto;">
+                <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#C9A84C,#F0D080);display:flex;align-items:center;justify-content:center;margin:0 auto .15rem;font-size:1.1rem;">🏅</div>
+                <div style="font-size:.38rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(100,80,20,.4);">Verified</div>
+              </div>
+              <div style="text-align:center;flex:1;">
+                <div id="previewDateScript" style="font-family:Georgia,serif;font-style:italic;font-size:.7rem;color:rgba(100,80,20,.35);margin-bottom:.15rem;">—</div>
+                <div style="width:90px;height:1px;background:rgba(100,80,20,.25);margin:0 auto .2rem;"></div>
+                <div id="previewDate" style="font-size:.42rem;font-weight:700;color:#1a1a2e;">—</div>
+                <div style="font-size:.38rem;color:rgba(100,80,20,.4);">Date of Issue</div>
+              </div>
+            </div>
+            <div id="previewCertId" style="font-size:.38rem;letter-spacing:.1em;color:rgba(100,80,20,.3);margin-top:.5rem;">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── LEADERBOARD TAB ─── -->
+    <div class="dash-panel" id="tab-leaderboard">
+      <h2 style="font-size:1.1rem;font-weight:800;margin-bottom:.3rem;">Leaderboard.</h2>
+      <p class="body-text" style="font-size:.84rem;color:var(--muted);margin-bottom:.3rem;">See how you rank among fellow Sofians in XP, commission, and validated referrals — <strong style="color:var(--orange);">this month</strong>.</p>
+      <p id="lbPeriodLabel" style="font-size:.68rem;color:var(--muted);opacity:.7;margin-bottom:1.4rem;">Loading current period…</p>
+
+      <!-- Sub-tabs -->
+      <div class="lb-tabs" style="margin-bottom:1.4rem;">
+        <button class="lb-tab active" id="lbTabXp" onclick="switchLbTab('xp',this)">⚡ XP Ranking</button>
+        <button class="lb-tab" id="lbTabComm" onclick="switchLbTab('commission',this)">💰 Commission</button>
+        <button class="lb-tab" id="lbTabReferral" onclick="switchLbTab('referral',this)">🤝 Validated Referrals</button>
+      </div>
+
+      <!-- Your rank callout -->
+      <div id="lbMyRank" style="display:none;background:linear-gradient(135deg,rgba(255,138,0,.08),rgba(20,40,255,.06));border:1px solid rgba(255,138,0,.3);border-radius:10px;padding:.85rem 1.1rem;margin-bottom:1.2rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+        <div style="font-size:1.6rem;line-height:1;flex-shrink:0;" id="lbMyRankIcon">🌱</div>
+        <div style="flex:1;min-width:140px;">
+          <div style="font-size:.58rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:.12rem;">Your Rank</div>
+          <div id="lbMyRankText" style="font-size:.95rem;font-weight:800;color:var(--white);">#— among all Sofians</div>
+          <div id="lbMyRankSub" style="font-size:.68rem;color:var(--muted);margin-top:.1rem;">Loading…</div>
+        </div>
+        <div id="lbMyRankBadge" style="font-size:.62rem;font-weight:700;background:rgba(255,138,0,.1);color:var(--orange);border:1px solid rgba(255,138,0,.25);border-radius:20px;padding:.3rem .8rem;"></div>
+      </div>
+
+      <!-- XP leaderboard table -->
+      <div id="lbXpPanel" class="lb-section">
+        <div style="background:var(--panel);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+          <div style="padding:.85rem 1rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+            <span style="font-size:.78rem;font-weight:700;color:var(--white);">Top Sofians by XP</span>
+            <span style="font-size:.65rem;color:var(--muted);">Top 20</span>
+          </div>
+          <div id="lbXpList" style="min-height:120px;">
+            <div style="text-align:center;padding:2rem;color:var(--muted);font-size:.78rem;">⏳ Loading leaderboard…</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Commission leaderboard table -->
+      <div id="lbCommPanel" class="lb-section" style="display:none;">
+        <div style="background:var(--panel);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+          <div style="padding:.85rem 1rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+            <span style="font-size:.78rem;font-weight:700;color:var(--white);">Top Earners by Commission</span>
+            <span style="font-size:.65rem;color:var(--muted);">Top 20</span>
+          </div>
+          <div id="lbCommList" style="min-height:120px;">
+            <div style="text-align:center;padding:2rem;color:var(--muted);font-size:.78rem;">⏳ Loading leaderboard…</div>
+          </div>
+        </div>
+        <p style="font-size:.65rem;color:var(--muted);margin-top:.75rem;opacity:.7;">💡 Commission ranking is based on commission earned this month.</p>
+      </div>
+
+      <!-- Validated Referral leaderboard table -->
+      <div id="lbReferralPanel" class="lb-section" style="display:none;">
+        <div style="background:var(--panel);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+          <div style="padding:.85rem 1rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+            <span style="font-size:.78rem;font-weight:700;color:var(--white);">Top Referrers This Month</span>
+            <span style="font-size:.65rem;color:var(--muted);">Top 20</span>
+          </div>
+          <div id="lbReferralList" style="min-height:120px;">
+            <div style="text-align:center;padding:2rem;color:var(--muted);font-size:.78rem;">⏳ Loading leaderboard…</div>
+          </div>
+        </div>
+        <p style="font-size:.65rem;color:var(--muted);margin-top:.75rem;opacity:.7;">💡 A referral counts once the person you referred completes the Foundation Course.</p>
+      </div>
+    </div>
+
+    <!-- ─── PROFILE & SETTINGS TAB ─── -->
+    <div class="dash-panel" id="tab-profile">
+      <h2 style="font-size:1.1rem;font-weight:800;margin-bottom:.3rem;">Profile &amp; Settings.</h2>
+      <p class="body-text" style="font-size:.84rem;margin-bottom:1.5rem;">Manage your personal information, bank details, and notification preferences.</p>
+
+      <!-- Avatar / name summary -->
+      <div class="profile-avatar-row reveal">
+        <div class="profile-avatar-lg" id="profileAvatarLg">
+          <span id="profileAvatarInitials">—</span>
+          <span class="avatar-edit-btn" title="Change photo" onclick="alert('Photo upload coming soon.')">✏️</span>
+        </div>
+        <div class="profile-meta">
+          <h3 id="profileMetaName">Loading…</h3>
+          <p id="profileMetaEmail">—</p>
+          <p id="profileMetaMeta" style="margin-top:.3rem;font-size:.7rem;color:rgba(20,40,255,0.3);">Member since — &nbsp;·&nbsp; Referral ID: <strong style="color:rgba(20,40,255,0.3)">—</strong></p>
+        </div>
+      </div>
+
+      <!-- Personal Information (read-only) -->
+      <div class="form-card reveal">
+        <div class="profile-section-title">Personal Information <span style="font-size:.6rem;font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0;margin-left:.5rem;">· Cannot be edited. Contact support to update.</span></div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">First Name</label>
+            <input class="form-input" type="text" id="pFieldFirstName" placeholder="Loading..." disabled />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Last Name</label>
+            <input class="form-input" type="text" id="pFieldLastName"  placeholder="Loading..." disabled />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email Address</label>
+            <input class="form-input" type="email" id="pFieldEmail" placeholder="Loading..." disabled />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Phone Number</label>
+            <input class="form-input" type="tel" id="pFieldPhone" placeholder="Loading..." disabled />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Country</label>
+            <input class="form-input" type="text" id="pFieldCountry" placeholder="Loading..." disabled />
+          </div>
+          <div class="form-group full">
+            <label class="form-label">State / Location</label>
+            <input class="form-input" type="text" id="pFieldState" placeholder="Loading..." disabled />
+          </div>
+        </div>
+        <p style="font-size:.65rem;color:var(--muted);margin-top:.8rem;opacity:.6;">🔒 These fields are locked for security. To update your personal details, please contact <strong style="color:var(--white);"><a href="mailto:support@sofegroup.com" style="color:var(--white);">support@sofegroup.com</a></strong>.</p>
+      </div>
+
+      <!-- Select Node (Institution) -->
+      <div class="form-card reveal">
+        <div class="profile-section-title">Select Institution (Chapter)</div>
+        <p style="font-size:.78rem;color:var(--muted);margin-bottom:1.2rem;">Select your institution to connect with your community, access local events, and be assigned to your Chapter Head.</p>
+        <div class="form-group" style="max-width:480px;">
+          <label class="form-label">Your Institution</label>
+          <input class="form-input" type="text" id="profileNodeInput" list="profileChapterList" placeholder="Type or Select your institution..." autocomplete="off" />
+          <datalist id="profileChapterList">
+            <!-- Populated dynamically from backend Chapters collection -->
+          </datalist>
+          <span class="form-hint">Type to search. If your institution isn't listed, type its full name.</span>
+        </div>
+        <div class="form-actions" style="justify-content:flex-start;margin-top:1rem;">
+          <button class="btn-primary" style="font-size:.76rem;padding:.55rem 1.4rem;" id="saveNodeBtn" onclick="saveNode()">Save Institution</button>
+        </div>
+      </div>
+
+      <!-- My Chapter -->
+      <div class="form-card reveal" id="myChapterCard" style="display:none;">
+        <div class="profile-section-title">My Chapter</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.85rem;">
+          <div>
+            <div style="font-size:.95rem;font-weight:700;color:var(--white);" id="myChapterName">—</div>
+            <p style="font-size:.72rem;color:var(--muted);margin-top:.2rem;">Your local Sofe Node community on WhatsApp.</p>
+          </div>
+          <a id="myChapterWhatsappBtn" href="#" target="_blank" rel="noopener noreferrer"
+             style="display:inline-flex;align-items:center;gap:.5rem;background:#25D366;color:#062f1a;
+                    text-decoration:none;font-weight:700;font-size:.8rem;padding:.7rem 1.3rem;
+                    border-radius:50px;flex-shrink:0;">
+            💬 WhatsApp Community
+          </a>
+        </div>
+      </div>
+
+      <!-- Sign-in Methods (Password + Google) -->
+      <div class="form-card reveal">
+        <div class="profile-section-title" style="display:flex;align-items:center;justify-content:space-between;">
+          <span>Sign-in Methods</span>
+          <span id="signInMethodsBadge" style="font-size:.62rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);"></span>
+        </div>
+        <p style="font-size:.78rem;color:var(--muted);margin-bottom:1.2rem;">Manage how you sign in to Sofe Node. Add multiple methods so you always have access.</p>
+
+        <!-- Provider list -->
+        <div id="signInMethodsList" style="display:flex;flex-direction:column;gap:.6rem;margin-bottom:1.2rem;">
+          <!-- Populated by JS -->
+        </div>
+
+        <!-- Add password section (shown for Google-only users) -->
+        <div id="addPasswordSection" style="display:none;background:rgba(20,40,255,.05);border:1px solid rgba(20,40,255,.2);border-radius:8px;padding:1rem;">
+          <div style="font-weight:700;font-size:.85rem;margin-bottom:.4rem;">➕ Add a password to your account</div>
+          <p style="font-size:.75rem;color:var(--muted);margin-bottom:1rem;line-height:1.55;">Currently you can only sign in with Google. Set a password as a backup so you can access your account even if Google is unavailable.</p>
+          <button class="btn-primary" style="font-size:.78rem;padding:.55rem 1.4rem;" onclick="sendPasswordResetForCurrentUser()">Send password setup link →</button>
+          <p style="font-size:.66rem;color:var(--muted);margin-top:.8rem;">We'll email you a link to set your password. After that, you can sign in with EITHER Google or your password.</p>
+        </div>
+
+        <!-- Change password section (shown for users who already have password) -->
+        <div id="changePasswordSection" style="display:none;">
+          <div class="profile-section-title" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;font-size:.8rem;" onclick="togglePasswordSection()">
+            Change Password
+            <span id="pwdChevron" style="font-size:.7rem;color:var(--muted);transition:transform .25s;">▼</span>
+          </div>
+          <div id="pwdSection" style="display:none;margin-top:1rem;">
+            <div id="pwdAlert" style="display:none;padding:.7rem 1rem;border-radius:8px;margin-bottom:1rem;font-size:.78rem;"></div>
+            <div class="form-grid">
+              <div class="form-group full">
+                <label class="form-label">Current Password</label>
+                <input class="form-input" type="password" id="oldPwd" placeholder="Enter current password" autocomplete="current-password" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">New Password</label>
+                <input class="form-input" type="password" id="newPwd" placeholder="Min. 8 characters" autocomplete="new-password" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Repeat New Password</label>
+                <input class="form-input" type="password" id="repeatPwd" placeholder="Repeat new password" autocomplete="new-password" />
+              </div>
+            </div>
+            <div class="form-actions" style="justify-content:space-between;flex-wrap:wrap;gap:.8rem;">
+              <button class="btn-ghost" style="font-size:.74rem;" onclick="sendPasswordResetForCurrentUser()">Forgot password? Send reset link →</button>
+              <div style="display:flex;gap:.8rem;">
+                <button class="btn-ghost" onclick="closePasswordSection()">Cancel</button>
+                <button class="btn-primary" id="updatePwdBtn" style="font-size:.76rem;padding:.55rem 1.4rem;" onclick="updateUserPassword()">Update Password</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Connect Wallet -->
+      <div class="form-card reveal">
+        <div class="profile-section-title">Connect Wallet</div>
+        <p style="font-size:.78rem;color:var(--muted);margin-bottom:1.2rem;">Link your Web3 wallet to your Sofian profile to unlock on-chain features, receive token rewards, and verify credentials on-chain.</p>
+        <div id="walletConnected" style="display:none;background:rgba(0,200,100,.08);border:1px solid rgba(0,200,100,.2);border-radius:8px;padding:.9rem 1.2rem;font-size:.82rem;color:#00c864;margin-bottom:1rem;">
+          ✓ Wallet connected: <strong id="walletAddress" style="font-family:monospace;font-size:.78rem;"></strong>
+          <button onclick="disconnectWallet()" style="background:transparent;border:none;color:rgba(200,215,240,.4);font-size:.7rem;cursor:pointer;margin-left:.8rem;text-decoration:underline;">Disconnect</button>
+        </div>
+        <div id="walletBtns" style="display:flex;gap:.8rem;flex-wrap:wrap;">
+          <button class="btn-primary" style="font-size:.76rem;padding:.55rem 1.4rem;" onclick="connectWallet('MetaMask')">🦊 Connect MetaMask</button>
+          <button class="btn-outline" style="font-size:.76rem;padding:.55rem 1.4rem;" onclick="connectWallet('WalletConnect')">🔗 WalletConnect</button>
+          <button class="btn-ghost" style="font-size:.76rem;" onclick="connectWallet('Coinbase')">🔵 Coinbase Wallet</button>
+        </div>
+      </div>
+
+      <!-- Bank / Payout Details -->
+      <div class="form-card reveal">
+        <div class="profile-section-title">Bank &amp; Payout Details</div>
+        <p style="font-size:.78rem;color:var(--muted);margin-bottom:1rem;">Your payout will be sent to this account. Minimum withdrawal: <strong style="color:var(--white);">₦10,000</strong>. Processed <strong style="color:var(--white);">28th–30th</strong> monthly. <span title="Payouts are processed monthly between the 28th–30th after your withdrawal request is submitted." style="cursor:help;">ℹ️</span></p>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Bank Name</label>
+            <select class="form-input" style="cursor:pointer;">
+              <option>GTBank</option>
+              <option>Access Bank</option>
+              <option>First Bank</option>
+              <option>Zenith Bank</option>
+              <option>UBA</option>
+              <option>Kuda Bank</option>
+              <option>OPay</option>
+              <option>PalmPay</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Account Number</label>
+            <input class="form-input" type="text" id="bankAccNumber" value="" placeholder="10-digit account number" maxlength="10" />
+            <span id="bankAccHint" class="form-hint"></span>
+          </div>
+          <div class="form-group full">
+            <label class="form-label">Account Name</label>
+            <input class="form-input" type="text" id="bankAccName" value="" disabled />
+            <span class="form-hint">Auto-filled from your registered name — cannot be edited.</span>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-ghost">Cancel</button>
+          <button class="btn-primary" style="font-size:.76rem;padding:.55rem 1.4rem;" onclick="alert('Bank details updated successfully. Next payout will go to the new account.')">Update Bank Details</button>
+        </div>
+      </div>
+
+      <!-- Notification Preferences -->
+      <div class="form-card reveal">
+        <div class="profile-section-title">Notification Preferences</div>
+        <div class="notif-row">
+          <div>
+            <div class="notif-label">Referral Signups</div>
+            <div class="notif-desc">Get notified when someone signs up using your referral link.</div>
+          </div>
+          <label class="toggle"><input type="checkbox" checked /><span class="toggle-slider"></span></label>
+        </div>
+        <div class="notif-row">
+          <div>
+            <div class="notif-label">Commission Earned</div>
+            <div class="notif-desc">Email alert when a referral commission is credited to your wallet.</div>
+          </div>
+          <label class="toggle"><input type="checkbox" checked /><span class="toggle-slider"></span></label>
+        </div>
+        <div class="notif-row">
+          <div>
+            <div class="notif-label">Course &amp; Module Updates</div>
+            <div class="notif-desc">Notifications about new modules, course releases, and deadlines.</div>
+          </div>
+          <label class="toggle"><input type="checkbox" checked /><span class="toggle-slider"></span></label>
+        </div>
+        <div class="notif-row">
+          <div>
+            <div class="notif-label">Payout Processed</div>
+            <div class="notif-desc">Email confirmation when your withdrawal has been sent.</div>
+          </div>
+          <label class="toggle"><input type="checkbox" checked /><span class="toggle-slider"></span></label>
+        </div>
+        <div class="notif-row">
+          <div>
+            <div class="notif-label">Sofe Node News &amp; Announcements</div>
+            <div class="notif-desc">General newsletters, events (BCE), and platform updates.</div>
+          </div>
+          <label class="toggle"><input type="checkbox" /><span class="toggle-slider"></span></label>
+        </div>
+        <div class="form-actions" style="margin-top:1rem;">
+          <button class="btn-primary" style="font-size:.76rem;padding:.55rem 1.4rem;" onclick="alert('Notification preferences saved.')">Save Preferences</button>
+        </div>
+      </div>
+
+      <!-- Danger Zone -->
+      <div class="danger-zone reveal">
+        <h4>⚠️ Danger Zone</h4>
+        <p>Deleting your account is permanent and cannot be undone. All your progress, earnings, and certificates will be lost.</p>
+        <button class="btn-danger" onclick="if(confirm('Are you sure? This action cannot be undone. All your data will be permanently deleted.')) alert('Account deletion request submitted. Our team will contact you within 48 hours.')">Delete My Account</button>
+      </div>
+    </div>
+
+  </main>
+</div>
+</div>
+
+<footer>
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <a href="/" class="nav-logo" style="margin-bottom:.6rem;">
+        <img src="./images/Nodes/SofeLogoHome.png" class="logo-img" alt="Sofe Node Logo" />
+  </a>
+      <p>A Sofe Group company. Empowering the next generation to lead Africa's tech revolution.</p>
+      <div class="social-row">
+         <a class="social-btn" href="http://x.com/sofenode" title="X/Twitter" target="_blank"> <img src="./images/Social/SofeNodeX(twitter).png" alt="X/Twitter"></a> 
+        <a class="social-btn" href="https://www.linkedin.com/company/sofe-group" title="LinkedIn" target="_blank"> <img src="./images/Social/SofeNodeLInkedIn.png" alt="LinkedIn"></a>
+        <a class="social-btn" href="http://youtube.com/@sofegroupofficial" title="YouTube" target="_blank"> <img src="./images/Social/SofeNodeYoutubelogo.png" alt="YouTube"></a>
+        <a class="social-btn" href="https://www.facebook.com/profile.php?id=100063995682203&mibextid=ZbWKwL" title="Facebook" target="_blank"> <img src="./images/Social/SofeNodeFacebooklogo.png" alt="Facebook"></a>
+        <a class="social-btn" href="https://t.me/sofegroupofficial" title="Telegram" target="_blank"> <img src="./images/Social/SofeNodeTelegram.png" alt="Telegram"></a>
+      </div>
+    </div>
+    <div class="footer-col">
+      <h4>Quick Links</h4>
+      <ul>
+        <li><a href="./about.html">About Us</a></li>
+        <li><a href="./for-ecosystems.html">For Ecosystems</a></li>
+        <li><a href="./for-talent.html">For Talent</a></li>
+        <li><a href="./bce.html">BCE</a></li>
+        <li><a href="./blog.html">Blog</a></li>
+        <li><a href="./dashboard.html">Dashboard</a></li>
+        <li><a href="#">Verify Certificate</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Legal</h4>
+      <ul>
+        <li><a href="#">Privacy Policy</a></li>
+        <li><a href="#">Terms of Service</a></li>
+        <li><a href="#">Affiliate Terms</a></li>
+        <li><a href="#">Cookie Policy</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Web3 Job Alerts</h4>
+      <p style="font-size:.85rem;color:var(--muted);margin-bottom:.5rem;font-weight:300;">Get the latest Web3 opportunities in Africa, straight to your inbox.</p>
+      <div class="newsletter-row">
+        <input type="email" class="newsletter-input" placeholder="your@email.com" />
+        <button class="newsletter-btn">Join</button>
+      </div>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>&copy; 2025 Sofe Node &middot; A Sofe Group Company &middot; All rights reserved.</p>
+    <p style="color:var(--orange);">Africa's Node for Web3 Growth.</p>
+  </div>
+</footer>
+
+<script type="module">
+import { auth, db, onAuthStateChanged, signOut,
+         sendEmailVerification, reload, sendPasswordResetEmail,
+         updatePassword, EmailAuthProvider, linkWithCredential,
+         reauthenticateWithCredential, fetchSignInMethodsForEmail,
+         doc, getDoc, getDocs, updateDoc, setDoc, addDoc, serverTimestamp,
+         collection, query, where, orderBy, functions, httpsCallable, limit }
+  from './firebase.js';
+
+// ── Sign-in methods management ──────────────────────────────
+window.refreshSignInMethods = async function() {
+  if (!auth.currentUser) return;
+  try {
+    const user = auth.currentUser;
+    const providers = (user.providerData || []).map(p => p.providerId);
+
+    const hasPassword = providers.includes('password');
+    const hasGoogle   = providers.includes('google.com');
+
+    const list = document.getElementById('signInMethodsList');
+    const badge = document.getElementById('signInMethodsBadge');
+    const addPwd = document.getElementById('addPasswordSection');
+    const changePwd = document.getElementById('changePasswordSection');
+
+    if (!list) return;
+
+    const items = [];
+    if (hasGoogle) {
+      items.push('<div style="display:flex;align-items:center;gap:.7rem;padding:.7rem .9rem;background:rgba(0,200,100,.05);border:1px solid rgba(0,200,100,.2);border-radius:8px;"><span style="font-size:1.1rem;">🔐</span><div style="flex:1;"><div style="font-size:.8rem;font-weight:600;">Google Sign-In</div><div style="font-size:.66rem;color:var(--muted);">' + (user.email || '—') + '</div></div><span style="font-size:.62rem;color:#00c864;font-weight:700;">✓ ACTIVE</span></div>');
+    }
+    if (hasPassword) {
+      items.push('<div style="display:flex;align-items:center;gap:.7rem;padding:.7rem .9rem;background:rgba(20,40,255,.05);border:1px solid rgba(20,40,255,.2);border-radius:8px;"><span style="font-size:1.1rem;">🔑</span><div style="flex:1;"><div style="font-size:.8rem;font-weight:600;">Email & Password</div><div style="font-size:.66rem;color:var(--muted);">' + (user.email || '—') + '</div></div><span style="font-size:.62rem;color:#00c864;font-weight:700;">✓ ACTIVE</span></div>');
+    }
+    if (items.length === 0) {
+      items.push('<div style="padding:.7rem .9rem;color:var(--muted);font-size:.78rem;">No sign-in methods detected.</div>');
+    }
+    list.innerHTML = items.join('');
+
+    if (badge) {
+      if (hasPassword && hasGoogle) badge.textContent = '2 methods active';
+      else if (hasPassword) badge.textContent = 'Password only';
+      else if (hasGoogle) badge.textContent = 'Google only';
+      else badge.textContent = '';
+    }
+
+    if (addPwd) addPwd.style.display = (hasGoogle && !hasPassword) ? 'block' : 'none';
+    if (changePwd) changePwd.style.display = hasPassword ? 'block' : 'none';
+  } catch (err) { console.error('[AUTH-METHODS] Error:', err); }
+};
+
+window.sendPasswordResetForCurrentUser = async function() {
+  if (!auth.currentUser || !auth.currentUser.email) { alert('No email on file. Please contact support.'); return; }
+  const email = auth.currentUser.email;
+  if (!confirm('Send password reset link to ' + email + '?\n\nFor Google-only accounts, this will let you ADD a password (Google still works after).')) return;
+  try {
+    await sendPasswordResetEmail(auth, email, { url: window.location.origin + '/login.html', handleCodeInApp: false });
+    alert('✓ Reset link sent to ' + email + '.\n\nCheck your inbox (and spam folder). Click the link to set your password.');
+  } catch (err) {
+    let msg = err.message || err.code;
+    if (err.code === 'auth/too-many-requests') msg = 'Too many requests. Please wait a few minutes.';
+    alert('Could not send reset email: ' + msg);
+  }
+};
+
+window.updateUserPassword = async function() {
+  const oldPwd    = document.getElementById('oldPwd').value;
+  const newPwd    = document.getElementById('newPwd').value;
+  const repeatPwd = document.getElementById('repeatPwd').value;
+  const alertEl   = document.getElementById('pwdAlert');
+  const btn       = document.getElementById('updatePwdBtn');
+
+  function showPwdAlert(msg, kind) {
+    if (!alertEl) { alert(msg); return; }
+    alertEl.style.display = 'block'; alertEl.textContent = msg;
+    if (kind === 'success') {
+      alertEl.style.background = 'rgba(0,200,100,.1)'; alertEl.style.border = '1px solid rgba(0,200,100,.25)'; alertEl.style.color = '#00c864';
+    } else {
+      alertEl.style.background = 'rgba(255,80,80,.1)'; alertEl.style.border = '1px solid rgba(255,80,80,.25)'; alertEl.style.color = '#ff7070';
+    }
+  }
+
+  if (!oldPwd) { showPwdAlert('Please enter your current password.', 'error'); return; }
+  if (newPwd.length < 8) { showPwdAlert('New password must be at least 8 characters.', 'error'); return; }
+  if (newPwd !== repeatPwd) { showPwdAlert('New passwords do not match.', 'error'); return; }
+  if (newPwd === oldPwd) { showPwdAlert('New password must be different from current password.', 'error'); return; }
+
+  btn.disabled = true; btn.textContent = 'Updating…';
+
+  try {
+    const user = auth.currentUser;
+    const credential = EmailAuthProvider.credential(user.email, oldPwd);
+    await reauthenticateWithCredential(user, credential);
+    await updatePassword(user, newPwd);
+    showPwdAlert('✓ Password updated successfully.', 'success');
+    document.getElementById('oldPwd').value = ''; document.getElementById('newPwd').value = ''; document.getElementById('repeatPwd').value = '';
+    setTimeout(() => { closePasswordSection(); }, 2500);
+  } catch (err) {
+    let msg = err.message;
+    if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') msg = 'Current password is incorrect.';
+    else if (err.code === 'auth/weak-password') msg = 'New password is too weak. Use at least 8 characters with mixed case and numbers.';
+    else if (err.code === 'auth/requires-recent-login') msg = 'For security, please log out and log back in, then try again.';
+    showPwdAlert(msg, 'error');
+  } finally { btn.disabled = false; btn.textContent = 'Update Password'; }
+};
+
+window.closePasswordSection = function() {
+  const sec = document.getElementById('pwdSection');
+  const chev = document.getElementById('pwdChevron');
+  const alertEl = document.getElementById('pwdAlert');
+  if (sec) sec.style.display = 'none';
+  if (chev) chev.style.transform = 'rotate(0deg)';
+  if (alertEl) alertEl.style.display = 'none';
+  const f1 = document.getElementById('oldPwd');    if (f1) f1.value = '';
+  const f2 = document.getElementById('newPwd');    if (f2) f2.value = '';
+  const f3 = document.getElementById('repeatPwd'); if (f3) f3.value = '';
+};
+
+window.togglePasswordSection = function() {
+  const sec = document.getElementById('pwdSection');
+  const chev = document.getElementById('pwdChevron');
+  if (!sec) return;
+  const isOpen = sec.style.display === 'block';
+  sec.style.display = isOpen ? 'none' : 'block';
+  if (chev) chev.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+};
+
+let _dashChaptersMap = {};
+(async function loadDashChapterOptions() {
+  try {
+    const snap = await getDocs(query(collection(db, 'chapters'), where('active', '==', true)));
+    const datalist = document.getElementById('profileChapterList');
+    if(!datalist) return;
+    const chapters = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    chapters.forEach(c => {
+      _dashChaptersMap[c.id] = { name: c.name, whatsapp_link: c.whatsapp_link };
+      const opt = document.createElement('option');
+      opt.value = c.name;
+      datalist.appendChild(opt);
+    });
+  } catch (e) {}
+})();
+
+window.saveNode = async function() {
+  const btn = document.getElementById('saveNodeBtn');
+  const inputVal = document.getElementById('profileNodeInput').value.trim();
+  if(!inputVal) { alert('Please enter an institution.'); return; }
+  
+  btn.disabled = true; btn.textContent = 'Saving...';
+  try {
+    let chapterId = null;
+    let chapterName = inputVal;
+    
+    for (const [id, data] of Object.entries(_dashChaptersMap)) {
+      if (data.name.toLowerCase() === inputVal.toLowerCase()) {
+        chapterId = id; chapterName = data.name; break;
+      }
+    }
+    await updateDoc(doc(db, 'users', auth.currentUser.uid), {
+      node: chapterId || 'other',
+      node_label: chapterName,
+      chapter_id: chapterId,
+      chapter_name: chapterName,
+      updated_at: serverTimestamp()
+    });
+    alert('Institution updated successfully!');
+    setTimeout(() => location.reload(), 500);
+  } catch(e) {
+    alert('Error updating institution: ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Save Institution';
+  }
+};
+
+window._auth    = auth;
+window._db      = db;
+window._signOut = signOut;
+
+// ── My Courses — Phase 3B ────────────────────────────────────────────────────
+async function renderMyCourses(user, enrolments, foundationPct, foundationDone) {
+  var loadingEl = document.getElementById('myCoursesLoading');
+  var emptyEl   = document.getElementById('myCoursesEmpty');
+  var gridEl    = document.getElementById('myCoursesGrid');
+  var browseEl  = document.getElementById('browseMoreCard');
+
+  if (loadingEl) loadingEl.style.display = 'none';
+
+  if (enrolments.length === 0) {
+    if (emptyEl) emptyEl.style.display = '';
+    if (gridEl)  gridEl.style.display = 'none';
+    if (browseEl) browseEl.style.display = 'none';
+    await loadFeaturedCourses();
+    return;
+  }
+
+  if (emptyEl) emptyEl.style.display = 'none';
+  if (gridEl)  gridEl.style.display = 'grid';
+  if (browseEl) browseEl.style.display = '';
+
+  var hasCbie      = enrolments.some(e => e.course_id === 'cbie' || e.tier === 'executive');
+  var hasFoundation= enrolments.some(e => e.course_id === 'foundation' || !e.course_id);
+  
+  if (hasCbie && !hasFoundation) {
+    enrolments = [{
+      id: '__foundation_synthetic__',
+      course_id: 'foundation',
+      status: 'active',
+      progress_pct: foundationPct,
+      completed_at: foundationDone ? true : null,
+      _synthetic: true
+    }].concat(enrolments);
+  }
+
+  var courseIds = enrolments.map(e => e.course_id || 'foundation').filter(Boolean);
+  var coursesData = {};
+  for (var i = 0; i < courseIds.length; i++) {
+    try {
+      var cs = await getDoc(doc(db, 'courses', courseIds[i]));
+      if (cs.exists()) coursesData[courseIds[i]] = cs.data();
+    } catch(e) {}
+  }
+
+  if (gridEl) {
+    gridEl.innerHTML = enrolments.map(enrol => {
+      var cid = enrol.course_id || 'foundation';
+      var course = coursesData[cid] || {};
+      var tier = course.tier || (cid === 'foundation' ? 'foundation' : 'track');
+      var pct = enrol.progress_pct || 0;
+      var done = !!enrol.completed_at;
+      var isLocked = tier === 'track' && !foundationDone;
+
+      var KNOWN_TITLES = { 'foundation': 'Blockchain & Cryptocurrency Foundation', 'cbie': 'Certified Blockchain Industry Expert (CBIE)' };
+      var title = course.title || KNOWN_TITLES[cid] || 'Untitled Course';
+      var desc  = course.description || '';
+      var icon  = course.icon || (tier === 'foundation' ? '🌱' : tier === 'executive' ? '👑' : '◆');
+      var tierLabel = tier === 'foundation' ? '★ Foundation' : tier === 'executive' ? '👑 Executive' : '◆ Career Track';
+
+      var status = done ? 'completed' : isLocked ? 'locked' : 'in-progress';
+      var ctaText, ctaHref, ctaClass = 'mc-cta';
+      if (done) { ctaText = 'Review Course →'; ctaHref = './course-view.html?course=' + encodeURIComponent(cid); }
+      else if (isLocked) { ctaText = '🔒 Complete Foundation First'; ctaHref = '#'; ctaClass = 'mc-cta locked-cta'; }
+      else if (enrol._synthetic) { ctaText = pct > 0 ? 'Continue Foundation →' : 'Start Foundation Course →'; ctaHref = './course-view.html?course=foundation'; }
+      else if (pct === 0) { ctaText = 'Start Learning →'; ctaHref = './course-view.html?course=' + encodeURIComponent(cid); }
+      else { ctaText = 'Continue Learning →'; ctaHref = './course-view.html?course=' + encodeURIComponent(cid); }
+
+      var meta = [];
+      if (course.module_count) meta.push('<span>📚 ' + course.module_count + ' modules</span>');
+      if (course.duration_weeks) meta.push('<span>📅 ' + course.duration_weeks + ' weeks</span>');
+
+      var displayPct = isLocked ? foundationPct : pct;
+      var progressLabel = enrol._synthetic ? 'Your Foundation Progress' : isLocked ? 'Foundation Progress' : (done ? 'Completed' : 'Progress');
+
+      var scholarshipBadge = enrol.scholarship_percentage ? '<span style="display:inline-flex;align-items:center;gap:.25rem;background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.3);border-radius:4px;font-size:.52rem;font-weight:700;letter-spacing:.06em;padding:.2rem .5rem;margin-left:.5rem;">' + enrol.scholarship_percentage + '% Scholarship</span>' : '';
+      var syntheticNote = enrol._synthetic ? '<div style="background:rgba(20,40,255,.08);border:1px solid rgba(20,40,255,.25);border-radius:6px;padding:.55rem .75rem;margin-bottom:.75rem;font-size:.72rem;color:#6b8cff;line-height:1.55;">📋 <strong>Required first:</strong> Complete this Foundation Course to unlock your CBIE programme and earn your first certificate.</div>' : '';
+      var includesFoundation = (!enrol._synthetic && (tier === 'executive' || cid === 'cbie')) ? '<div style="font-size:.65rem;color:var(--muted);margin-bottom:.6rem;"><span style="color:#6b8cff;">★</span> Includes Foundation Course — complete it first to unlock CBIE content.</div>' : '';
+
+      return '<article class="mc-card tier-' + tier + (isLocked ? ' locked' : '') + (enrol._synthetic ? ' tier-foundation' : '') + '">' +
+        (done ? '<div class="mc-completed-badge qe">✓ Completed</div>' : '') +
+        (isLocked ? '<div class="mc-lock-overlay">🔒 Locked</div>' : '') +
+        (enrol._synthetic ? '<div style="position:absolute;top:1rem;right:1rem;font-size:.55rem;font-weight:700;letter-spacing:.08em;background:rgba(20,40,255,.15);color:#6b8cff;border:1px solid rgba(20,40,255,.3);padding:.2rem .5rem;border-radius:4px;">★ START HERE</div>' : '') +
+        '<div class="mc-tier-badge">' + tierLabel + scholarshipBadge + '</div>' +
+        '<h3 class="mc-title">' + icon + ' ' + title + '</h3>' +
+        syntheticNote + includesFoundation +
+        (desc ? '<p class="mc-desc">' + desc + '</p>' : '') +
+        (meta.length ? '<div class="mc-meta">' + meta.join('') + '</div>' : '') +
+        '<div class="mc-progress-wrap">' +
+          '<div class="mc-progress-row"><span>' + progressLabel + '</span><strong>' + displayPct + '%</strong></div>' +
+          '<div class="mc-progress-bar"><div class="mc-progress-fill" style="width:' + displayPct + '%;"></div></div>' +
+        '</div>' +
+        (isLocked ? '<button class="' + ctaClass + '" disabled>' + ctaText + '</button>' : '<a href="' + ctaHref + '" class="' + ctaClass + '">' + ctaText + '</a>') +
+      '</article>';
+    }).join('');
+  }
+}
+
+async function loadFeaturedCourses() {
+  var grid = document.getElementById('featuredCoursesGrid');
+  if (!grid) return;
+  try {
+    var snap = await getDocs(query(collection(db, 'courses'), where('status', '==', 'published')));
+    var courses = snap.docs.map(d => Object.assign({id:d.id}, d.data())).sort((a,b) => (a.display_order||99) - (b.display_order||99)).slice(0, 4);
+
+    if (courses.length === 0) {
+      grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--muted);font-size:.78rem;padding:1rem;">Catalogue is being prepared.</div>';
+      return;
+    }
+
+    grid.innerHTML = courses.map(c => {
+      var price = c.price === 0 ? 'FREE' : '₦' + (c.price || 0).toLocaleString('en-NG');
+      var tier = c.tier === 'foundation' ? '★ Foundation' : c.tier === 'executive' ? '👑 Executive' : '◆ Career Track';
+      var ctaHref = c.tier === 'executive' ? './cbie-application.html?course=' + c.id : './payment-flow.html?course=' + c.id;
+      return '<a href="' + ctaHref + '" class="mc-featured">' +
+        '<div class="mc-featured-tier">' + tier + '</div>' +
+        '<div class="mc-featured-title">' + (c.title || c.id) + '</div>' +
+        '<div class="mc-featured-desc">' + (c.description || '').slice(0, 110) + (c.description && c.description.length > 110 ? '…' : '') + '</div>' +
+        '<div class="mc-featured-foot">' +
+          '<span class="mc-featured-price">' + price + '</span><span class="mc-featured-cta">Enrol →</span>' +
+        '</div></a>';
+    }).join('');
+  } catch(e) { grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--muted);font-size:.78rem;padding:1rem;">Could not load courses. <a href="./academy.html" style="color:var(--orange);">Browse Academy →</a></div>'; }
+}
+
+onAuthStateChanged(auth, async function(user) {
+  if (user && typeof window.refreshSignInMethods === 'function') setTimeout(() => window.refreshSignInMethods(), 1500);
+  if (!user) { window.location.replace('./login.html'); return; }
+
+  document.body.style.opacity = '1';
+  var g = document.getElementById('auth-guard'); if(g) g.remove();
+  var defNew = document.getElementById('new-user-foundation'); if (defNew) defNew.style.display = '';
+
+  try {
+    var userSnap = await getDoc(doc(db,'users',user.uid));
+    if (!userSnap.exists()) { window.location.replace('./login.html'); return; }
+    var u = userSnap.data();
+    var fullName = ((u.first_name||'') + ' ' + (u.last_name||'')).trim() || u.email || 'Sofian';
+    
+    if (!user.emailVerified && !u.email_verified) {
+      var vb = document.getElementById('verifyBanner');
+      if (vb) vb.style.display = 'block';
+    }
+    if (user.emailVerified && !u.email_verified) {
+      try { await updateDoc(doc(db, 'users', user.uid), { email_verified: true, updated_at: serverTimestamp() }); } catch(e) {}
+    }
+    
+    var isAdmin  = u.role === 'admin';
+    var adminLbl = isAdmin ? (u.admin_role||'admin').replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase()) : '';
+    var XP_TIERS = [{name:'Genesis Node',min:0,icon:'🌱'},{name:'Validator',min:500,icon:'⚡'},{name:'Crypto Knight',min:1500,icon:'⚔️'},{name:'Chain Architect',min:4000,icon:'🔥'},{name:'Node Operator',min:8000,icon:'🏆'},{name:'Node Sovereign',min:15000,icon:'👑'}];
+    var xp   = Number(u.xp_total)||0;
+    var tier = XP_TIERS.slice().reverse().find(t => xp>=t.min)||XP_TIERS[0];
+    var nextT = XP_TIERS[XP_TIERS.indexOf(tier)+1];
+    window._walletBalance = Number(u.wallet_balance)||0;
+    window.FOUNDATION_COMPLETE = false;
+
+    // DOM Updates
+    function sv(id,v){var e=document.getElementById(id);if(e)e.value=v||'';}
+    function st(id,v){var e=document.getElementById(id);if(e)e.textContent=v||'';}
+    function ss(id,v){var e=document.getElementById(id);if(e)e.style.display=v;}
+
+    var parts = fullName.split(' ').filter(Boolean);
+    var initials = parts.length>=2?(parts[0][0]+parts[parts.length-1][0]).toUpperCase():(parts[0]||'?')[0].toUpperCase();
+
+    st('welcomeName', fullName);
+    var av = document.querySelector('.dash-avatar'); if(av) av.textContent = initials;
+    var dun = document.querySelector('.dash-user-name'); if(dun) dun.textContent = fullName;
+    var lvl = document.getElementById('sidebarLevel');
+    if(lvl) lvl.textContent = isAdmin ? '🔐 '+adminLbl : tier.icon+' '+tier.name+' — '+xp.toLocaleString()+' XP';
+
+    function fillSettings() {
+      sv('pFieldFirstName', u.first_name); sv('pFieldLastName', u.last_name);
+      sv('pFieldEmail', u.email); sv('pFieldPhone', u.phone);
+      sv('pFieldCountry', u.country || '—'); sv('pFieldState', u.state || '—');
+      sv('profileNodeInput', u.node_label || u.chapter_name || u.node || '');
+    }
+    fillSettings(); setTimeout(fillSettings, 500);
+
+    (async function loadMyChapter() {
+      if (!u.chapter_id) return;
+      try {
+        var chSnap = await getDoc(doc(db, 'chapters', u.chapter_id));
+        if (!chSnap.exists() || !chSnap.data().whatsapp_link) return;
+        var card = document.getElementById('myChapterCard');
+        if (card) {
+          document.getElementById('myChapterName').textContent = chSnap.data().name || u.chapter_name || 'Your Chapter';
+          document.getElementById('myChapterWhatsappBtn').href = chSnap.data().whatsapp_link;
+          card.style.display = '';
+        }
+      } catch (e) {}
+    })();
+
+    var pmn=document.getElementById('profileMetaName'); if(pmn){pmn.textContent=fullName;pmn.style.color='';}
+    var pme=document.getElementById('profileMetaEmail'); if(pme) pme.innerHTML=(u.email||'')+' &nbsp;&middot;&nbsp; <span style="color:var(--orange);">'+(isAdmin?'🔐 '+adminLbl:tier.icon+' '+tier.name)+'</span>';
+    var pmm=document.getElementById('profileMetaMeta');
+    if (pmm) pmm.innerHTML = 'Sofian ID: <strong style="color:var(--orange);">' + (u.sofian_id||'—') + '</strong> &nbsp;&middot;&nbsp; Member since ' + (u.created_at?.toDate?u.created_at.toDate().toLocaleDateString('en-NG',{month:'long',year:'numeric'}):'—') + ' &nbsp;&middot;&nbsp; Referral ID: <strong style="color:var(--muted);">' + (u.referral_code||'—') + '</strong>';
+    
+    var pai=document.getElementById('profileAvatarInitials'); if(pai) pai.textContent=initials;
+    sv('bankAccName',fullName.toUpperCase());
+    if(u.bank_name){sv('bankNameSelect', u.bank_name);}
+    if(u.account_number){sv('bankAccNumber',u.account_number);var bh=document.getElementById('bankAccHint');if(bh){bh.textContent='Account saved ✓';bh.style.color='#00c864';}}
+
+    // XP display
+    st('xpTierIcon', tier.icon); st('xpTierName', tier.name);
+    var xe=document.getElementById('xpEarned'); if(xe) xe.textContent=xp.toLocaleString()+' XP';
+    var xr=document.getElementById('xpTierRange');
+    if (xr) xr.innerHTML = tier.min.toLocaleString() + ' – ' + (nextT ? nextT.min - 1 : tier.min).toLocaleString() + ' XP · <strong id="xpEarned" style="color:var(--orange);">' + xp.toLocaleString() + ' XP</strong> earned';
+    st('xpToNext', nextT ? (nextT.min - xp).toLocaleString() : '0');
+    st('xpNextTier', nextT ? nextT.name : 'Max tier reached');
+    var xb=document.getElementById('xpProgressBar');
+    if (xb) xb.style.width = (nextT ? Math.round((xp-tier.min)/(nextT.min-tier.min)*100) : 100) + '%';
+
+    var alreadyClaimedToday = false;
+    if (u.last_daily_claim) {
+      var todayUTC = new Date().toISOString().slice(0, 10);
+      var lastClaimRaw = u.last_daily_claim;
+      var lastClaimUTC = lastClaimRaw.toDate ? lastClaimRaw.toDate().toISOString().slice(0,10) : new Date(lastClaimRaw).toISOString().slice(0,10);
+      alreadyClaimedToday = (lastClaimUTC === todayUTC);
+    }
+    if (typeof window.updateXpWidget === 'function') window.updateXpWidget(xp, Number(u.daily_streak)||0, alreadyClaimedToday);
+
+    var bal=document.getElementById('walletBalanceAmt'); if(bal) bal.textContent='₦'+(window._walletBalance).toLocaleString('en-NG');
+
+    window._referralCode = u.referral_code||'';
+    if(u.referral_code){
+      ss('refLinkLocked','none'); ss('refLinkActive','');
+      sv('refLinkInput','https://node.sofegroup.com/signup?ref='+u.referral_code);
+      var qrl=document.getElementById('quickReferralLink');
+      if(qrl) { qrl.style.display = ''; sv('quickRefLinkInput','https://node.sofegroup.com/signup?ref='+u.referral_code); }
+    }
+
+    window._certUserName = fullName;
+    window._certNumber   = 'SOFE-CERT-'+new Date().getFullYear()+'-'+(u.uid||'').slice(-5).toUpperCase();
+    var cun=document.getElementById('certUserName'); if(cun) cun.textContent=fullName+' · '+new Date().toLocaleDateString('en-NG',{month:'short',year:'numeric'});
+
+   // ── Referral stats (Strict Verification vs Validation Separation) ──
+    try {
+      var refUsers = [];
+      var myCode = u.referral_code || '';
+      if (myCode) {
+        try {
+          var refsSnap = await getDocs(query(
+            collection(db, 'referrals'),
+            where('referrer_code', '==', myCode)
+          ));
+          refUsers = refsSnap.docs.map(d => d.data());
+        } catch(e) {
+          console.warn('Referrals query:', e.message);
+        }
+      }
+
+      var totalEarned = 0, unpaid = 0, bountyEarnings = 0;
+      try {
+        var commSnap = await getDocs(query(collection(db,'commissions'), where('user_id','==',user.uid)));
+        commSnap.docs.forEach(d => {
+          var c = d.data();
+          totalEarned += (c.amount || 0);
+          if (c.status !== 'paid') unpaid += (c.amount || 0);
+        });
+      } catch(e){}
+
+      try {
+        var bountySnap = await getDocs(query(collection(db, 'bounty_earnings'), where('user_id', '==', user.uid)));
+        bountySnap.docs.forEach(d => { bountyEarnings += (d.data().amount || 0); });
+        totalEarned += bountyEarnings;
+      } catch(e){}
+
+      // 1. Total Referrals = All signups
+      // 2. Verified Referrals = Completed Email Verification
+      // 3. Validated Referrals = Completed Foundation Course (Earns Commission)
+      var totalSignups   = refUsers.length;
+      var verifiedRefs   = refUsers.filter(r => r.email_verified === true || r.status === 'verified').length;
+      var validatedRefs  = refUsers.filter(r => r.foundation_complete === true).length;
+      var pendingValidate = totalSignups - validatedRefs;
+      
+      var qualifiedCount = refUsers.filter(r => r.foundation_complete === true && r.career_enrolled === true).length;
+
+      // Update DOM with clear distinction
+      var e1 = document.getElementById('stat-total-referrals'); if (e1) e1.textContent = totalSignups;
+      var e2 = document.getElementById('stat-valid-signups');   if (e2) e2.textContent = validatedRefs;
+      var e3 = document.getElementById('stat-total-earned');    if (e3) e3.textContent = '₦' + totalEarned.toLocaleString('en-NG');
+      var e4 = document.getElementById('stat-unpaid');          if (e4) e4.textContent = '₦' + unpaid.toLocaleString('en-NG');
+      var e5 = document.getElementById('stat-bounty-earnings'); if (e5) e5.textContent = '₦' + bountyEarnings.toLocaleString('en-NG');
+
+      if (e1 && pendingValidate > 0) {
+        var hint = e1.parentElement.querySelector('.pending-hint');
+        if (!hint) {
+          hint = document.createElement('div');
+          hint.className = 'pending-hint';
+          hint.style.cssText = 'font-size:.58rem;color:var(--muted);margin-top:.25rem;opacity:.7;';
+          e1.parentElement.appendChild(hint);
+        }
+        hint.textContent = `${pendingValidate} pending validation (${verifiedRefs} email verified)`;
+      }
+
+      // Determine affiliate tier based strictly on VALIDATED referrals
+      var isAmbassador = u.affiliate_tier === 'ambassador';
+      var currentTier = isAmbassador ? 'ambassador' : (qualifiedCount >= 10 ? 'affiliate' : 'newbie');
+
+      ['newbie','affiliate','ambassador'].forEach(t => {
+        var card = document.getElementById('tier-' + t);
+        if (!card) return;
+        card.classList.remove('active-level','locked');
+        if (t === currentTier) card.classList.add('active-level');
+        else if (t === 'ambassador') card.classList.add('locked');
+        else if (t === 'affiliate' && currentTier === 'newbie') {
+          var reqEl = card.querySelector('.level-req');
+          if (reqEl) reqEl.innerHTML = 'Refer <strong>10 people</strong> who complete the Foundation Course <strong>and</strong> enrol in at least one Career Track course. Commission rate doubles automatically once the milestone is reached. <strong style="color:var(--orange);">(' + qualifiedCount + '/10 qualified)</strong>';
+        }
+      });
+
+      window._affiliateTier = currentTier;
+    } catch(e) {
+      console.warn('Referral calculation error:', e.message);
+    }
+
+    // My Courses tab
+    var allEnrolments = [];
+    var fpct=0, fdone=false, fenrolled=false;
+    try {
+      var es = await getDocs(query(collection(db,'enrolments'),where('user_id','==',user.uid)));
+      allEnrolments = es.docs.map(d => Object.assign({id:d.id}, d.data()));
+      try {
+        var es2 = await getDocs(query(collection(db,'enrolment'),where('user_id','==',user.uid)));
+        if (!es2.empty) {
+          var existingIds = new Set(allEnrolments.map(e => e.course_id));
+          es2.docs.forEach(d => { var data = Object.assign({id:d.id, _legacy:true}, d.data()); if (!existingIds.has(data.course_id)) allEnrolments.push(data); });
+        }
+      } catch(e2){}
+      var fe = allEnrolments.find(d => (d.course_id === 'foundation' || !d.course_id) && d.status === 'active');
+      if (fe) { fenrolled = true; fpct = fe.progress_pct || 0; fdone = !!fe.completed_at; }
+    } catch(e){}
+
+    window.FOUNDATION_COMPLETE = fdone;
+    window.USER_ENROLLED       = fenrolled;
+    window._allEnrolments      = allEnrolments;
+    window._foundationPct      = fpct;
+
+    try { await renderMyCourses(user, allEnrolments, fpct, fdone); } catch(e){}
+
+    // Notifications
+    try {
+      var ns2 = await getDocs(query(collection(db,'notifications'), where('user_id','==',user.uid), orderBy('created_at','desc')));
+      var personalDocs = ns2.docs.map(d => ({ id: d.id, data: d.data(), isBroadcast: false }));
+      var broadcastDocs = [];
+      try {
+        var bs = await getDocs(query(collection(db,'notifications'), where('type','==','broadcast'), orderBy('created_at','desc'), limit(20)));
+        broadcastDocs = bs.docs.map(d => ({ id: d.id, data: d.data(), isBroadcast: true }));
+      } catch(be) {}
+
+      var seenBroadcastIds = [];
+      try { seenBroadcastIds = JSON.parse(localStorage.getItem('sofe_read_broadcasts') || '[]'); } catch(e2){}
+
+      var allNotifs = personalDocs.concat(broadcastDocs).sort((a, b) => (b.data.created_at?.toMillis()||0) - (a.data.created_at?.toMillis()||0)).slice(0, 20);
+
+      function isUnread(item) { return item.isBroadcast ? !seenBroadcastIds.includes(item.id) : !item.data.read; }
+
+      var unreadCount = allNotifs.filter(isUnread).length;
+      var nb = document.getElementById('notifBadge');
+      if (nb) { nb.textContent = unreadCount; nb.style.display = unreadCount > 0 ? '' : 'none'; }
+
+      var nl = document.getElementById('notifList');
+      var ne = document.getElementById('notifEmpty');
+      if (nl && allNotifs.length > 0) {
+        if (ne) ne.style.display = 'none';
+        function timeAgo(d) {
+          if (!d) return '';
+          var s = Math.floor((Date.now() - d.getTime())/1000);
+          if (s < 60) return 'Just now';
+          if (s < 3600) return Math.floor(s/60) + 'm ago';
+          if (s < 86400) return Math.floor(s/3600) + 'h ago';
+          if (s < 604800) return Math.floor(s/86400) + 'd ago';
+          return d.toLocaleDateString('en-NG',{month:'short',day:'numeric',year:'numeric'});
+        }
+        var newlySeenBroadcastIds = [];
+        var items = allNotifs.map(item => {
+          var n = item.data;
+          var when = n.created_at ? timeAgo(n.created_at.toDate()) : '';
+          var unr = isUnread(item);
+          if (item.isBroadcast && unr) newlySeenBroadcastIds.push(item.id);
+          var dotColor = n.category === 'payout' ? 'orange' : n.category === 'referral' ? 'green' : n.category === 'course' ? '' : (unr ? '' : 'read');
+          return '<div class="notif-item' + (unr ? ' unread' : '') + '"' + (n.link ? ' data-link="'+n.link+'" style="cursor:pointer;"' : '') + '>' +
+                 '<div class="notif-dot ' + dotColor + '"></div><div><div class="notif-text"><strong>' + (n.title||'Notification') + '</strong> ' + (n.message||'') + '</div><div class="notif-time">' + when + '</div></div></div>';
+        }).join('');
+        nl.innerHTML = items + (ne ? '<div id="notifEmpty" style="display:none;"></div>' : '');
+        if (newlySeenBroadcastIds.length > 0) {
+          try { localStorage.setItem('sofe_read_broadcasts', JSON.stringify(seenBroadcastIds.concat(newlySeenBroadcastIds).slice(-200))); } catch(e3){}
+        }
+      }
+    } catch(e){}
+
+    // Transactions
+    try {
+      var txs = await getDocs(query(collection(db,'commissions'),where('user_id','==',user.uid),orderBy('created_at','desc')));
+      var txl=document.getElementById('txList'), txe=document.getElementById('txEmpty');
+      if (txl && txs.size > 0) {
+        if (txe) txe.style.display = 'none';
+        txl.innerHTML = txs.docs.map(d => {
+          var tx = d.data();
+          return '<div class="tx-item"><div class="tx-icon tx-in">💸</div><div style="flex:1"><div class="tx-desc">'+(tx.description||'Commission earned')+'</div><div class="tx-date">'+(tx.created_at?new Date(tx.created_at.toDate()).toLocaleDateString('en-NG',{day:'numeric',month:'short',year:'numeric'}):'')+'</div></div><div class="tx-amount tx-pos">+₦'+Number(tx.amount||0).toLocaleString('en-NG')+'</div></div>';
+        }).join('');
+      }
+    } catch(e) {}
+
+    // Certificates
+    var cl2=document.getElementById('certLoading'); if(cl2) cl2.style.display='none';
+    try {
+      var cs2 = await getDocs(query(collection(db,'certificates'),where('user_id','==',user.uid)));
+      var cg=document.getElementById('certGrid'), cp=document.getElementById('certPreviewWrap'), ce2=document.getElementById('certEmpty');
+      if(cs2.empty && !fdone){ if(ce2) ce2.style.display=''; }
+      else if(!cs2.empty){
+        var cl3=[];
+        cs2.docs.forEach(d => { var c=d.data(); cl3.push({course:c.course_title||'Foundation',date:c.issued_at?c.issued_at.toDate():new Date(),certId:c.cert_number||'SOFE-CERT-'+new Date().getFullYear()}); });
+        window._certList=cl3;
+        if(cg){
+          cg.style.display='';
+          cg.innerHTML=cl3.map((c,i) => '<div class="cert-card" onclick="previewCertificate('+i+')" style="cursor:pointer;"><div class="cert-preview"><div class="cert-seal">🏅</div><div class="cert-title">'+c.course+'</div><div class="cert-name" style="font-size:.7rem;margin-top:.25rem;">'+fullName+'</div></div><div class="cert-actions"><button class="cert-btn cert-btn-dl" onclick="event.stopPropagation();window._activeCertIdx='+i+';downloadCertificate()">⬇ PDF</button><button class="cert-btn cert-btn-li" onclick="event.stopPropagation();window._activeCertIdx='+i+';shareLinkedIn()">in</button></div></div>').join('');
+        }
+        if(typeof window.previewCertificate === 'function') window.previewCertificate(0); 
+        if(cp) cp.style.display='';
+      } else { if(ce2) ce2.style.display=''; }
+    } catch(e){ var ce3=document.getElementById('certEmpty'); if(ce3) ce3.style.display=''; }
+
+    document.querySelectorAll('.reveal').forEach(r => r.classList.add('visible'));
+
+  } catch(err) {
+    console.error('Dashboard error:', err.message);
+    document.body.style.opacity='1';
+  }
+});
+
+// ── LEADERBOARD LOGIC (Securely scoped inside module) ──
+window.loadXpLeaderboard = async function() {
+  const list = document.getElementById('lbXpList');
+  const myRankDiv = document.getElementById('lbMyRank');
+  if (!list || !window._db) return;
+  list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);font-size:.78rem;">⏳ Loading…</div>';
+  
+  try {
+    const snap = await getDocs(collection(window._db, 'leaderboard'));
+    if (snap.empty) { list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">No Sofians on the leaderboard yet.</div>'; return; }
+
+    const rows = snap.docs.sort((a, b) => (Number(b.data().xp_this_period)||0) - (Number(a.data().xp_this_period)||0)).slice(0, 20);
+    
+    const XP_TIERS_LB = [
+      {name:'Genesis Node',min:0,icon:'🌱'},{name:'Validator',min:500,icon:'⚡'},
+      {name:'Crypto Knight',min:1500,icon:'⚔️'},{name:'Chain Architect',min:4000,icon:'🔥'},
+      {name:'Node Operator',min:8000,icon:'🏆'},{name:'Node Sovereign',min:15000,icon:'👑'}
+    ];
+    function tierFor(xp){ return XP_TIERS_LB.slice().reverse().find(t => xp >= t.min) || XP_TIERS_LB[0]; }
+    function initials(u){ let p = (u.first_name||'').trim(); return p.length>=2?(p[0]+p[1]).toUpperCase():p.length===1?p[0].toUpperCase():'SO'; }
+    function displayName(u){ return ((u.first_name||'') + ' ' + (u.last_initial||'')).trim() || 'Sofian'; }
+
+    const currentUid = window._auth && window._auth.currentUser ? window._auth.currentUser.uid : null;
+    let myRank = -1;
+
+    let html = '<table class="lb-table"><thead><tr><th>#</th><th>Sofian</th><th>Tier</th><th style="text-align:right;">XP This Month</th></tr></thead><tbody>';
+    rows.forEach((d, i) => {
+      const u = d.data();
+      const xpPeriod = Number(u.xp_this_period)||0;
+      const tier = tierFor(Number(u.xp_total)||0);
+      const rank = i + 1;
+      const rankClass = rank===1?'r1':rank===2?'r2':rank===3?'r3':'';
+      const name = displayName(u);
+      const isMe = d.id === currentUid;
+      if (isMe) myRank = rank;
+      
+      html += '<tr' + (isMe?' style="background:rgba(255,138,0,.06);"':'') + '>' +
+        '<td class="lb-rank ' + rankClass + '">' + (rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':rank) + '</td>' +
+        '<td><span class="lb-avatar">' + initials(u) + '</span>' +
+          '<span class="lb-name">' + name + (isMe?'<span style="color:var(--orange);font-size:.6rem;margin-left:.4rem;padding:2px 4px;background:var(--orange);color:#000;border-radius:4px;">YOU</span>':'') + '</span></td>' +
+        '<td><span class="lb-tier">' + tier.icon + ' ' + tier.name + '</span></td>' +
+        '<td class="lb-xp">' + xpPeriod.toLocaleString() + ' XP</td>' +
+      '</tr>';
+    });
+    html += '</tbody></table>';
+    list.innerHTML = html;
+
+    if (myRankDiv && myRank > -1) {
+      const myData = rows[myRank-1].data();
+      const myTier = tierFor(Number(myData.xp_total)||0);
+      document.getElementById('lbMyRankIcon').textContent  = myTier.icon;
+      document.getElementById('lbMyRankText').textContent  = '#' + myRank + ' among all Sofians this month';
+      document.getElementById('lbMyRankSub').textContent   = (Number(myData.xp_this_period)||0).toLocaleString() + ' XP this month · ' + myTier.name;
+      document.getElementById('lbMyRankBadge').textContent = 'TOP ' + Math.ceil(myRank / rows.length * 100) + '%';
+      myRankDiv.style.display = 'flex';
+    }
+  } catch(e) {
+    console.warn('[LB-XP]', e.message);
+    list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">Could not load leaderboard.</div>';
+  }
+};
+
+window.loadCommissionLeaderboard = async function() {
+  const list = document.getElementById('lbCommList');
+  if (!list || !window._db) return;
+  list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);font-size:.78rem;">⏳ Loading…</div>';
+  try {
+    const snap = await getDocs(collection(window._db, 'leaderboard'));
+    const rows = snap.docs.filter(d => (Number(d.data().commission_this_period)||0) > 0)
+      .sort((a, b) => (Number(b.data().commission_this_period)||0) - (Number(a.data().commission_this_period)||0))
+      .slice(0, 20);
+
+    if (rows.length === 0) { list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">No commissions earned this month yet.</div>'; return; }
+
+    const currentUid = window._auth && window._auth.currentUser ? window._auth.currentUser.uid : null;
+    let myRank = -1;
+    function initials(u){ let p = (u.first_name||'').trim(); return p.length>=2?(p[0]+p[1]).toUpperCase():p.length===1?p[0].toUpperCase():'SO'; }
+    function displayName(u){ return ((u.first_name||'') + ' ' + (u.last_initial||'')).trim() || 'Sofian'; }
+
+    let html = '<table class="lb-table"><thead><tr><th>#</th><th>Sofian</th><th>XP Tier</th><th>Earned This Month</th></tr></thead><tbody>';
+    rows.forEach((d, i) => {
+      const u = d.data();
+      const comm = Number(u.commission_this_period)||0;
+      const rank = i + 1;
+      const rankClass = rank===1?'r1':rank===2?'r2':rank===3?'r3':'';
+      const name = displayName(u);
+      const isMe = d.id === currentUid;
+      if (isMe) myRank = rank;
+      
+      html += '<tr' + (isMe?' style="background:rgba(255,138,0,.06);"':'') + '>' +
+        '<td class="lb-rank ' + rankClass + '">' + (rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':rank) + '</td>' +
+        '<td><span class="lb-avatar">' + initials(u) + '</span><span class="lb-name">' + name + (isMe?'<span style="color:var(--orange);font-size:.6rem;margin-left:.4rem;padding:2px 4px;background:var(--orange);color:#000;border-radius:4px;">YOU</span>':'') + '</span></td>' +
+        '<td><span class="lb-tier">' + (u.tier||'Genesis Node') + '</span></td>' +
+        '<td class="lb-comm">₦' + comm.toLocaleString('en-NG') + '</td>' +
+      '</tr>';
+    });
+    html += '</tbody></table>';
+    list.innerHTML = html;
+  } catch(e) { console.warn('[LB-COMM]', e.message); list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">Could not load commission leaderboard.</div>'; }
+};
+
+window.loadReferralLeaderboard = async function() {
+  const list = document.getElementById('lbReferralList');
+  if (!list || !window._db) return;
+  list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);font-size:.78rem;">⏳ Loading…</div>';
+  try {
+    const snap = await getDocs(collection(window._db, 'leaderboard'));
+    const rows = snap.docs.filter(d => (Number(d.data().validated_referrals_this_period)||0) > 0)
+      .sort((a, b) => (Number(b.data().validated_referrals_this_period)||0) - (Number(a.data().validated_referrals_this_period)||0))
+      .slice(0, 20);
+
+    if (rows.length === 0) { list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">No validated referrals this month yet.</div>'; return; }
+
+    const currentUid = window._auth && window._auth.currentUser ? window._auth.currentUser.uid : null;
+    let myRank = -1;
+    function initials(u){ let p = (u.first_name||'').trim(); return p.length>=2?(p[0]+p[1]).toUpperCase():p.length===1?p[0].toUpperCase():'SO'; }
+    function displayName(u){ return ((u.first_name||'') + ' ' + (u.last_initial||'')).trim() || 'Sofian'; }
+
+    let html = '<table class="lb-table"><thead><tr><th>#</th><th>Sofian</th><th>XP Tier</th><th>Validated Referrals</th></tr></thead><tbody>';
+    rows.forEach((d, i) => {
+      const u = d.data();
+      const refs = Number(u.validated_referrals_this_period)||0;
+      const rank = i + 1;
+      const rankClass = rank===1?'r1':rank===2?'r2':rank===3?'r3':'';
+      const name = displayName(u);
+      const isMe = d.id === currentUid;
+      if (isMe) myRank = rank;
+      
+      html += '<tr' + (isMe?' style="background:rgba(255,138,0,.06);"':'') + '>' +
+        '<td class="lb-rank ' + rankClass + '">' + (rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':rank) + '</td>' +
+        '<td><span class="lb-avatar">' + initials(u) + '</span><span class="lb-name">' + name + (isMe?'<span style="color:var(--orange);font-size:.6rem;margin-left:.4rem;padding:2px 4px;background:var(--orange);color:#000;border-radius:4px;">YOU</span>':'') + '</span></td>' +
+        '<td><span class="lb-tier">' + (u.tier||'Genesis Node') + '</span></td>' +
+        '<td class="lb-comm" style="color:#10b981;">🤝 ' + refs + '</td>' +
+      '</tr>';
+    });
+    html += '</tbody></table>';
+    list.innerHTML = html;
+  } catch(e) { console.warn('[LB-REF]', e.message); list.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);">Could not load referral leaderboard.</div>'; }
+};
+
+// ── DAILY CLAIM LOGIC (Cleaned & Restored) ──
+window.showXpToast = function(msg) {
+  let t = document.getElementById('xpToastEl');
+  if (!t) {
+    t = document.createElement('div'); t.id='xpToastEl';
+    t.style.cssText='position:fixed;bottom:24px;right:24px;z-index:9999;background:linear-gradient(135deg,rgba(13,21,38,.98),rgba(13,21,38,.95));border:1px solid rgba(255,138,0,.4);border-radius:10px;padding:.9rem 1.2rem;font-family:Poppins,sans-serif;font-size:.82rem;font-weight:700;color:#FFB800;box-shadow:0 8px 32px rgba(0,0,0,.5);max-width:320px;display:flex;align-items:center;gap:.6rem;pointer-events:none;';
+    const s = document.createElement('style'); s.textContent='@keyframes xpIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}';
+    document.head.appendChild(s); document.body.appendChild(t);
+  }
+  t.innerHTML = '<span style="font-size:1.2rem">⚡</span><span>' + msg + '</span>';
+  t.style.animation = 'xpIn .3s ease'; t.style.display = 'flex';
+  clearTimeout(t._to); t._to = setTimeout(() => { t.style.display = 'none'; }, 4000);
+};
+
+window.handleDailyClaim = async function() {
+  const btn = document.getElementById('xpClaimMainBtn');
+  if (!btn || btn.disabled) return;
+  btn.disabled = true;
+  btn.innerHTML = '⏳ Claiming…';
+
+  try {
+    if (!auth || !auth.currentUser) throw new Error('Not signed in. Please refresh the page.');
+    const uid = auth.currentUser.uid;
+
+    const claimXpFn = httpsCallable(window._functions || functions, 'claimDailyXp');
+    const result = await claimXpFn();
+    const data = result.data;
+
+    if (!data.success) throw new Error(data.message || 'Failed to claim XP');
+
+    const newStreak = data.newStreak;
+    const totalEarned = data.xpEarned;
+    const bonusXp = data.bonus || 0;
+
+    // Securely record badge if milestone hit (without overwriting user doc)
+    const milestones = {7: 'consistent_node', 30: 'month_long_node', 100: 'century_node'};
+    if (milestones[newStreak]) {
+      try {
+        const bRef = doc(db, 'user_badges', uid + '_' + milestones[newStreak]);
+        const bSnap = await getDoc(bRef);
+        if (!bSnap.exists()) {
+          await setDoc(bRef, {
+            user_id: uid,
+            badge_id: milestones[newStreak],
+            awarded_at: serverTimestamp(),
+            source: 'streak_auto'
+          });
+        }
+      } catch(e) { console.warn('[BADGE] non-fatal:', e.message); }
+    }
+
+    // Fetch newly updated user profile
+    const userSnap = await getDoc(doc(db, 'users', uid));
+    const u = userSnap.data();
+
+    // Update UI Widgets
+    if (typeof window.updateXpWidget === 'function') {
+      window.updateXpWidget(u.xp_total || 0, newStreak, true);
+    }
+    
+    // Smooth disappearing toast (replaces alert)
+    let toastMsg = '+' + totalEarned + ' XP claimed!';
+    if (bonusXp > 0) toastMsg += ' 🎉 Streak Bonus (+'+bonusXp+' XP)!';
+    window.showXpToast(toastMsg);
+
+    // Update Sidebar Tier
+    const XP_TIERS = [{name:'Genesis Node',min:0,icon:'🌱'},{name:'Validator',min:500,icon:'⚡'},{name:'Crypto Knight',min:1500,icon:'⚔️'},{name:'Chain Architect',min:4000,icon:'🔥'},{name:'Node Operator',min:8000,icon:'🏆'},{name:'Node Sovereign',min:15000,icon:'👑'}];
+    const newTier = XP_TIERS.slice().reverse().find(t => (u.xp_total || 0) >= t.min) || XP_TIERS[0];
+    const lvl = document.getElementById('sidebarLevel');
+    if (lvl) lvl.textContent = newTier.icon + ' ' + newTier.name + ' — ' + (u.xp_total || 0).toLocaleString() + ' XP';
+
+  } catch(err) {
+    console.error('[DAILY-CLAIM]', err.message, err);
+    if (btn) { btn.disabled = false; btn.className = 'xp-claim-btn'; btn.innerHTML = '⚡ Claim +2 XP'; }
+    
+    let msg = err.message || 'Unknown error';
+    if (msg.includes('already claimed')) {
+        msg = 'Daily XP already claimed today.';
+        if (typeof window.updateXpWidget === 'function') {
+          window.updateXpWidget(Number(document.getElementById('xpWidgetTotal')?.textContent.replace(/,/g, '')) || 0, Number(document.getElementById('xpWidgetStreakNum')?.textContent) || 0, true);
+        }
+    } else {
+        alert('Could not save your claim. Please try again.\n(' + msg + ')');
+    }
+  }
+};
+</script>
+
+<!-- ── UI NAVIGATION HELPERS ── -->
+<script>
+  window.showTab = function(tabId, el, event) {
+    if (event) event.preventDefault();
+    document.querySelectorAll('.dash-panel').forEach(p => { p.classList.remove('active'); p.style.display = 'none'; });
+    const target = document.getElementById('tab-' + tabId);
+    if (target) { target.classList.add('active'); target.style.display = 'block'; }
+
+    document.querySelectorAll('.dash-nav-item').forEach(nav => nav.classList.remove('active'));
+    if (el) el.classList.add('active');
+
+    if (tabId === 'profile' && typeof window.refreshSignInMethods === 'function') setTimeout(window.refreshSignInMethods, 200);
+    if (tabId === 'leaderboard' && !window._lbLoaded.xp && typeof window.loadXpLeaderboard === 'function') {
+      window._lbLoaded.xp = true;
+      setTimeout(window.loadXpLeaderboard, 150);
+    }
+
+    if (target) target.querySelectorAll('.reveal').forEach(r => r.classList.add('visible'));
+
+    if (window.innerWidth <= 900) {
+      const sidebar = document.getElementById('dashSidebar');
+      const layout = document.querySelector('.dash-layout');
+      if (sidebar) sidebar.classList.remove('open');
+      if (layout) layout.classList.remove('sidebar-open');
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const toggle = document.getElementById('sidebarToggle');
+    const sidebar = document.getElementById('dashSidebar');
+    const layout = document.querySelector('.dash-layout');
+    if (toggle && sidebar && layout) {
+      toggle.addEventListener('click', () => {
+        const isOpen = sidebar.classList.toggle('open');
+        layout.classList.toggle('sidebar-open');
+        localStorage.setItem('sofeSidebarOpen', isOpen ? '1' : '0');
+      });
+      if(localStorage.getItem('sofeSidebarOpen') === '1') {
+        sidebar.classList.add('open'); layout.classList.add('sidebar-open');
+      }
+    }
+    
+    var _dd = document.getElementById('dashDate'); 
+    if (_dd) _dd.textContent = new Date().toLocaleDateString('en-NG',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+
+    var el = document.getElementById('lbPeriodLabel');
+    if (el) el.textContent = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) + ' leaderboard · resets on the 1st of each month';
+  });
+
+  window.switchBizTab = function(tabId, el) {
+    document.getElementById('biz-panel-affiliate').style.display = tabId === 'affiliate' ? 'block' : 'none';
+    document.getElementById('biz-panel-ambassador').style.display = tabId === 'ambassador' ? 'block' : 'none';
+    document.querySelectorAll('.vp-tab').forEach(b => b.classList.remove('active'));
+    if (el) el.classList.add('active');
+  };
+
+  window._lbLoaded = { xp: false, commission: false, referral: false };
+  window.switchLbTab = function(tabId, el) {
+    document.getElementById('lbXpPanel').style.display = tabId === 'xp' ? 'block' : 'none';
+    document.getElementById('lbCommPanel').style.display = tabId === 'commission' ? 'block' : 'none';
+    document.getElementById('lbReferralPanel').style.display = tabId === 'referral' ? 'block' : 'none';
+    document.querySelectorAll('.lb-tab').forEach(b => b.classList.remove('active'));
+    if (el) el.classList.add('active');
+
+    if (tabId === 'xp' && !window._lbLoaded.xp && typeof window.loadXpLeaderboard === 'function') {
+      window._lbLoaded.xp = true; window.loadXpLeaderboard();
+    } else if (tabId === 'commission' && !window._lbLoaded.commission && typeof window.loadCommissionLeaderboard === 'function') {
+      window._lbLoaded.commission = true; window.loadCommissionLeaderboard();
+    } else if (tabId === 'referral' && !window._lbLoaded.referral && typeof window.loadReferralLeaderboard === 'function') {
+      window._lbLoaded.referral = true; window.loadReferralLeaderboard();
+    }
+  };
+
+  window.toggleStreakExpanded = function(e) {
+    if (e) e.stopPropagation();
+    const panel = document.getElementById('xpStreakExpanded');
+    if (panel) panel.classList.toggle('open');
+  };
+
+  window.copyQuickRefLink = function() {
+    const input = document.getElementById('quickRefLinkInput');
+    if (input) { navigator.clipboard.writeText(input.value); alert('Referral link copied!'); }
+  };
+
+  window.copyRef = function() {
+    const input = document.getElementById('refLinkInput');
+    if (input) {
+      navigator.clipboard.writeText(input.value);
+      const btn = document.getElementById('copyBtn');
+      if (btn) {
+        btn.textContent = 'Copied!'; btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'Copy Link'; btn.classList.remove('copied'); }, 2000);
+      }
+    }
+  };
+
+  window.copyRefFromWallet = function() {
+    if (window._referralCode) {
+      navigator.clipboard.writeText('https://node.sofegroup.com/signup?ref=' + window._referralCode);
+      alert('Referral link copied!');
+    }
+  };
+
+  window.requestPayment = function() {
+    if (window._walletBalance < 10000) alert('You need a minimum balance of ₦10,000 to request a payout.');
+    else {
+      const toast = document.getElementById('payoutToast');
+      if (toast) { toast.style.display = 'flex'; setTimeout(() => { toast.style.display = 'none'; }, 5000); }
+    }
+  };
+
+  window.goToAcademy = function() { window.location.href = './academy.html'; };
+  window.goToPayment = function() { window.location.href = './payment-flow.html?course=foundation'; };
+  
+  window.handleNavLogout = function() {
+    if (window._signOut && window._auth) window._signOut(window._auth).then(() => window.location.href = './login.html');
+    else window.location.href = './login.html';
+  };
+
+  window.previewCertificate = function(idx) {
+    if (!window._certList || !window._certList[idx]) return;
+    const cert = window._certList[idx];
+    const t = document.getElementById('previewCourseTitle'); if (t) t.textContent = cert.course;
+    const n = document.getElementById('previewName'); if (n) n.textContent = window._certUserName || 'Sofian';
+    const ds = cert.date.toLocaleDateString('en-NG');
+    const ds1 = document.getElementById('previewDateScript'); if (ds1) ds1.textContent = ds;
+    const dt = document.getElementById('previewDate'); if (dt) dt.textContent = ds;
+    const cid = document.getElementById('previewCertId'); if (cid) cid.textContent = 'ID: ' + cert.certId;
+  };
+
+  window.downloadCertificate = function() { alert('Certificate PDF download will begin shortly.'); };
+  window.shareLinkedIn = function() { window.open('https://www.linkedin.com/profile/add?startTask=CERTIFICATION_NAME', '_blank'); };
+  window.connectWallet = function(provider) { alert(provider + ' integration is coming soon!'); };
+  window.disconnectWallet = function() { document.getElementById('walletConnected').style.display = 'none'; document.getElementById('walletBtns').style.display = 'flex'; };
+
+  // ── SOFIAN BADGES ENGINE (Restored) ──
+  function updateSofianBadges(xp) {
+    xp = Number(xp) || 0;
+    const badges = [
+      { id: 'genesis', minXp: 0 },
+      { id: 'validator', minXp: 500 },
+      { id: 'knight', minXp: 1500 },
+      { id: 'architect', minXp: 4000 },
+      { id: 'operator', minXp: 8000 },
+      { id: 'sovereign', minXp: 15000 }
+    ];
+
+    badges.forEach(b => {
+      const card = document.getElementById('sbadge-' + b.id);
+      const tag = document.getElementById('sbadge-' + b.id + '-tag');
+      if (!card) return;
+
+      if (xp >= b.minXp) {
+        card.classList.remove('badge-locked');
+        card.classList.add('badge-earned');
+        if (tag) {
+          tag.className = 'sofian-badge-status-tag sbt-earned';
+          tag.textContent = '✓ Earned';
+        }
+      } else if (xp >= b.minXp - 500) {
+        card.classList.remove('badge-locked', 'badge-earned');
+        if (tag) {
+          tag.className = 'sofian-badge-status-tag sbt-active';
+          tag.textContent = (b.minXp - xp).toLocaleString() + ' XP away';
+        }
+      } else {
+        card.classList.add('badge-locked');
+        card.classList.remove('badge-earned');
+        if (tag) {
+          tag.className = 'sofian-badge-status-tag sbt-locked';
+          tag.textContent = 'Locked';
+        }
+      }
+    });
+  }
+  
+  window.updateXpWidget = function(xp, streak, alreadyClaimed) {
+    xp = Number(xp)||0; streak = Number(streak)||0;
+    
+    const XP_TIERS_CLAIM = [{name:'Genesis Node',min:0,icon:'🌱'},{name:'Validator',min:500,icon:'⚡'},{name:'Crypto Knight',min:1500,icon:'⚔️'},{name:'Chain Architect',min:4000,icon:'🔥'},{name:'Node Operator',min:8000,icon:'🏆'},{name:'Node Sovereign',min:15000,icon:'👑'}];
+    const tier = XP_TIERS_CLAIM.slice().reverse().find(t => xp >= t.min) || XP_TIERS_CLAIM[0];
+    const nextTier = XP_TIERS_CLAIM[XP_TIERS_CLAIM.indexOf(tier)+1]||null;
+
+    const ic=document.getElementById('xpWidgetTierIcon'); if(ic) ic.textContent=tier.icon;
+    const tn=document.getElementById('xpWidgetTierName'); if(tn) tn.textContent=tier.name;
+    const tot=document.getElementById('xpWidgetTotal');   if(tot) tot.textContent=xp.toLocaleString('en-NG');
+
+    const lbl=document.getElementById('xpWidgetBarLabel');
+    const pctEl=document.getElementById('xpWidgetBarPct');
+    const fill=document.getElementById('xpWidgetBarFill');
+    if (nextTier) {
+      const p=Math.round((xp-tier.min)/(nextTier.min-tier.min)*100);
+      if(lbl) lbl.textContent='to '+nextTier.name;
+      if(pctEl) pctEl.textContent=p+'%';
+      if(fill) fill.style.width=p+'%';
+    } else {
+      if(lbl) lbl.textContent='Max tier';
+      if(pctEl) pctEl.textContent='100%';
+      if(fill) fill.style.width='100%';
+    }
+
+    const sn=document.getElementById('xpWidgetStreakNum'); if(sn) sn.textContent=streak;
+
+    const btn=document.getElementById('xpClaimMainBtn');
+    const cd=document.getElementById('xpClaimCountdown');
+    if (alreadyClaimed) {
+      if(btn){ btn.disabled=true; btn.className='xp-claim-btn xp-claimed'; btn.innerHTML='✓ Claimed today'; }
+      if(cd) {
+        cd.style.display='';
+        const midnight = new Date(); midnight.setHours(24,0,0,0);
+        function tick() {
+          const diff = Math.max(0, midnight - new Date());
+          const h = Math.floor(diff/3600000), m = Math.floor((diff%3600000)/60000);
+          if(document.getElementById('xpClaimCd')) document.getElementById('xpClaimCd').textContent = h + 'h ' + m + 'm';
+          if (diff > 0) setTimeout(tick, 30000);
+        }
+        tick();
+      }
+    } else {
+      if(btn){ btn.disabled=false; btn.className='xp-claim-btn'; btn.innerHTML='⚡ Claim +2 XP'; }
+      if(cd) cd.style.display='none';
+    }
+
+    const todayIdx=(new Date().getDay()+6)%7;
+    for(let i=0;i<7;i++){
+      const dot=document.getElementById('xpDot'+i); if(!dot) continue;
+      if(i<todayIdx){
+        const ago=todayIdx-i;
+        dot.className=ago<=streak-(alreadyClaimed?1:0)?'xp-sdot done':'xp-sdot future';
+        dot.textContent=ago<=streak-(alreadyClaimed?1:0)?'✓':'·';
+      } else if(i===todayIdx){
+        dot.className=alreadyClaimed?'xp-sdot today-done':'xp-sdot today-ready';
+        dot.textContent=alreadyClaimed?'✓':'⚡';
+      } else { dot.className='xp-sdot future'; dot.textContent='·'; }
+    }
+
+    const hint=document.getElementById('xpStreakHint');
+    if(hint){
+      if(alreadyClaimed){
+        const rem=streak>=7?0:7-streak;
+        hint.innerHTML='✅ <strong>XP claimed today!</strong> Streak: '+streak+' day'+(streak===1?'':'s')+'. '+
+          (rem>0?'Come back tomorrow — '+rem+' more day'+(rem===1?'':'s')+' to earn Consistent Node (+10 XP).':'🎉 7-day streak active!');
+      } else {
+        hint.innerHTML='🎯 <strong>Claim your 2 XP today</strong> — tap the button above. Build your streak for bonus XP at 7, 30, and 100 days.';
+      }
+    }
+  };
+</script>
+<script type="module" src="./js/sofe-navbar.js"></script>
+</body>
+</html>

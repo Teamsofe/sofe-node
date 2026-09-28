@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<!-- SECURITY: Content Security Policy -->
+<meta http-equiv="Content-Security-Policy" 
+  content="default-src 'self'; 
+           script-src 'self' 'unsafe-inline' https://www.gstatic.com https://www.googleapis.com; 
+           style-src 'self' 'unsafe-inline'; 
+           connect-src 'self' https://*.firebaseio.com https://*.googleapis.com https://firestore.googleapis.com;
+           img-src 'self' data: https:;
+           font-src 'self' data:;">
+
+<!-- SECURITY: Prevent clickjacking -->
+<meta http-equiv="X-Frame-Options" content="DENY">
+
+<!-- SECURITY: XSS Protection -->
+<meta http-equiv="X-Content-Type-Options" content="nosniff">
+
+<title>Course Migration Tool — Sofe Admin</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #0a0f1e;
+    color: #e0e6f0;
+    padding: 2rem;
+    line-height: 1.6;
+  }
+  .container {
+    max-width: 800px;
+    margin: 0 auto;
+    background: #111827;
+    border-radius: 12px;
+    padding: 2rem;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  h1 {
+    font-size: 1.75rem;
+    margin-bottom: 0.5rem;
+    color: #FF8A00;
+  }
+  .subtitle {
+    color: #9ca3af;
+    margin-bottom: 2rem;
+    font-size: 0.9rem;
+  }
+  .warning-box {
+    background: rgba(255,138,0,0.1);
+    border: 1px solid rgba(255,138,0,0.3);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 2rem;
+  }
+  .warning-title {
+    font-weight: 600;
+    color: #FF8A00;
+    margin-bottom: 0.5rem;
+  }
+  .info-box {
+    background: rgba(20,40,255,0.1);
+    border: 1px solid rgba(20,40,255,0.3);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 2rem;
+    font-size: 0.9rem;
+  }
+  .status-box {
+    background: #1f2937;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+    max-height: 300px;
+    overflow-y: auto;
+  }
+  .status-line {
+    margin-bottom: 0.25rem;
+  }
+  .status-line.success { color: #10b981; }
+  .status-line.error { color: #ef4444; }
+  .status-line.warning { color: #f59e0b; }
+  .status-line.info { color: #60a5fa; }
+  .btn {
+    background: linear-gradient(135deg, #FF8A00, #ff7000);
+    color: #000;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    width: 100%;
+    margin-bottom: 1rem;
+  }
+  .btn:hover { transform: translateY(-1px); }
+  .btn:disabled {
+    background: #374151;
+    color: #6b7280;
+    cursor: not-allowed;
+    transform: none;
+  }
+  .btn-secondary {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #e0e6f0;
+  }
+  .summary {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  .summary-card {
+    background: #1f2937;
+    padding: 1rem;
+    border-radius: 8px;
+    text-align: center;
+  }
+  .summary-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #FF8A00;
+    margin-bottom: 0.25rem;
+  }
+  .summary-label {
+    font-size: 0.8rem;
+    color: #9ca3af;
+  }
+  .auth-required {
+    text-align: center;
+    padding: 3rem 1rem;
+  }
+  #authCheck { display: none; }
+  #mainContent { display: none; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div id="authCheck">
+    <div class="auth-required">
+      <h2>🔒 Authentication Required</h2>
+      <p style="color:#9ca3af;margin:1rem 0;">You must be logged in as an admin to use this tool.</p>
+      <a href="./admin-dashboard-v2.html" class="btn" style="display:inline-block;text-decoration:none;width:auto;">Go to Admin Dashboard</a>
+    </div>
+  </div>
+
+  <div id="mainContent">
+    <h1>🔧 Course Migration Tool</h1>
+    <p class="subtitle">Fix field name mismatches from old course schema</p>
+
+    <div class="warning-box">
+      <div class="warning-title">⚠️ Before Running Migration:</div>
+      <ul style="margin-left:1.5rem;margin-top:0.5rem;">
+        <li>This will update ALL courses in Firestore</li>
+        <li>Backup your data first (optional but recommended)</li>
+        <li>Only run this ONCE after deploying updated code</li>
+      </ul>
+    </div>
+
+    <div class="info-box">
+      <strong>What this does:</strong><br>
+      • Maps <code>category</code> → <code>tier</code><br>
+      • Maps <code>fee</code> → <code>price</code><br>
+      • Maps <code>total_modules</code> → <code>module_count</code><br>
+      • Maps <code>short_description</code> → <code>description</code><br>
+      • Adds missing <code>display_order</code> and <code>includes_foundation</code> fields
+    </div>
+
+    <div class="summary">
+      <div class="summary-card">
+        <div class="summary-value" id="totalCourses">—</div>
+        <div class="summary-label">Total Courses</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-value" id="needMigration">—</div>
+        <div class="summary-label">Need Migration</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-value" id="migrated">0</div>
+        <div class="summary-label">Migrated</div>
+      </div>
+    </div>
+
+    <button class="btn" id="scanBtn" onclick="scanCourses()">
+      1. Scan Courses
+    </button>
+
+    <button class="btn" id="migrateBtn" onclick="runMigration()" disabled>
+      2. Run Migration
+    </button>
+
+    <div class="status-box" id="statusLog">
+      <div class="status-line info">Ready to scan courses...</div>
+    </div>
+
+    <button class="btn btn-secondary" onclick="window.location.href='./admin-dashboard-v2.html'">
+      ← Back to Admin Dashboard
+    </button>
+  </div>
+</div>
+
+<script type="module">
+import { auth, db, onAuthStateChanged, collection, getDocs, doc, updateDoc, getDoc, setDoc, serverTimestamp } 
+  from './firebase.js';
+
+let _user = null;
+let _coursesToMigrate = [];
+let _lastActivity = Date.now();
+const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+
+// SECURITY: Session timeout monitor
+setInterval(() => {
+  if (_user && Date.now() - _lastActivity > SESSION_TIMEOUT) {
+    alert('Session expired for security. Please refresh and log in again.');
+    window.location.reload();
+  }
+}, 60000); // Check every minute
+
+// Track activity
+document.addEventListener('click', () => { _lastActivity = Date.now(); });
+document.addEventListener('keypress', () => { _lastActivity = Date.now(); });
+
+// SECURITY: Audit logging function
+async function logAudit(action, details) {
+  try {
+    await setDoc(doc(collection(db, 'audit_logs')), {
+      user_id: _user?.uid || 'unknown',
+      user_email: _user?.email || 'unknown',
+      action: action,
+      details: details,
+      timestamp: serverTimestamp(),
+      ip: 'browser', // Server-side would capture real IP
+      user_agent: navigator.userAgent
+    });
+    console.log('[AUDIT]', action, details);
+  } catch (err) {
+    console.error('[AUDIT] Failed to log:', err);
+    // Don't block operation if audit fails
+  }
+}
+
+// SECURITY: Sanitize log output (prevent XSS in logs)
+function sanitizeLog(text) {
+  const div = document.createElement('div');
+  div.textContent = text; // Use textContent to prevent HTML injection
+  return div.innerHTML;
+}
+
+// Check authentication
+onAuthStateChanged(auth, async (user) => {
+  if (!user) {
+    document.getElementById('authCheck').style.display = 'block';
+    await logAudit('access_denied', { reason: 'not_authenticated' });
+    return;
+  }
+
+  // Check if user is admin
+  try {
+    const userDoc = await getDoc(doc(db, 'users', user.uid));
+    const userData = userDoc.data();
+    
+    if (!userData?.role || !['admin', 'super_admin'].includes(userData.role)) {
+      document.getElementById('authCheck').style.display = 'block';
+      await logAudit('access_denied', { 
+        reason: 'insufficient_permissions', 
+        user_role: userData?.role || 'none' 
+      });
+      return;
+    }
+
+    // User is authenticated admin
+    _user = user;
+    _lastActivity = Date.now();
+    document.getElementById('mainContent').style.display = 'block';
+    
+    await logAudit('tool_accessed', { 
+      user_role: userData.role,
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    console.error('Auth check error:', err);
+    document.getElementById('authCheck').style.display = 'block';
+    await logAudit('auth_error', { error: err.message });
+  }
+});
+
+window.scanCourses = async function() {
+  // SECURITY: Verify user is still authenticated
+  if (!_user) {
+    alert('Session expired. Please refresh.');
+    return;
+  }
+  
+  const btn = document.getElementById('scanBtn');
+  const migrateBtn = document.getElementById('migrateBtn');
+  const log = document.getElementById('statusLog');
+  
+  btn.disabled = true;
+  btn.textContent = 'Scanning...';
+  log.innerHTML = '<div class="status-line info">📡 Scanning Firestore courses...</div>';
+  
+  await logAudit('scan_started', { user_initiated: true });
+  
+  try {
+    const snap = await getDocs(collection(db, 'courses'));
+    const courses = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    
+    document.getElementById('totalCourses').textContent = courses.length;
+    
+    _coursesToMigrate = [];
+    
+    for (const course of courses) {
+      const issues = [];
+      const updates = {};
+      
+      // SECURITY: Validate course ID format (prevent injection)
+      if (!course.id || typeof course.id !== 'string' || course.id.length > 100) {
+        log.innerHTML += `<div class="status-line error">⚠️ Invalid course ID format, skipping</div>`;
+        continue;
+      }
+      
+      if (course.category && !course.tier) {
+        issues.push('category → tier');
+        updates.tier = course.category;
+      }
+      if (course.fee !== undefined && course.price === undefined) {
+        issues.push('fee → price');
+        updates.price = course.fee;
+      }
+      if (course.total_modules !== undefined && course.module_count === undefined) {
+        issues.push('total_modules → module_count');
+        updates.module_count = course.total_modules;
+      }
+      if (course.short_description && !course.description) {
+        issues.push('short_description → description');
+        updates.description = course.short_description;
+      }
+      if (course.display_order === undefined) {
+        issues.push('missing display_order');
+        const tier = course.tier || course.category || 'track';
+        updates.display_order = tier === 'foundation' ? 1 : tier === 'executive' ? 99 : 2;
+      }
+      
+      const tier = course.tier || course.category;
+      if ((tier === 'track' || tier === 'executive') && course.includes_foundation === undefined) {
+        issues.push('missing includes_foundation');
+        updates.includes_foundation = true;
+      }
+      
+      if (issues.length > 0) {
+        _coursesToMigrate.push({ id: course.id, title: course.title, issues, updates });
+        
+        const issueText = sanitizeLog(issues.join(', '));
+        const courseTitle = sanitizeLog(course.title || course.id);
+        log.innerHTML += `<div class="status-line warning">⚠️ ${courseTitle}: ${issueText}</div>`;
+      }
+    }
+    
+    document.getElementById('needMigration').textContent = _coursesToMigrate.length;
+    
+    await logAudit('scan_completed', { 
+      total_courses: courses.length,
+      need_migration: _coursesToMigrate.length 
+    });
+    
+    if (_coursesToMigrate.length === 0) {
+      log.innerHTML += '<div class="status-line success">✅ All courses are up to date! No migration needed.</div>';
+      btn.textContent = '✓ Scan Complete';
+    } else {
+      log.innerHTML += `<div class="status-line info">📋 Found ${_coursesToMigrate.length} course(s) that need migration.</div>`;
+      btn.textContent = '✓ Scan Complete';
+      migrateBtn.disabled = false;
+    }
+    
+  } catch (err) {
+    console.error('Scan error:', err);
+    await logAudit('scan_failed', { error: err.message });
+    log.innerHTML += `<div class="status-line error">❌ Error: ${sanitizeLog(err.message)}</div>`;
+    btn.textContent = 'Scan Failed - Retry';
+    btn.disabled = false;
+  }
+};
+
+window.runMigration = async function() {
+  // SECURITY: Multiple confirmations for destructive operation
+  if (_coursesToMigrate.length === 0) {
+    alert('No courses to migrate. Run scan first.');
+    return;
+  }
+  
+  // SECURITY: Verify user is still authenticated
+  if (!_user) {
+    alert('Session expired. Please refresh and log in again.');
+    return;
+  }
+  
+  // SECURITY: Double confirmation with details
+  const confirmMsg = `⚠️ IMPORTANT: This will update ${_coursesToMigrate.length} course(s) in Firestore.\n\n` +
+    `Changes cannot be easily undone.\n\n` +
+    `Are you sure you want to continue?`;
+  
+  if (!confirm(confirmMsg)) {
+    await logAudit('migration_cancelled', { reason: 'user_cancelled_first_prompt' });
+    return;
+  }
+  
+  // Second confirmation
+  if (!confirm('Final confirmation: Click OK to proceed with migration.')) {
+    await logAudit('migration_cancelled', { reason: 'user_cancelled_second_prompt' });
+    return;
+  }
+  
+  const btn = document.getElementById('migrateBtn');
+  const scanBtn = document.getElementById('scanBtn');
+  const log = document.getElementById('statusLog');
+  
+  btn.disabled = true;
+  scanBtn.disabled = true;
+  btn.textContent = 'Migrating...';
+  log.innerHTML = '<div class="status-line info">🚀 Starting migration...</div>';
+  
+  await logAudit('migration_started', { 
+    courses_count: _coursesToMigrate.length,
+    timestamp: new Date().toISOString()
+  });
+  
+  let successCount = 0;
+  let errorCount = 0;
+  const errors = [];
+  
+  for (const course of _coursesToMigrate) {
+    try {
+      // SECURITY: Validate updates object before writing
+      if (!course.updates || typeof course.updates !== 'object') {
+        throw new Error('Invalid updates object');
+      }
+      
+      // SECURITY: Rate limiting - small delay between operations
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      await updateDoc(doc(db, 'courses', course.id), {
+        ...course.updates,
+        updated_at: new Date(),
+        migrated_by: _user.uid,
+        migrated_at: serverTimestamp()
+      });
+      
+      successCount++;
+      document.getElementById('migrated').textContent = successCount;
+      const courseTitle = sanitizeLog(course.title || course.id);
+      log.innerHTML += `<div class="status-line success">✓ ${courseTitle}</div>`;
+      
+      // Log each successful migration
+      await logAudit('course_migrated', { 
+        course_id: course.id,
+        course_title: course.title,
+        changes: Object.keys(course.updates)
+      });
+      
+    } catch (err) {
+      errorCount++;
+      errors.push({ course: course.id, error: err.message });
+      const courseTitle = sanitizeLog(course.title || course.id);
+      const errorMsg = sanitizeLog(err.message);
+      log.innerHTML += `<div class="status-line error">✗ ${courseTitle}: ${errorMsg}</div>`;
+      
+      await logAudit('migration_error', { 
+        course_id: course.id,
+        error: err.message 
+      });
+    }
+  }
+  
+  // Final summary
+  log.innerHTML += '<div class="status-line info">────────────────────────</div>';
+  log.innerHTML += `<div class="status-line success">✅ Migration complete!</div>`;
+  log.innerHTML += `<div class="status-line info">• ${successCount} courses updated</div>`;
+  if (errorCount > 0) {
+    log.innerHTML += `<div class="status-line error">• ${errorCount} errors</div>`;
+  }
+  log.innerHTML += '<div class="status-line info">────────────────────────</div>';
+  log.innerHTML += '<div class="status-line info">💡 You can now close this page and use the admin dashboard.</div>';
+  
+  await logAudit('migration_completed', { 
+    success_count: successCount,
+    error_count: errorCount,
+    errors: errors.slice(0, 5), // Log first 5 errors only
+    timestamp: new Date().toISOString()
+  });
+  
+  btn.textContent = '✓ Migration Complete';
+  btn.disabled = true;
+  scanBtn.textContent = 'Re-scan Courses';
+  scanBtn.disabled = false;
+  
+  // Auto-scroll to bottom
+  log.scrollTop = log.scrollHeight;
+};
+</script>
+
+</body>
+</html>

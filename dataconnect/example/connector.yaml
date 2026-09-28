@@ -1,0 +1,9 @@
+connectorId: example
+generate:
+  javascriptSdk:
+    - outputDir: ..\..\Downloads\sofe-node-nextjs\sofe-node-nextjs\src\dataconnect-generated
+      package: "@dataconnect/generated"
+      packageJsonDir: ..\..\Downloads\sofe-node-nextjs\sofe-node-nextjs
+      react: true
+      angular: false
+      clientCache: {}

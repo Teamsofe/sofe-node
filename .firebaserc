@@ -1,0 +1,15 @@
+{
+  "projects": {
+    "default": "sofe-node"
+  },
+  "targets": {
+    "sofe-node": {
+      "hosting": {
+        "default": [
+          "sofe-node"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}

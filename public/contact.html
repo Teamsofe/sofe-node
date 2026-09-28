@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Contact Us — Sofe Node</title>
+<link rel="icon" href="./images/favicon.ico" type="image/x-icon" />
+<meta name="title" content="Book a Strategy Session | Sofe Node Partnership">
+<meta name="description" content="Schedule a consultation with Sofe Node to discuss protocol distribution, node infrastructure, and market entry strategies for the African Web3 ecosystem.">
+<meta name="keywords" content="Book Web3 Consultation, Blockchain Strategy Africa, Partner with Sofe Node, Protocol Onboarding Call">
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/contact.css" />
+</head>
+<body data-nav-active="contact">
+
+<canvas id="hexCanvas"></canvas>
+
+<div id="sofe-navbar"></div>
+
+<!-- HERO -->
+<section class="contact-hero">
+  <div style="max-width:680px">
+    <div class="section-tag">Get In Touch</div>
+    <h1 style="font-size:clamp(2.2rem,5vw,3.6rem);font-weight:800;line-height:1.1;margin-top:.75rem;">
+      Talk to the <em style="font-style:normal;color:var(--blue);">Node</em>.
+    </h1>
+    <p class="body-text" style="max-width:560px;margin-top:1.2rem;">
+      Whether you're a global protocol looking to enter the African market, a student ready to start
+      their Web3 journey, or a partner exploring collaboration — we want to hear from you.
+    </p>
+    <p class="hero-tagline" style="margin-top:1.5rem;">Response within 48 hours.</p>
+  </div>
+</section>
+
+<!-- CONTACT GRID -->
+<section style="padding-top:2rem;">
+  <div class="contact-grid reveal">
+    <!-- FORM -->
+    <form class="contact-form-card" onsubmit="handleContactSubmit(event)">
+  <h3>Send a Message</h3>
+  <p class="sub">Fill in the form and our team will get back to you within 48 hours.</p>
+  
+  <div class="form-row">
+    <div class="form-field">
+      <label class="form-label">First Name</label>
+      <input type="text" id="firstName" class="form-input" placeholder="Chukwuemeka" required />
+    </div>
+    <div class="form-field">
+      <label class="form-label">Last Name</label>
+      <input type="text" id="lastName" class="form-input" placeholder="Obi" required />
+    </div>
+  </div>
+
+  <div class="form-field">
+    <label class="form-label">Email Address</label>
+    <input type="email" id="email" class="form-input" placeholder="you@example.com" required />
+  </div>
+
+  <div class="form-field">
+    <label class="form-label">I Am A...</label>
+    <select id="userType" class="form-select" required>
+      <option value="">Select who you are</option>
+      <option value="Student">Student / Aspiring Web3 Professional</option>
+      <option value="Brand">Brand / Protocol looking to enter Africa</option>
+      <option value="Sponsor">Event Sponsor</option>
+      <option value="Campus Rep">University / Campus representative</option>
+      <option value="Media">Media / Press</option>
+      <option value="Other">Other</option>
+    </select>
+  </div>
+
+  <div class="form-field">
+    <label class="form-label">Subject</label>
+    <input type="text" id="subject" class="form-input" placeholder="Briefly describe your enquiry" required />
+  </div>
+
+  <div class="form-field">
+    <label class="form-label">Message</label>
+    <textarea id="message" class="form-input" placeholder="Tell us more about what you need..." required></textarea>
+  </div>
+
+  <button type="submit" id="submitBtn" class="btn-primary" style="width:100%;justify-content:center;">Send Message</button>
+</form>
+
+    <!-- INFO CARDS -->
+    <div class="contact-info-card">
+      <div class="info-item">
+        <div class="info-icon">📧</div>
+        <div>
+          <div class="info-label">Email</div>
+          <div class="info-value"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="650d0009090a25160a03000b0a01004b060a08">info@node.sofegroup.com, sofenode@gmail.com</a></div>
+          <div class="info-sub">General enquiries &amp; partnerships</div>
+        </div>
+      </div>
+      <div class="info-item">
+        <div class="info-icon">📱</div>
+        <div>
+          <div class="info-label">WhatsApp / Phone</div>
+          <div class="info-value">+234 704 284 7883, +234 903 420 1114</div>
+          <div class="info-sub">Mon – Fri, 9am – 6pm WAT</div>
+        </div>
+      </div>
+      <div class="info-item">
+        <div class="info-icon">📍</div>
+        <div>
+          <div class="info-label">Location</div>
+          <div class="info-value">Head Office: Suite 107 Continuing Education Center, University of Nigeria, Nsukka</div>
+          <div class="info-sub">Nigeria (Operations)</div>
+        </div>
+      </div>
+      <div class="info-item">
+        <div class="info-icon">💬</div>
+        <div>
+          <div class="info-label">Community</div>
+          <div class="info-value">5,000+ members</div>
+          <div class="info-sub">Live Web3 discussions, job alerts, and event updates.</div>
+        </div>
+      </div>
+      <!-- Social Links -->
+      <div style="background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:1.5rem;">
+        <div class="info-label" style="margin-bottom:1rem;">Follow the Node</div>
+        <div style="display:flex;gap:.7rem;flex-wrap:wrap;">
+          <a href="http://x.com/sofenode" class="social-btn" title="X/Twitter" target="_blank" style="width:auto;padding:.4rem .9rem;font-size:.72rem;font-weight:600;">Twitter</a>
+          <a href="https://www.linkedin.com/company/sofe-node" class="social-btn" title="LinkedIn" target="_blank" style="width:auto;padding:.4rem .9rem;font-size:.72rem;font-weight:600;">LinkedIn</a>
+          <a href="https://t.me/sofegroupofficial" class="social-btn" title="Telegram" target="_blank" style="width:auto;padding:.4rem .9rem;font-size:.72rem;font-weight:600;">Telegram</a>
+          <a href="https://www.facebook.com/profile.php?id=100063995682203&mibextid=ZbWKwL" class="social-btn" title="Facebook" target="_blank" style="width:auto;padding:.4rem .9rem;font-size:.72rem;font-weight:600;">Facebook</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="faq-section">
+  <div class="section-tag orange-tag">Quick Answers</div>
+  <h2>Frequently Asked <em class="orange">Questions</em></h2>
+  <div class="faq-grid reveal">
+    <div class="faq-item-c">
+      <div class="faq-q" onclick="toggleFaqC(this)">How do I join a bootcamp?</div>
+      <div class="faq-a">Click "Get Started Today" on the homepage or Academy page to register for the next cohort. Bootcamps run regularly in virtual and physical formats, with fees heavily subsidised by our global partners.</div>
+    </div>
+    <div class="faq-item-c">
+      <div class="faq-q" onclick="toggleFaqC(this)">How can my brand partner with Sofe Node?</div>
+      <div class="faq-a">We offer market distribution, talent sponsorship, campus activation, and conference sponsorship. Fill the contact form above selecting "Brand / Protocol" and our partnerships team will respond within 48 hours.</div>
+    </div>
+    <div class="faq-item-c">
+      <div class="faq-q" onclick="toggleFaqC(this)">How does the affiliate program work?</div>
+      <div class="faq-a">Once registered, you get a unique referral link. Earn 10% at Level 1 (Newbie) and 15% at Level 2 (Ambassador) on every successful signup. Commissions are paid directly to your Nigerian bank account via Paystack.</div>
+    </div>
+    <div class="faq-item-c">
+      <div class="faq-q" onclick="toggleFaqC(this)">Is there a fee to join Sofe Node?</div>
+      <div class="faq-a">Creating a free Sofian account costs nothing. Course fees are heavily subsidised (up to 80%) by our global partners. The remaining fee (around ₦2,000 for certification) covers admin and credentialing costs.</div>
+    </div>
+    <div class="faq-item-c">
+      <div class="faq-q" onclick="toggleFaqC(this)">Can I open a campus chapter at my university?</div>
+      <div class="faq-a">Yes. We actively expand our university node network. Reach out via the form above selecting "University / Campus representative" and our expansion team will be in touch.</div>
+    </div>
+    <div class="faq-item-c">
+      <div class="faq-q" onclick="toggleFaqC(this)">What is the BCE event?</div>
+      <div class="faq-a">The Blockchain Career Expo (BCE) is Sofe Node's annual flagship conference — bringing together Web3 professionals, protocols, and talent for keynotes, a career fair, and exhibitions across our node networks.</div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <a href="/" class="nav-logo" style="margin-bottom:.6rem;">
+        <img src="./images/Nodes/SofeLogoHome.png" class="logo-img" alt="Sofe Node Logo" />
+  </a>
+      <p>A Sofe Group company. Empowering the next generation to lead Africa's tech revolution.</p>
+      <div class="social-row">
+        <a class="social-btn" href="http://x.com/sofenode" title="X/Twitter" target="_blank"> <img src="./images/Social/SofeNodeX(twitter).png" alt="X/Twitter"></a> 
+        <a class="social-btn" href="https://www.linkedin.com/company/sofe-group" title="LinkedIn" target="_blank"> <img src="./images/Social/SofeNodeLInkedIn.png" alt="LinkedIn"></a>
+        <a class="social-btn" href="http://youtube.com/@sofegroupofficial" title="YouTube" target="_blank"> <img src="./images/Social/SofeNodeYoutubelogo.png" alt="YouTube"></a>
+        <a class="social-btn" href="https://www.facebook.com/profile.php?id=100063995682203&mibextid=ZbWKwL" title="Facebook" target="_blank"> <img src="./images/Social/SofeNodeFacebooklogo.png" alt="Facebook"></a>
+        <a class="social-btn" href="https://t.me/sofegroupofficial" title="Telegram" target="_blank"> <img src="./images/Social/SofeNodeTelegram.png" alt="Telegram"></a>
+      </div>
+    </div>
+    <div class="footer-col">
+      <h4>Quick Links</h4>
+      <ul>
+        <li><a href="./about.html">About Us</a></li>
+        <li><a href="./partners.html">For Partners</a></li>
+        <li><a href="./talent.html">For Talent</a></li>
+        <li><a href="./bce.html">BCE</a></li>
+        <li><a href="./dashboard.html">Dashboard</a></li>
+        <li><a href="#">Verify Certificate</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Legal</h4>
+      <ul>
+        <li><a href="#">Privacy Policy</a></li>
+        <li><a href="#">Terms of Service</a></li>
+        <li><a href="#">Affiliate Terms</a></li>
+        <li><a href="#">Cookie Policy</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Web3 Job Alerts</h4>
+      <p style="font-size:.85rem;color:var(--muted);margin-bottom:.5rem;font-weight:300;">Get the latest Web3 opportunities in Africa, straight to your inbox.</p>
+      <div class="newsletter-row">
+        <input type="email" class="newsletter-input" placeholder="your@email.com" />
+        <button class="newsletter-btn">Join</button>
+      </div>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>&copy; 2025 Sofe Node &middot; A Sofe Group Company &middot; All rights reserved.</p>
+    <p style="color:var(--orange);">Africa's Node for Web3 Growth.</p>
+  </div>
+</footer>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script>
+
+<!-- PLAIN SCRIPT: All page logic that must never be blocked by Firebase -->
+<script>
+  // FAQ TOGGLE
+  function toggleFaqC(btn) {
+    const item = btn.parentElement;
+    const wasOpen = item.classList.contains('open');
+    document.querySelectorAll('.faq-item-c').forEach(i => i.classList.remove('open'));
+    if (!wasOpen) item.classList.add('open');
+  }
+
+  // REVEAL on scroll
+  document.addEventListener('DOMContentLoaded', function() {
+    const revealEls = document.querySelectorAll('.reveal');
+    const revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          entry.target.classList.add('active');
+        }
+      });
+    }, { threshold: 0.1 });
+    revealEls.forEach(el => revealObserver.observe(el));
+    // Fail-safe: force visible after 1.5s in case observer doesn't fire
+    setTimeout(() => revealEls.forEach(el => {
+      el.classList.add('visible');
+      el.classList.add('active');
+    }), 1500);
+  });
+
+  // Fallback submit handler — used if Firebase module fails to load
+  window.handleContactSubmit = function(e) {
+    e.preventDefault();
+    alert('Submission failed: Firebase could not be loaded. Please try again later or contact us directly.');
+  };
+</script>
+
+<!-- MODULE SCRIPT: Firebase only — isolated so any import error cannot break the page -->
+<script type="module">
+  import { db, collection, addDoc, serverTimestamp } from './firebase.js';
+
+  // Override the fallback submit handler with the real Firebase one
+  window.handleContactSubmit = async function(e) {
+    e.preventDefault();
+    const btn = document.getElementById('submitBtn');
+    if (!btn) return;
+    const originalText = btn.innerHTML;
+    const form = e.target;
+
+    // Remove any previous feedback
+    const existingFeedback = document.getElementById('contactFeedback');
+    if (existingFeedback) existingFeedback.remove();
+
+    btn.disabled = true;
+    btn.textContent = 'Sending...';
+
+    try {
+      await addDoc(collection(db, 'contact_messages'), {
+        first_name: document.getElementById('firstName').value.trim(),
+        last_name:  document.getElementById('lastName').value.trim(),
+        email:      document.getElementById('email').value.trim(),
+        user_type:  document.getElementById('userType') ? document.getElementById('userType').value : 'General',
+        subject:    document.getElementById('subject').value.trim(),
+        message:    document.getElementById('message').value.trim(),
+        status:     'unread',
+        source:     'Sofe Node Contact Page',
+        timestamp:  serverTimestamp()
+      });
+
+      // Show success inline — no alert()
+      const success = document.createElement('div');
+      success.id = 'contactFeedback';
+      success.style.cssText = 'background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:8px;padding:14px 18px;margin-top:16px;font-size:.85rem;color:#10b981;display:flex;align-items:center;gap:.6rem;';
+      success.innerHTML = '<span style="font-size:1.1rem;">✓</span> Message sent! We\'ll get back to you within 48 hours. Check your inbox for a confirmation email.';
+      btn.parentNode.appendChild(success);
+      form.reset();
+
+    } catch (err) {
+      console.error('Firebase Error:', err);
+      const errDiv = document.createElement('div');
+      errDiv.id = 'contactFeedback';
+      errDiv.style.cssText = 'background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:14px 18px;margin-top:16px;font-size:.85rem;color:#f87171;display:flex;align-items:center;gap:.6rem;';
+      errDiv.innerHTML = '<span style="font-size:1.1rem;">✕</span> Failed to send — please email us directly at <a href="mailto:info@sofegroup.com" style="color:#f87171;text-decoration:underline;">info@sofegroup.com</a>';
+      btn.parentNode.appendChild(errDiv);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+    }
+  };
+</script>
+
+<!-- PLAIN SCRIPT: Hex canvas, theme, hamburger, scroll-spy — all independent of Firebase -->
+<script>
+// FLOATING HEXAGONAL BACKGROUND (ORANGE)
+(function(){
+  const canvas = document.getElementById('hexCanvas');
+  const ctx = canvas.getContext('2d');
+  let nodes = [], W, H;
+
+  function resize(){
+    W = canvas.width  = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+
+  function hexPath(cx, cy, r, rot){
+    ctx.beginPath();
+    for(let i = 0; i < 6; i++){
+      const a = Math.PI / 3 * i + rot;
+      i === 0
+        ? ctx.moveTo(cx + r * Math.cos(a), cy + r * Math.sin(a))
+        : ctx.lineTo(cx + r * Math.cos(a), cy + r * Math.sin(a));
+    }
+    ctx.closePath();
+  }
+
+  function init(){
+    nodes = [];
+    // Layer 1 — small dense hexagons (network mesh feel)
+    const smallCount = Math.min(45, Math.floor(W * H / 10000));
+    for(let i = 0; i < smallCount; i++){
+      const ang = Math.random() * Math.PI * 2;
+      nodes.push({
+        x: Math.random() * W, y: Math.random() * H,
+        vx: Math.cos(ang) * (0.12 + Math.random() * 0.18),
+        vy: Math.sin(ang) * (0.12 + Math.random() * 0.18),
+        r: 10 + Math.random() * 12,   // 10–22px radius
+        rot: Math.random() * Math.PI,
+        rotV: (Math.random() - 0.5) * 0.006,
+        phase: Math.random() * Math.PI * 2,
+        layer: 'small',
+      });
+    }
+    // Layer 2 — medium accent hexagons (depth anchors)
+    const medCount = Math.min(12, Math.floor(W * H / 55000));
+    for(let i = 0; i < medCount; i++){
+      const ang = Math.random() * Math.PI * 2;
+      nodes.push({
+        x: Math.random() * W, y: Math.random() * H,
+        vx: Math.cos(ang) * (0.07 + Math.random() * 0.12),
+        vy: Math.sin(ang) * (0.07 + Math.random() * 0.12),
+        r: 28 + Math.random() * 14,   // 28–42px radius
+        rot: Math.random() * Math.PI,
+        rotV: (Math.random() - 0.5) * 0.002,
+        phase: Math.random() * Math.PI * 2,
+        layer: 'medium',
+      });
+    }
+  }
+
+  function draw(){
+    ctx.clearRect(0, 0, W, H);
+    const lightMode = document.body.classList.contains('light');
+
+    if (!lightMode) {
+      // Dark mode: paint background
+      ctx.fillStyle = 'rgba(4,8,16,0.93)';
+      ctx.fillRect(0, 0, W, H);
+    }
+    // Light mode: clearRect above is enough — canvas stays transparent
+
+    const MAX = 160; // tighter connections suit smaller hexagons
+    for(let i = 0; i < nodes.length; i++){
+      for(let j = i + 1; j < nodes.length; j++){
+        const dx = nodes[i].x - nodes[j].x;
+        const dy = nodes[i].y - nodes[j].y;
+        const d  = Math.sqrt(dx*dx + dy*dy);
+        if(d < MAX){
+          const a = (1 - d / MAX) * 0.22;
+          ctx.beginPath();
+          ctx.moveTo(nodes[i].x, nodes[i].y);
+          ctx.lineTo(nodes[j].x, nodes[j].y);
+          // Light mode: darker lines so they're visible on pale bg
+          ctx.strokeStyle = lightMode
+            ? `rgba(20,40,200,${(a * 0.7).toFixed(3)})`
+            : `rgba(255,138,0,${a.toFixed(3)})`;
+          ctx.lineWidth   = (1 - d / MAX) * 1.6;
+          ctx.stroke();
+        }
+      }
+    }
+
+    nodes.forEach(n => {
+      n.x += n.vx; n.y += n.vy;
+      n.rot   += n.rotV;
+      n.phase += 0.013;
+      if(n.x < -n.r*2)    n.x = W + n.r;
+      if(n.x > W + n.r*2) n.x = -n.r;
+      if(n.y < -n.r*2)    n.y = H + n.r;
+      if(n.y > H + n.r*2) n.y = -n.r;
+
+      const p = 0.5 + 0.5 * Math.sin(n.phase);
+      const isSmall = n.layer === 'small';
+
+      // Glow halo
+      const glowR = n.r * (isSmall ? 1.6 : 2.2);
+      const glowA = isSmall ? 0.07 * p : 0.13 * p;
+      const glowColor = lightMode ? `rgba(20,40,220,${glowA.toFixed(3)})` : `rgba(255,138,0,${glowA.toFixed(3)})`;
+      const grd = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, glowR);
+      grd.addColorStop(0, glowColor);
+      grd.addColorStop(1, lightMode ? 'rgba(20,40,220,0)' : 'rgba(255,138,0,0)');
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, glowR, 0, Math.PI * 2);
+      ctx.fillStyle = grd; ctx.fill();
+
+      // Hex fill
+      const fillA = isSmall ? (0.03 + 0.04 * p) : (0.05 + 0.07 * p);
+      hexPath(n.x, n.y, n.r, n.rot);
+      ctx.fillStyle = lightMode
+        ? `rgba(20,40,220,${(fillA * 1.4).toFixed(3)})`
+        : `rgba(255,138,0,${fillA.toFixed(3)})`;
+      ctx.fill();
+
+      // Outer stroke
+      const strokeA = isSmall ? (0.28 + 0.28 * p) : (0.50 + 0.32 * p);
+      const strokeW = isSmall ? 0.8 : 1.3;
+      hexPath(n.x, n.y, n.r, n.rot);
+      ctx.strokeStyle = lightMode
+        ? `rgba(20,40,220,${(strokeA * 0.9).toFixed(3)})`
+        : `rgba(255,160,40,${strokeA.toFixed(3)})`;
+      ctx.lineWidth = strokeW; ctx.stroke();
+
+      // Inner hex stroke (medium layer only)
+      if (!isSmall) {
+        hexPath(n.x, n.y, n.r * 0.5, n.rot);
+        ctx.strokeStyle = lightMode
+          ? `rgba(255,138,0,${(0.25 + 0.2 * p).toFixed(3)})`
+          : `rgba(255,138,0,${(0.18 + 0.18 * p).toFixed(3)})`;
+        ctx.lineWidth = 0.7; ctx.stroke();
+      }
+
+      // Center dot
+      const dotR = isSmall ? 1.4 : 2.4;
+      const dotA = isSmall ? (0.4 + 0.3 * p) : (0.65 + 0.35 * p);
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, dotR, 0, Math.PI * 2);
+      ctx.fillStyle = lightMode
+        ? `rgba(255,120,0,${dotA.toFixed(3)})`
+        : `rgba(255,180,60,${dotA.toFixed(3)})`;
+      ctx.fill();
+    });
+
+    requestAnimationFrame(draw);
+  }
+
+  window.addEventListener('resize', () => { resize(); init(); });
+  resize(); init(); draw();
+})();
+
+function switchTab(id, btn){
+  document.querySelectorAll('.vp-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.vp-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  btn.classList.add('active');
+}
+
+// LIGHT MODE TOGGLE
+const themeBtn = document.getElementById('themeToggle');
+const themeBtnMob = document.getElementById('themeToggleMob');
+let isLight = false;
+
+function applyTheme(light) {
+  isLight = light;
+  document.body.classList.toggle('light', isLight);
+  const icon = isLight ? '🌙' : '☀️';
+  const title = isLight ? 'Switch to dark mode' : 'Switch to light mode';
+  themeBtn.textContent = icon; themeBtn.title = title;
+  themeBtnMob.textContent = icon; themeBtnMob.title = title;
+  document.getElementById('hexCanvas').style.opacity = isLight ? '0.18' : '1';
+}
+themeBtn.addEventListener('click', () => applyTheme(!isLight));
+themeBtnMob.addEventListener('click', () => applyTheme(!isLight));
+
+// HAMBURGER MENU
+const hamburger = document.getElementById('hamburger');
+const mobileMenu = document.getElementById('mobileMenu');
+let menuOpen = false;
+
+hamburger.addEventListener('click', () => {
+  menuOpen = !menuOpen;
+  hamburger.classList.toggle('open', menuOpen);
+  if (menuOpen) {
+    mobileMenu.classList.add('open');
+  } else {
+    mobileMenu.classList.remove('open');
+  }
+});
+
+// Close mobile menu on link click
+mobileMenu.querySelectorAll('a[href]').forEach(a => {
+  a.addEventListener('click', () => {
+    if (!a.classList.contains('mob-services-toggle')) {
+      menuOpen = false;
+      hamburger.classList.remove('open');
+      mobileMenu.classList.remove('open');
+    }
+  });
+});
+
+// Mobile Services sub-menu toggle
+function toggleMobServices(e) {
+  e.preventDefault();
+  const tgl = document.getElementById('mobServicesTgl');
+  const sub = document.getElementById('mobSub');
+  const isOpen = tgl.classList.contains('open');
+  tgl.classList.toggle('open', !isOpen);
+  sub.style.display = isOpen ? 'none' : 'block';
+}
+
+// FAQ ACCORDION
+function toggleFaq(el) {
+  const item = el.parentElement;
+  const isOpen = item.classList.contains('open');
+  // Close all
+  document.querySelectorAll('.faq-item').forEach(i => i.classList.remove('open'));
+  // Open clicked if it wasn't open
+  if (!isOpen) item.classList.add('open');
+}
+
+window.addEventListener('scroll', () => {
+  document.getElementById('nav').style.background =
+    window.scrollY > 40 ? 'rgba(4,8,16,0.97)' : 'rgba(4,8,15,0.88)';
+});
+
+// ── SCROLL-SPY ──────────────────────────────────────────────────────────────
+// Maps section IDs → the nav link href that should highlight
+const spyMap = {
+  'hero':        '/',
+  'case-study':  '/',
+  'about':       '/about',
+  'value':       '/services',
+  'bce':         '/bce',
+  'impact':      '/bce',
+  'dashboard':   '/dashboard',
+  'partners':    '/about',
+  'contact-faq': '/about',
+};
+
+// Collect all desktop + mobile nav links that match hrefs in the spy map
+function getSpyLinks(href) {
+  return [
+    ...document.querySelectorAll(`.nav-links a[href="${href}"]`),
+    ...document.querySelectorAll(`.mob-links a[href="${href}"]`),
+  ];
+}
+
+function clearSpy() {
+  document.querySelectorAll('.nav-links a, .mob-links a').forEach(a => a.classList.remove('spy-active'));
+}
+
+function activateSpy(href) {
+  clearSpy();
+  getSpyLinks(href).forEach(a => a.classList.add('spy-active'));
+}
+
+// Use IntersectionObserver — fire when a section is ≥ 30% visible
+const spySections = Object.keys(spyMap)
+  .map(id => document.getElementById(id))
+  .filter(Boolean);
+
+// Track which sections are currently intersecting and pick topmost
+const visible = new Set();
+
+const spyObserver = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) visible.add(e.target.id);
+    else visible.delete(e.target.id);
+  });
+
+  // Find the topmost visible section (by DOM order)
+  const active = spySections.find(s => visible.has(s.id));
+  if (active) activateSpy(spyMap[active.id]);
+}, { threshold: 0.18, rootMargin: '-60px 0px -20% 0px' });
+
+spySections.forEach(s => spyObserver.observe(s));
+// ────────────────────────────────────────────────────────────────────────────
+
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if(e.isIntersecting){ setTimeout(() => e.target.classList.add('visible'), 80); obs.unobserve(e.target); }
+  });
+}, { threshold: .1 });
+document.querySelectorAll('.reveal').forEach(r => obs.observe(r));
+</script>
+<script type="module" src="./js/sofe-navbar.js"></script>
+</body>
+</html>

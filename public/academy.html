@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sofe Academy — Sofe Node</title>
+<link rel="icon" href="./images/favicon.ico" type="image/x-icon" />
+<meta name="description" content="Master blockchain and Web3 with Sofe Node. From foundation to executive — courses designed for the African market." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="./css/main.css" />
+<style>
+  /* Page-specific styles */
+  :root {
+    --bg:#040810; 
+    --deep:#060d1a; 
+    --panel:#0a1628;
+    --border:rgba(200,215,240,.1); 
+    --white:#c8d7f0; 
+    --muted:rgba(200,215,240,.5);
+    --orange:#FF8A00; 
+    --blue:#1428FF; 
+    --gold:#C9A84C;
+  }
+
+  body { background: var(--bg); color: var(--white); font-family: 'Poppins', sans-serif; }
+
+   /* ── LIGHT MODE ── */
+  body.light {
+    --bg: #F0F4FF;
+    --deep: #E4EAFF;
+    --panel: #FFFFFF;
+    --border: rgba(20,40,255,0.14);
+    --white: #0A1420;
+    --muted: rgba(10,20,32,0.6);
+    --blue-dim: rgba(20,40,255,0.08);
+    --orange-dim: rgba(255,138,0,0.10);
+  }
+  body.light nav { background: rgba(230,236,255,0.95) !important; }
+  body.light footer { background: #E4EAFF; }
+  body.light #trust { background: rgba(210,220,255,0.85); border-color: rgba(20,40,255,0.15); }
+  body.light .trust-label { color: rgba(10,15,36,0.6); }
+  body.light .trust-item span { color: rgba(10,15,36,0.5); }
+  body.light .trust-item:hover span { color: rgba(10,15,36,0.9); }
+  body.light .stats-wrap { background: rgba(220,228,255,0.6); }
+  body.light #value { background: rgba(224,232,255,0.5); }
+  body.light #dashboard { background: rgba(224,232,255,0.6); }
+  body.light .about-visual::before { background: radial-gradient(circle, rgba(20,40,255,.06), transparent 70%); }
+  body.light #hexCanvas { opacity: 1; } /* Controlled per-frame in draw() */
+  
+  /* Light mode: Hero section text visibility fixes */
+  body.light .cat-title { color: #0A0F24; }
+  body.light .cat-sub { color: #4A5568; }
+  body.light .cat-eyebrow { color: var(--orange); }
+  
+  /* Dropdown stays dark on light mode — high contrast against the light nav */
+  body.light .nav-dropdown-panel {
+    background: #f0f1f3;
+    border-color: rgba(20,40,255,0.3);
+    box-shadow: 0 16px 40px rgba(0,0,0,.25);
+  }
+  body.light .nav-dropdown-panel::before { background: #0D1526; border-color: rgba(20,40,255,0.3); }
+
+  /* Catalog hero */
+  .cat-hero {
+    padding: 6rem 1.5rem 3rem;
+    text-align: center;
+    background:
+      radial-gradient(circle at 20% 20%, rgba(20,40,255,.08), transparent 50%),
+      radial-gradient(circle at 80% 30%, rgba(255,138,0,.06), transparent 50%);
+  }
+  .cat-eyebrow {
+    font-size: .65rem; font-weight: 700;
+    letter-spacing: .25em; text-transform: uppercase;
+    color: var(--orange); margin-bottom: 1rem;
+  }
+  .cat-title {
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 800; line-height: 1.05;
+    margin-bottom: 1rem;
+    font-family: 'Poppins', sans-serif;
+  }
+  .cat-title em { color: var(--orange); font-style: normal; }
+  .cat-sub {
+    font-size: 1rem; color: var(--muted);
+    max-width: 580px; margin: 0 auto 2rem;
+    line-height: 1.6;
+  }
+
+  /* Filter pills */
+  .cat-filters {
+    display: flex; gap: .5rem; flex-wrap: wrap;
+    justify-content: center; margin-bottom: 3rem;
+    padding: 0 1rem;
+  }
+  .cat-filter-pill {
+    background: var(--panel); border: 1px solid var(--border);
+    color: var(--muted); padding: .5rem 1.1rem;
+    border-radius: 50px; font-family: 'Poppins', sans-serif;
+    font-size: .72rem; font-weight: 600; letter-spacing: .04em;
+    cursor: pointer; transition: all .2s;
+  }
+  .cat-filter-pill:hover { color: var(--white); border-color: rgba(255,255,255,.2); }
+  .cat-filter-pill.active {
+    background: var(--orange); color: #000;
+    border-color: var(--orange);
+  }
+
+  /* Course grid */
+  .courses-wrap {
+    max-width: 1200px; margin: 0 auto;
+    padding: 0 1.5rem 5rem;
+  }
+  .courses-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.5rem;
+  }
+
+  /* Course card */
+  .course-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.5rem;
+    position: relative;
+    transition: transform .25s, border-color .25s, box-shadow .25s;
+    overflow: hidden;
+    display: flex; flex-direction: column;
+    min-height: 380px;
+  }
+  .course-card::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, transparent, transparent 70%, var(--card-accent, rgba(255,138,0,.04)) 100%);
+    pointer-events: none;
+  }
+  .course-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--card-border-hover, rgba(255,138,0,.3));
+    box-shadow: 0 20px 40px rgba(0,0,0,.3);
+  }
+
+  /* Tier-specific styling */
+  .course-card.tier-foundation {
+    --card-accent: rgba(20,40,255,.08);
+    --card-border-hover: rgba(20,40,255,.4);
+  }
+  .course-card.tier-track {
+    --card-accent: rgba(255,138,0,.08);
+    --card-border-hover: rgba(255,138,0,.4);
+  }
+  .course-card.tier-executive {
+    --card-accent: rgba(201,168,76,.08);
+    --card-border-hover: rgba(201,168,76,.5);
+    border-color: rgba(201,168,76,.2);
+  }
+  .course-card.tier-executive::after {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  }
+
+  .course-tier-badge {
+    display: inline-flex; align-items: center; gap: .35rem;
+    font-size: .58rem; font-weight: 700;
+    letter-spacing: .14em; text-transform: uppercase;
+    padding: .3rem .75rem;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+    align-self: flex-start;
+  }
+  .tier-foundation .course-tier-badge {
+    background: rgba(20,40,255,.12);
+    color: #6b8cff;
+    border: 1px solid rgba(20,40,255,.25);
+  }
+  .tier-track .course-tier-badge {
+    background: rgba(255,138,0,.1);
+    color: var(--orange);
+    border: 1px solid rgba(255,138,0,.25);
+  }
+  .tier-executive .course-tier-badge {
+    background: linear-gradient(135deg, rgba(201,168,76,.15), rgba(201,168,76,.08));
+    color: var(--gold);
+    border: 1px solid rgba(201,168,76,.35);
+  }
+
+  .course-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.3rem; font-weight: 700;
+    color: var(--white); line-height: 1.2;
+    margin-bottom: .75rem;
+  }
+
+  .course-desc {
+    font-size: .82rem;
+    color: var(--muted);
+    line-height: 1.65;
+    margin-bottom: 1.2rem;
+    flex: 1;
+  }
+
+  .course-includes {
+    display: flex; flex-direction: column; gap: .35rem;
+    margin-bottom: 1.5rem;
+    padding: .8rem 1rem;
+    background: rgba(255,255,255,.02);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+  .course-includes-item {
+    display: flex; align-items: center; gap: .5rem;
+    font-size: .72rem;
+    color: var(--muted);
+  }
+  .course-includes-item::before {
+    content: '✓';
+    color: var(--orange);
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .course-footer {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 1rem; flex-wrap: wrap;
+  }
+  .course-price {
+    display: flex; flex-direction: column;
+  }
+  .course-price-main {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.5rem; font-weight: 700;
+    color: var(--white); line-height: 1;
+  }
+  .course-price-sub {
+    font-size: .6rem;
+    color: var(--muted);
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    margin-top: .15rem;
+  }
+  .tier-foundation .course-price-main { color: #6b8cff; }
+  .tier-track .course-price-main { color: var(--orange); }
+  .tier-executive .course-price-main { color: var(--gold); }
+
+  .course-cta {
+    background: var(--orange);
+    color: #000;
+    border: none;
+    padding: .65rem 1.4rem;
+    border-radius: 8px;
+    font-family: 'Poppins', sans-serif;
+    font-size: .76rem;
+    font-weight: 700;
+    letter-spacing: .03em;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex; align-items: center; gap: .35rem;
+    transition: all .2s;
+    white-space: nowrap;
+  }
+  .course-cta:hover {
+    background: #ffa333;
+    transform: translateX(2px);
+  }
+  .tier-foundation .course-cta { background: var(--blue); color: #fff; }
+  .tier-foundation .course-cta:hover { background: #2a3fff; }
+  .tier-executive .course-cta {
+    background: linear-gradient(135deg, var(--gold), #f0d080);
+    color: #1a1a2e;
+  }
+
+  /* Soft "Foundation included" mini-badge for tracks/executive */
+  .course-foundation-included {
+    position: absolute;
+    top: 1.2rem; right: 1.2rem;
+    font-size: .55rem;
+    font-weight: 700;
+    letter-spacing: .1em;
+    color: rgba(20,40,255,.7);
+    background: rgba(20,40,255,.08);
+    border: 1px solid rgba(20,40,255,.2);
+    padding: .25rem .55rem;
+    border-radius: 50px;
+    text-transform: uppercase;
+  }
+
+  .course-meta-row {
+    display: flex; gap: 1rem; flex-wrap: wrap;
+    font-size: .68rem;
+    color: var(--muted);
+    margin-bottom: 1rem;
+  }
+  .course-meta-row span {
+    display: flex; align-items: center; gap: .3rem;
+  }
+
+  /* Empty state */
+  .courses-empty {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--muted);
+    grid-column: 1 / -1;
+  }
+
+  /* Bottom CTA section */
+  .cat-bottom-cta {
+    max-width: 800px;
+    margin: 0 auto 4rem;
+    padding: 2.5rem;
+    text-align: center;
+    background: linear-gradient(135deg, rgba(20,40,255,.08), rgba(255,138,0,.05));
+    border: 1px solid var(--border);
+    border-radius: 20px;
+  }
+  .cat-bottom-cta h2 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.6rem; font-weight: 700;
+    margin-bottom: .75rem;
+  }
+  .cat-bottom-cta p {
+    color: var(--muted);
+    font-size: .88rem;
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+    max-width: 500px;
+    margin-left: auto; margin-right: auto;
+  }
+
+  @media (max-width: 768px) {
+    .cat-hero { padding: 4rem 1rem 2rem; }
+    .courses-grid { grid-template-columns: 1fr; }
+    .course-card { min-height: auto; }
+  }
+
+  /* FOOTER */
+
+  footer { background: var(--deep); border-top: 1px solid var(--border); padding: 4rem 5vw 2rem; }
+  .footer-grid { display: grid; grid-template-columns: 1.5fr 1fr 1fr 1.2fr; gap: 3rem; margin-bottom: 3rem; }
+  .footer-brand { display: flex; flex-direction: column; }
+  .footer-brand .nav-logo { display: inline-block; }
+  .footer-brand .logo-img { height: 32px; width: auto; object-fit: contain; }
+  .footer-brand p { font-family: 'Poppins', sans-serif; color: var(--muted); font-size: .86rem; font-weight: 300; margin-top: .8rem; max-width: 220px; line-height: 1.65; }
+  .footer-col h4 { font-family: 'Poppins', sans-serif; font-size: .6rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--blue); margin-bottom: 1.2rem; }
+  .footer-col ul { list-style: none; }
+  .footer-col li { margin-bottom: .6rem; }
+  .footer-col a { font-family: 'Poppins', sans-serif; color: var(--muted); text-decoration: none; font-size: .86rem; font-weight: 300; transition: color .2s; }
+  .footer-col a:hover { color: var(--white); }
+  .newsletter-row { display: flex; gap: .5rem; margin-top: .8rem; }
+  .newsletter-input { flex: 1; background: var(--panel); border: 1px solid var(--border); border-radius: 4px; padding: .6rem .8rem; color: var(--white); font-family: 'Poppins', sans-serif; font-size: .82rem; font-weight: 300; outline: none; }
+  .newsletter-input::placeholder { color: var(--muted); }
+  .newsletter-input:focus { border-color: var(--blue); }
+  .newsletter-btn { background: var(--blue); color: #fff; border: none; border-radius: 4px; padding: .6rem 1rem; font-family: 'Poppins', sans-serif; font-size: .62rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; cursor: pointer; transition: opacity .2s; }
+  .newsletter-btn:hover { opacity: .85; }
+  .social-row { display: flex; gap: .7rem; margin-top: 1.2rem; }
+  .social-btn { width: 36px; height: 36px; border: 1px solid var(--border); border-radius: 5px; display: flex; align-items: center; justify-content: center; background: var(--panel); color: var(--muted); font-size: .8rem; text-decoration: none; transition: border-color .2s, color .2s; }
+  .social-btn img {
+    width: 24px; height: 24px;
+  }
+  .social-btn:hover { border-color: var(--blue); color: var(--blue); }
+  .footer-bottom { border-top: 1px solid var(--border); padding-top: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
+  .footer-bottom p { font-family: 'Poppins', sans-serif; font-size: .6rem; font-weight: 500; letter-spacing: .08em; color: var(--muted); }
+
+</style>
+</head>
+<body data-nav-active="academy">
+
+<!-- Universal Sofe Navbar (renders via JS) -->
+<div id="sofe-navbar"></div>
+
+<!-- HERO -->
+<section class="cat-hero">
+  <div class="cat-eyebrow">📚 Sofe Academy</div>
+  <h1 class="cat-title">Master Web3.<br/>Build Your <em>Career.</em></h1>
+  <p class="cat-sub">From blockchain fundamentals to industry-grade certifications — courses designed for the African market, recognised globally.</p>
+
+  <!-- Filter pills with career track categories -->
+  <div class="cat-filters" id="catFilters">
+    <button class="cat-filter-pill active" data-filter="all" onclick="filterCourses('all',this)">All Courses</button>
+    <button class="cat-filter-pill" data-filter="foundation" onclick="filterCourses('foundation',this)">Foundation</button>
+    <button class="cat-filter-pill" data-filter="development" onclick="filterCourses('development',this)">Development</button>
+    <button class="cat-filter-pill" data-filter="data-security" onclick="filterCourses('data-security',this)">Data & Security</button>
+    <button class="cat-filter-pill" data-filter="ai-automation" onclick="filterCourses('ai-automation',this)">AI & Automation</button>
+    <button class="cat-filter-pill" data-filter="design" onclick="filterCourses('design',this)">Design</button>
+    <button class="cat-filter-pill" data-filter="management" onclick="filterCourses('management',this)">Management</button>
+    <button class="cat-filter-pill" data-filter="growth-media" onclick="filterCourses('growth-media',this)">Growth & Media</button>
+    <button class="cat-filter-pill" data-filter="trading" onclick="filterCourses('trading',this)">Trading</button>
+    <button class="cat-filter-pill" data-filter="executive" onclick="filterCourses('executive',this)">Executive</button>
+  </div>
+</section>
+
+<!-- COURSES GRID -->
+<section class="courses-wrap">
+  <div class="courses-grid" id="coursesGrid">
+    <div class="courses-empty" id="coursesLoading">
+      <div style="font-size: 1.5rem; margin-bottom: .5rem;">⏳</div>
+      Loading courses…
+    </div>
+  </div>
+</section>
+
+<!-- BOTTOM CTA -->
+<section style="padding: 0 1.5rem;">
+  <div class="cat-bottom-cta">
+    <h2>Not sure where to start?</h2>
+    <p>Begin with our free Foundation Course — the same modules included in every Career Track. Master the basics, then level up.</p>
+    <a href="#course-foundation" class="course-cta" style="margin-top:.5rem;">Explore Foundation →</a>
+  </div>
+</section>
+
+<!-- FOOTER (would come from include) -->
+<footer>
+  <footer>
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <a href="/" class="nav-logo" style="margin-bottom:.6rem;">
+        <img src="./images/Nodes/SofeLogoHome.png" class="logo-img" alt="Sofe Node Logo" />
+  </a>
+      <p>A Sofe Group company. Empowering the next generation to lead Africa's tech revolution.</p>
+      <div class="social-row">
+         <a class="social-btn" href="http://x.com/sofenode" title="X/Twitter" target="_blank"> <img src="./images/Social/SofeNodeX(twitter).png" alt="X/Twitter"></a> 
+        <a class="social-btn" href="https://www.linkedin.com/company/sofe-group" title="LinkedIn" target="_blank"> <img src="./images/Social/SofeNodeLInkedIn.png" alt="LinkedIn"></a>
+        <a class="social-btn" href="http://youtube.com/@sofegroupofficial" title="YouTube" target="_blank"> <img src="./images/Social/SofeNodeYoutubelogo.png" alt="YouTube"></a>
+        <a class="social-btn" href="https://www.facebook.com/profile.php?id=100063995682203&mibextid=ZbWKwL" title="Facebook" target="_blank"> <img src="./images/Social/SofeNodeFacebooklogo.png" alt="Facebook"></a>
+        <a class="social-btn" href="https://t.me/sofegroupofficial" title="Telegram" target="_blank"> <img src="./images/Social/SofeNodeTelegram.png" alt="Telegram"></a>
+      </div>
+    </div>
+    <div class="footer-col">
+      <h4>Quick Links</h4>
+      <ul>
+        <li><a href="./about.html">About Us</a></li>
+        <li><a href="./ecosystems.html">For Ecosystems</a></li>
+        <li><a href="./talent.html">For Talent</a></li>
+        <li><a href="./bce.html">BCE</a></li>
+        <li><a href="./dashboard.html">Dashboard</a></li>
+        <li><a href="#">Verify Certificate</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Legal</h4>
+      <ul>
+        <li><a href="#">Privacy Policy</a></li>
+        <li><a href="#">Terms of Service</a></li>
+        <li><a href="#">Affiliate Terms</a></li>
+        <li><a href="#">Cookie Policy</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Web3 Job Alerts</h4>
+      <p style="font-size:.85rem;color:var(--muted);margin-bottom:.5rem;font-weight:300;">Get the latest Web3 opportunities in Africa, straight to your inbox.</p>
+      <div class="newsletter-row">
+        <input type="email" class="newsletter-input" placeholder="your@email.com" />
+        <button class="newsletter-btn">Join</button>
+      </div>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>&copy; 2025 Sofe Node &middot; A Sofe Group Company &middot; All rights reserved.</p>
+    <p style="color:var(--orange);">Africa's Node for Web3 Growth.</p>
+  </div>
+</footer>
+
+<script type="module">
+import { auth, db, onAuthStateChanged, collection, query, where, orderBy, getDocs }
+  from './firebase.js';
+
+let _allCourses = [];
+let _user = null;
+let _userEnrolments = [];
+
+// ── AUTH STATE ─────────────────────────────────────────────────────────────
+onAuthStateChanged(auth, async (user) => {
+  _user = user;
+  if (user) {
+    // Load user's enrolments to mark "already enrolled" courses
+    try {
+      const snap = await getDocs(query(
+        collection(db, 'enrolments'),
+        where('user_id', '==', user.uid)
+      ));
+      _userEnrolments = snap.docs.map(d => d.data().course_id);
+    } catch (e) { console.warn('Could not load enrolments:', e.message); }
+  }
+  loadCourses();
+});
+
+// ── LOAD COURSES ───────────────────────────────────────────────────────────
+async function loadCourses() {
+  try {
+    const snap = await getDocs(query(
+      collection(db, 'courses'),
+      where('status', '==', 'published'),
+      orderBy('display_order', 'asc')
+    ));
+    _allCourses = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderCourses();
+  } catch (err) {
+    // Fallback if no courses yet OR if orderBy index is missing — try without orderBy
+    console.warn('Falling back to simple query:', err.message);
+    try {
+      const snap = await getDocs(query(
+        collection(db, 'courses'),
+        where('status', '==', 'published')
+      ));
+      _allCourses = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      // Sort client-side
+      _allCourses.sort((a,b) => (a.display_order || 99) - (b.display_order || 99));
+      renderCourses();
+    } catch (err2) {
+      console.error('Could not load courses:', err2);
+      document.getElementById('coursesGrid').innerHTML = `
+        <div class="courses-empty">
+          <div style="font-size:2rem;margin-bottom:.75rem;">📭</div>
+          <div style="font-size:.95rem;font-weight:700;color:var(--white);margin-bottom:.5rem;">Courses coming soon</div>
+          <div>We're putting the finishing touches on our catalogue. Check back shortly.</div>
+        </div>`;
+    }
+  }
+}
+
+// ── RENDER COURSES ─────────────────────────────────────────────────────────
+function renderCourses() {
+  const grid = document.getElementById('coursesGrid');
+  const filter = window._catFilter || 'all';
+
+  let courses = _allCourses;
+  
+  if (filter !== 'all') {
+    if (filter === 'foundation' || filter === 'executive') {
+      // Filter by tier
+      courses = courses.filter(c => c.tier === filter);
+    } else {
+      // Filter by track category
+      // Track filters: development, data-security, ai-automation, design, management, growth-media, trading
+      courses = courses.filter(c => {
+        // Check if course has a track field that matches
+        const courseTrack = (c.track || '').toLowerCase().replace(/\s+/g, '-').replace(/&/g, '');
+        return courseTrack === filter;
+      });
+    }
+  }
+
+  if (courses.length === 0) {
+    grid.innerHTML = `
+      <div class="courses-empty">
+        <div style="font-size:2rem;margin-bottom:.75rem;">📭</div>
+        No courses in this category yet. Check back soon.
+      </div>`;
+    return;
+  }
+
+  grid.innerHTML = courses.map(c => renderCourseCard(c)).join('');
+}
+
+function renderCourseCard(c) {
+  // Fallback for courses created with old field names
+  const tier = c.tier || c.category || 'track';
+  const price = c.price !== undefined ? c.price : (c.fee || 0);
+  const description = c.description || c.short_description || '';
+  const moduleCount = c.module_count || c.total_modules || 0;
+  
+  const tierLabel = {
+    foundation: '★ Foundation',
+    track: '◆ Career Track',
+    executive: '👑 Executive Tier'
+  }[tier] || 'Course';
+
+  const isEnrolled = _userEnrolments.includes(c.id);
+  const includesFoundation = tier !== 'foundation' && (c.includes_foundation || false);
+
+  const ctaText = isEnrolled ? 'Continue Learning →' :
+                  tier === 'executive' ? 'Learn More →' :
+                  price === 0 ? 'Learn More →' : 'Learn More →';
+  const ctaHref = isEnrolled ? './dashboard.html' :
+                  !_user ? `./signup.html?next=enrol&course=${c.id}` :
+                  tier === 'executive' ? `./cbie-application.html?course=${c.id}` :
+                  `./course-detail.html?id=${c.id}`;
+
+  const priceMain = price === 0 ? 'FREE' : '₦' + price.toLocaleString('en-NG');
+  const priceSub = price === 0 ? 'self-paced' :
+                   tier === 'executive' ? 'incl. application fee' :
+                   'one-time payment';
+
+  const includes = (c.includes || []).map(item =>
+    `<div class="course-includes-item">${item}</div>`
+  ).join('');
+
+  const meta = [];
+  if (c.duration_weeks) meta.push(`<span>📅 ${c.duration_weeks} weeks</span>`);
+  if (moduleCount) meta.push(`<span>📚 ${moduleCount} modules</span>`);
+  if (c.cohort_based) meta.push(`<span>👥 cohort-based</span>`);
+  else meta.push(`<span>⏱ self-paced</span>`);
+
+  return `
+    <article class="course-card tier-${tier}" id="course-${c.id}">
+      ${includesFoundation ? '<div class="course-foundation-included">+ Foundation Included</div>' : ''}
+      <div class="course-tier-badge">${tierLabel}</div>
+      <h3 class="course-title">${c.title || 'Untitled Course'}</h3>
+      <p class="course-desc">${description}</p>
+      ${meta.length ? `<div class="course-meta-row">${meta.join('')}</div>` : ''}
+      ${includes ? `<div class="course-includes">${includes}</div>` : ''}
+      <div class="course-footer">
+        <div class="course-price">
+          <div class="course-price-main">${priceMain}</div>
+          <div class="course-price-sub">${priceSub}</div>
+        </div>
+        <a href="${ctaHref}" class="course-cta">${ctaText}</a>
+      </div>
+    </article>
+  `;
+}
+
+// ── FILTER ─────────────────────────────────────────────────────────────────
+window.filterCourses = function(type, btn) {
+  document.querySelectorAll('.cat-filter-pill').forEach(p => p.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  window._catFilter = type;
+  renderCourses();
+};
+</script>
+
+<!-- Universal navbar -->
+<script type="module" src="./js/sofe-navbar.js"></script>
+
+</body>
+</html>

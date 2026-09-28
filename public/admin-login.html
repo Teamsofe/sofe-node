@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Console — Sofe Node</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #04080F;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 1rem;
+        }
+        .admin-box {
+            background: #0D1526;
+            padding: 2.5rem;
+            border-radius: 16px;
+            border: 1px solid rgba(20,40,255,0.2);
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+        }
+        .admin-header { text-align: center; margin-bottom: 2rem; }
+        .admin-header img { width: 60px; margin-bottom: 1rem; }
+        .admin-header h2 { color: #EEF4FF; font-size: 1.4rem; font-weight: 800; margin-bottom: .3rem; }
+        .admin-header p { color: rgba(200,215,240,0.45); font-size: 0.82rem; }
+        .form-group { display: flex; flex-direction: column; gap: .4rem; margin-bottom: 1rem; }
+        .form-label {
+            font-size: .65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            color: rgba(200,215,240,0.5);
+        }
+        .form-input {
+            background: #060d1a;
+            border: 1px solid rgba(200,215,240,0.1);
+            border-radius: 7px;
+            padding: .65rem .9rem;
+            color: #c8d7f0;
+            font-size: .85rem;
+            outline: none;
+            transition: border-color .2s;
+            width: 100%;
+        }
+        .form-input:focus { border-color: rgba(20,40,255,0.5); }
+        .form-input::placeholder { color: rgba(200,215,240,0.25); }
+        .btn-admin {
+            background: #1428FF;
+            color: white;
+            border: none;
+            padding: .8rem;
+            width: 100%;
+            border-radius: 8px;
+            font-size: .85rem;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: .5rem;
+            transition: background .2s;
+        }
+        .btn-admin:hover:not(:disabled) { background: #2a3fff; }
+        .btn-admin:disabled { opacity: .55; cursor: not-allowed; }
+        .error-msg {
+            display: none;
+            background: rgba(255,68,68,.1);
+            border: 1px solid rgba(255,68,68,.25);
+            border-radius: 7px;
+            padding: .75rem 1rem;
+            font-size: .78rem;
+            color: #ff7070;
+            margin-top: 1rem;
+            text-align: center;
+        }
+        .error-msg.visible { display: block; }
+    </style>
+</head>
+<body>
+
+<div class="admin-box">
+    <div class="admin-header">
+        <img src="./images/Nodes/SofeLogoHome.png" alt="Sofe Node Logo">
+        <h2>Admin Console</h2>
+        <p>Authorized Personnel Only</p>
+    </div>
+
+    <form id="loginForm" onsubmit="handleAdminLogin(event)">
+        <div class="form-group">
+            <label class="form-label">Admin Email</label>
+            <input type="email" id="adminEmail" class="form-input"
+                   placeholder="admin@sofenode.com" required autocomplete="email">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Password</label>
+            <input type="password" id="adminPassword" class="form-input"
+                   placeholder="••••••••" required autocomplete="current-password">
+        </div>
+        <button type="submit" id="loginBtn" class="btn-admin">Enter Console</button>
+        <div class="error-msg" id="errorMsg"></div>
+    </form>
+</div>
+
+<script type="module">
+  // ── IMPORTS MUST ALWAYS COME FIRST ──────────────────────────────────────────
+  import { auth, db, signInWithEmailAndPassword, signOut }
+    from './firebase.js';
+  import { doc, getDoc }
+    from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+  // ── HELPER: show error below the form ───────────────────────────────────────
+  function showError(msg) {
+    const el = document.getElementById('errorMsg');
+    el.textContent = msg;
+    el.classList.add('visible');
+  }
+  function clearError() {
+    document.getElementById('errorMsg').classList.remove('visible');
+  }
+
+  // ── LOGIN HANDLER ────────────────────────────────────────────────────────────
+  window.handleAdminLogin = async function(e) {
+    e.preventDefault();
+    clearError();
+
+    const email    = document.getElementById('adminEmail').value.trim();
+    const password = document.getElementById('adminPassword').value;
+    const btn      = document.getElementById('loginBtn');
+
+    btn.disabled    = true;
+    btn.textContent = 'Verifying credentials…';
+
+    try {
+      // Step 1 — Authenticate with Firebase Auth
+      const credential = await signInWithEmailAndPassword(auth, email, password);
+      const user = credential.user;
+
+      // Step 2 — Check the user's role in Firestore
+      const userSnap = await getDoc(doc(db, 'users', user.uid));
+
+      if (!userSnap.exists()) {
+        await signOut(auth);
+        showError('Admin profile not found. Contact your super admin.');
+        return;
+      }
+
+      const data = userSnap.data();
+
+      // Step 3 — Only allow users with role === 'admin'
+      if (data.role !== 'admin') {
+        await signOut(auth);
+        showError('Access denied — you do not have admin privileges.');
+        return;
+      }
+
+      // Step 4 — Store the admin_role so the dashboard knows which panels to show
+      // (admin_role is the specific role: super_admin, course_manager, etc.)
+      sessionStorage.setItem('admin_role', data.admin_role || 'social_media_manager');
+
+      // Step 5 — Redirect to the admin dashboard
+      window.location.href = './admin-dashboard-v2.html';
+
+    } catch (error) {
+      console.error('Login error:', error.code, error.message);
+
+      // Show a friendly error message based on the Firebase error code
+      const messages = {
+        'auth/user-not-found':      'No account found with that email.',
+        'auth/wrong-password':      'Incorrect password. Try again.',
+        'auth/invalid-credential':  'Invalid email or password.',
+        'auth/too-many-requests':   'Too many attempts. Wait a few minutes and try again.',
+        'auth/network-request-failed': 'Network error. Check your connection.',
+      };
+      showError(messages[error.code] || 'Login failed: ' + error.message);
+
+    } finally {
+      btn.disabled    = false;
+      btn.textContent = 'Enter Console';
+    }
+  };
+</script>
+
+</body>
+</html>

@@ -1,0 +1,625 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {uid}
+    // Fields:
+    //   - uid: string (immutable, matches auth.uid)
+    //   - email: string (immutable, min 3 chars)
+    //   - first_name: string (1..50 chars)
+    //   - last_name: string (1..50 chars)
+    //   - phone: string (optional)
+    //   - country: string (optional)
+    //   - state: string (optional)
+    //   - node: string (optional)
+    //   - node_label: string (optional)
+    //   - node_lead_for: string (optional, admin-assigned chapter id)
+    //   - role: string ('student', 'tutor', 'admin', 'partner')
+    //   - admin_role: string ('super_admin', 'course_manager', 'finance_admin', 'community_manager', 'social_media_manager', 'admin', 'tutor')
+    //   - account_type: string ('sofian', 'partner_org', 'protocol')
+    //   - is_premium: bool (optional)
+    //   - bypass_foundation: bool (optional)
+    //   - can_post_bounties: bool (optional)
+    //   - tutor_courses: list (optional, course IDs)
+    //   - tutor_modules: list (optional, module IDs)
+    //   - xp_total: number (server-maintained)
+    //   - wallet_balance: number (server-maintained)
+    //   - referral_code: string (immutable)
+    //   - referred_by: string (optional)
+    //   - email_verified: bool
+    //   - created_at, updated_at: timestamp
+    //
+    // Collection: session_submissions
+    // Document ID: {submissionId}
+    // Fields:
+    //   - user_id: string (owner student uid)
+    //   - session_id: string
+    //   - course_id: string (optional)
+    //   - module_id: string (optional)
+    //   - type: string ('project' | 'assignment')
+    //   - status: string ('pending', 'graded', 'approved', 'rejected')
+    //   - project_link: string (optional, URL or link <= 1000 chars)
+    //   - submission_url: string (optional, URL or text <= 1000 chars)
+    //   - submission_text: string (optional)
+    //   - score: number (graded by tutor/admin)
+    //   - passed: bool (graded by tutor/admin)
+    //   - feedback: string (tutor/admin feedback)
+    //   - graded_by / reviewed_by: string
+    //   - graded_at / reviewed_at: timestamp
+    //   - created_at, updated_at: timestamp
+    //
+    // Collection: disbursement_requests
+    // Document ID: {requestId}
+    // Fields:
+    //   - user_id: string (requester uid)
+    //   - requester_email: string (optional, requester email)
+    //   - chapter_id: string (campus node id)
+    //   - amount: number (> 0 and < 10,000,000 NGN)
+    //   - purpose: string (optional)
+    //   - bank_name, account_number, account_name: string
+    //   - status: string ('pending', 'approved', 'rejected', 'disbursed')
+    //   - resolved_at: timestamp (optional)
+    //   - resolved_by: string (optional)
+    //   - notes: string (optional)
+    //   - rejection_reason: string (optional)
+    //   - created_at: timestamp
+    //
+    // Collection: chapters
+    // Document ID: {chapterId}
+    // Fields:
+    //   - name: string
+    //   - state, country: string
+    //   - lead_uid: string (optional)
+    //   - treasury_balance: number (optional)
+    //   - whatsapp_link: string (optional)
+    //   - created_at, updated_at: timestamp
+    //
+    // Collection: bounties
+    // Document ID: {bountyId}
+    // Fields:
+    //   - title: string
+    //   - status: string ('draft', 'pending_approval', 'open', 'active', 'completed', 'ended')
+    //   - posted_by / created_by: string (uid of poster / partner)
+    //   - category, type: string
+    //   - prize_ngn, prize_xp: number
+    //   - eligible_tracks: list
+    //   - winner_id, winner_ids: string / list (optional)
+    //   - winners_declared_at: timestamp (optional)
+    //   - created_at, updated_at: timestamp
+    //
+    // ===============================================================
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // HELPER FUNCTIONS
+    // ═════════════════════════════════════════════════════════════════════════
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isAdmin() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function isSuperAdmin() {
+      return isAdmin() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.admin_role == 'super_admin';
+    }
+
+    function hasAdminRole(role) {
+      return isAdmin() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.admin_role in role;
+    }
+
+    // Check if user is a designated tutor
+    function isTutor() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        (
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'tutor' ||
+          (
+            'admin_role' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data &&
+            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.admin_role == 'tutor'
+          )
+        );
+    }
+
+    // Check if user is a verified protocol partner
+    function isProtocolPartner() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        'account_type' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.account_type == 'protocol';
+    }
+
+    // Check if user is the creator / poster of a bounty
+    function isBountyOwner(bountyData) {
+      return isSignedIn() && (
+        ('posted_by' in bountyData && bountyData.posted_by == request.auth.uid) ||
+        ('created_by' in bountyData && bountyData.created_by == request.auth.uid) ||
+        ('user_id' in bountyData && bountyData.user_id == request.auth.uid)
+      );
+    }
+
+    // Email must be verified before accessing sensitive routes
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    // Check only the fields listed are changing (used to lock down mutable fields)
+    function onlyChanges(fields) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields);
+    }
+
+    // Validate a new user document on signup
+    function isValidNewUser() {
+      let d = request.resource.data;
+      return d.uid == request.auth.uid
+        && d.email is string && d.email.size() > 3
+        && d.first_name is string && d.first_name.size() > 0 && d.first_name.size() < 50
+        && d.last_name  is string && d.last_name.size()  > 0 && d.last_name.size()  < 50
+        && d.role == 'student'                    // cannot self-assign admin
+        && d.xp_total == 0                        // cannot start with XP
+        && d.wallet_balance == 0                  // cannot start with money
+        && !('admin_role' in d)                   // cannot self-assign admin role
+        && !('can_post_bounties' in d && d.can_post_bounties == true)
+        && !('bypass_foundation' in d && d.bypass_foundation == true)
+        && !('account_type' in d && d.account_type == 'protocol')
+        && !('tutor_courses' in d)
+        && !('tutor_modules' in d)
+        && !('node_lead_for' in d);
+    }
+
+    // Fields a student can change on their own user doc (XP and Streak removed for security)
+    function studentMutableFields() {
+      return ['phone', 'state', 'node', 'node_label',
+              'bank_name', 'account_number', 'account_name',
+              'marketing_ok', 'email_verified', 'updated_at'];
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // USERS
+    // ═════════════════════════════════════════════════════════════════════════
+    match /users/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+
+      allow create: if isOwner(uid) && isValidNewUser();
+
+      allow update: if
+        (isOwner(uid) && onlyChanges(studentMutableFields())) ||
+        (
+          isAdmin() && !isOwner(uid) &&
+          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['uid','email','referral_code']) &&
+          (!('admin_role' in request.resource.data) || request.resource.data.admin_role != 'super_admin' || isSuperAdmin())
+        ) ||
+        (isSuperAdmin());
+
+      allow delete: if isSuperAdmin();
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // COURSES
+    // ═════════════════════════════════════════════════════════════════════════
+    match /courses/{courseId} {
+      allow read: if isSignedIn() || resource.data.status == 'published';
+      allow write: if hasAdminRole(['super_admin', 'course_manager']);
+
+      match /modules/{moduleId} {
+        allow read: if true;
+        allow write: if hasAdminRole(['super_admin', 'course_manager']);
+
+        match /sessions/{sessionId} {
+          allow read: if true;
+          allow write: if hasAdminRole(['super_admin', 'course_manager']);
+        }
+      }
+    }
+
+    match /modules/{moduleId} {
+      allow read: if true;
+      allow write: if hasAdminRole(['super_admin', 'course_manager']);
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // ENROLMENTS
+    // ═════════════════════════════════════════════════════════════════════════
+    match /enrolments/{enrolmentId} {
+      allow read: if isOwner(resource.data.user_id) || isAdmin();
+
+      // Student creates an enrolment after payment is recorded
+      allow create: if isOwner(request.resource.data.user_id)
+        && request.resource.data.status in ['active', 'locked_pending_foundation']
+        && request.resource.data.progress_pct == 0
+        && !('completed_at' in request.resource.data)
+        && !('reviewed_by' in request.resource.data);
+
+      allow create: if hasAdminRole(['super_admin', 'course_manager', 'admin']);
+
+      // Clients no longer update progress_pct. Server handles it securely.
+      allow update: if hasAdminRole(['super_admin', 'course_manager', 'admin']);
+
+      allow delete: if isSuperAdmin();
+    }
+
+    match /enrolment/{enrolmentId} {
+      allow read: if isOwner(resource.data.user_id) || isAdmin();
+      allow create: if isOwner(request.resource.data.user_id)
+        && request.resource.data.status in ['active', 'locked_pending_foundation']
+        && request.resource.data.progress_pct == 0
+        && !('completed_at' in request.resource.data)
+        && !('reviewed_by' in request.resource.data);
+      allow create: if hasAdminRole(['super_admin', 'course_manager', 'admin']);
+      allow update: if hasAdminRole(['super_admin', 'course_manager', 'admin']);
+      allow delete: if isSuperAdmin();
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // MODULE PROGRESS
+    // ═════════════════════════════════════════════════════════════════════════
+    match /module_progress/{progressId} {
+      allow read: if isOwner(resource.data.user_id) || isAdmin();
+      
+      // All client writes revoked. Cloud Functions handle session completions.
+      allow write: if isAdmin(); 
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // SESSIONS
+    // ═════════════════════════════════════════════════════════════════════════
+    match /sessions/{sessionId} {
+      allow read: if true;
+      allow write: if hasAdminRole(['super_admin', 'course_manager']);
+
+      match /answer_key/{docId} {
+        allow read: if hasAdminRole(['super_admin', 'course_manager']);
+        allow write: if hasAdminRole(['super_admin', 'course_manager']);
+      }
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // SESSION SUBMISSIONS
+    // ═════════════════════════════════════════════════════════════════════════
+    match /session_submissions/{submissionId} {
+      allow read: if isOwner(resource.data.user_id) || isAdmin() || isTutor();
+
+      // Student submits project or assignment with link/url
+      allow create: if isOwner(request.resource.data.user_id)
+        && request.resource.data.type in ['project', 'assignment']
+        && request.resource.data.status == 'pending'
+        && (
+          (('project_link' in request.resource.data) && request.resource.data.project_link is string && request.resource.data.project_link.size() <= 1000) ||
+          (('submission_url' in request.resource.data) && request.resource.data.submission_url is string && request.resource.data.submission_url.size() <= 1000)
+        )
+        && !('score' in request.resource.data)
+        && !('passed' in request.resource.data)
+        && !('feedback' in request.resource.data)
+        && !('reviewed_by' in request.resource.data)
+        && !('reviewed_at' in request.resource.data)
+        && !('graded_by' in request.resource.data)
+        && !('graded_at' in request.resource.data);
+
+      // Student can update their submission before it is approved
+      allow update: if isOwner(resource.data.user_id)
+        && resource.data.type in ['project', 'assignment']
+        && onlyChanges(['project_link', 'submission_url', 'submission_text', 'updated_at'])
+        && resource.data.status != 'approved'
+        && (
+          !('project_link' in request.resource.data) ||
+          (request.resource.data.project_link is string && request.resource.data.project_link.size() <= 1000)
+        )
+        && (
+          !('submission_url' in request.resource.data) ||
+          (request.resource.data.submission_url is string && request.resource.data.submission_url.size() <= 1000)
+        );
+
+      // Grading by admin or tutor
+      allow update: if (isAdmin() || isTutor())
+        && onlyChanges(['status', 'feedback', 'reviewed_by', 'reviewed_at', 'score', 'passed', 'graded_by', 'graded_at']);
+
+      allow delete: if isSuperAdmin();
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // DISBURSEMENT REQUESTS (CAMPUS NODE TREASURY)
+    // ═════════════════════════════════════════════════════════════════════════
+    match /disbursement_requests/{requestId} {
+      allow read: if isOwner(resource.data.user_id)
+        || (isSignedIn() && ('requester_email' in resource.data) && resource.data.requester_email == request.auth.token.email)
+        || isAdmin()
+        || hasAdminRole(['super_admin', 'finance_admin', 'admin']);
+
+      // Requester submits pending disbursement under 10M NGN limit
+      allow create: if isSignedIn()
+        && request.resource.data.user_id == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.amount is number
+        && request.resource.data.amount > 0
+        && request.resource.data.amount < 10000000
+        && !('resolved_at' in request.resource.data)
+        && !('resolved_by' in request.resource.data);
+
+      // Finance admins and admins resolve or update notes/status
+      allow update: if hasAdminRole(['super_admin', 'finance_admin', 'admin'])
+        && onlyChanges(['status', 'resolved_at', 'resolved_by', 'notes', 'rejection_reason']);
+
+      allow delete: if isSuperAdmin();
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // CONTACT MESSAGES
+    // ═════════════════════════════════════════════════════════════════════════
+    match /contact_messages/{msgId} {
+      allow create: if request.resource.data.keys().hasAll(['first_name','email','message','timestamp'])
+        && request.resource.data.first_name is string
+        && request.resource.data.email is string
+        && request.resource.data.message is string;
+
+      allow read:   if isAdmin();
+      allow update: if hasAdminRole(['super_admin', 'admin', 'community_manager'])
+        && onlyChanges(['status', 'assigned_to', 'reply', 'updated_at']);
+      allow delete: if isSuperAdmin();
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // PAYMENTS
+    // ═════════════════════════════════════════════════════════════════════════
+    match /payments/{paymentId} {
+      allow read: if isOwner(resource.data.user_id) || hasAdminRole(['super_admin', 'finance_admin', 'admin']);
+
+      allow create: if isOwner(request.resource.data.user_id)
+        && request.resource.data.status in ['pending_approval', 'pending_confirmation']
+        && request.resource.data.amount is number
+        && request.resource.data.amount >= 0  
+        && request.resource.data.amount < 10000000;  
+
+      allow create: if hasAdminRole(['super_admin', 'finance_admin', 'admin']);
+      allow update: if hasAdminRole(['super_admin', 'finance_admin', 'admin']);
+      allow delete: if isSuperAdmin();
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // REFERRALS & COMMISSIONS
+    // ═════════════════════════════════════════════════════════════════════════
+    match /referrals/{referralId} {
+      allow read: if isSignedIn() && (
+        resource.data.referrer_id == request.auth.uid ||
+        resource.data.referrer_code == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.referral_code ||
+        isAdmin()
+      );
+
+      allow create: if isSignedIn() && (
+        (request.resource.data.referred_user_id == request.auth.uid
+          && request.resource.data.status == 'signed_up'
+          && request.resource.data.commission_amount == 0
+          && request.resource.data.referrer_id is string
+          && request.resource.data.referrer_code is string)
+        || isAdmin()
+      );
+
+      allow update, delete: if isAdmin();
+    }
+
+    match /commissions/{commissionId} {
+      allow read: if isOwner(resource.data.user_id) || hasAdminRole(['super_admin', 'finance_admin']);
+      allow write: if false;  // Cloud functions only
+    }
+
+    match /certificates/{certId} {
+      allow read: if isOwner(resource.data.user_id) || isAdmin();
+      allow write: if false;  
+    }
+
+    match /blog/{postId} {
+      allow read: if resource.data.status == 'published' || isAdmin();
+      allow write: if hasAdminRole(['super_admin', 'social_media_manager']);
+    }
+
+    match /notifications/{notifId} {
+      allow read: if isSignedIn() && (
+        resource.data.type == 'broadcast' ||
+        isOwner(resource.data.user_id)
+      ) || isAdmin();
+
+      allow update: if resource.data.type == 'personal'
+        && isOwner(resource.data.user_id)
+        && onlyChanges(['read', 'read_at']);
+
+      allow create: if hasAdminRole(['super_admin', 'community_manager']);
+      allow delete: if isSuperAdmin();
+    }
+
+    match /badges/{badgeId} {
+      allow read: if true;
+      allow write: if hasAdminRole(['super_admin', 'community_manager']);
+    }
+
+    match /chapters/{chapterId} {
+      allow read: if true;
+      allow write: if hasAdminRole(['super_admin', 'community_manager', 'finance_admin', 'admin']);
+    }
+
+    match /user_badges/{docId} {
+      allow read: if isOwner(resource.data.user_id) || isAdmin();
+      allow create: if isSignedIn()
+        && request.resource.data.user_id == request.auth.uid
+        && request.resource.data.source == 'streak_auto'
+        && request.resource.data.badge_id in ['consistent_node', 'month_long_node', 'century_node'];
+      allow write: if isAdmin();
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // XP TRANSACTIONS — Client creation revoked. Cloud Functions only.
+    // ═════════════════════════════════════════════════════════════════════════
+    match /xp/{claimId} {
+      allow read: if isOwner(resource.data.user_id) || isAdmin();
+
+      // Admin manual awards
+      allow create: if isAdmin()
+        && request.resource.data.source == 'manual'
+        && request.resource.data.user_id is string
+        && request.resource.data.xp_earned is number
+        && request.resource.data.awarded_by == request.auth.uid;
+
+      allow update, delete: if isAdmin();
+    }
+
+    match /xp_transactions/{txId} {
+      allow read: if isOwner(resource.data.user_id) || isAdmin();
+      allow write: if hasAdminRole(['super_admin', 'community_manager']);
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // BOUNTIES (PROTOCOL PARTNERS & ADMINS)
+    // ═════════════════════════════════════════════════════════════════════════
+    match /bounties/{bountyId} {
+      allow read: if true;
+
+      // Admins can create bounties; Protocol partners can create drafts or pending bounties
+      allow create: if hasAdminRole(['super_admin', 'community_manager', 'admin'])
+        || (
+          isProtocolPartner()
+          && request.resource.data.status in ['pending_approval', 'draft']
+          && (
+            ('posted_by' in request.resource.data && request.resource.data.posted_by == request.auth.uid) ||
+            ('created_by' in request.resource.data && request.resource.data.created_by == request.auth.uid) ||
+            ('user_id' in request.resource.data && request.resource.data.user_id == request.auth.uid)
+          )
+        );
+
+      // Admins can update any bounty; Protocol partner owner can update non-approved bounties or declare winners
+      allow update: if hasAdminRole(['super_admin', 'community_manager', 'admin'])
+        || (
+          isProtocolPartner()
+          && isBountyOwner(resource.data)
+          && (
+            // Updating only non-approved bounties (draft or pending_approval)
+            (
+              resource.data.status in ['draft', 'pending_approval', 'rejected']
+              && request.resource.data.status in ['draft', 'pending_approval']
+              && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['posted_by', 'created_by', 'user_id'])
+            )
+            ||
+            // Nominating winner for an active/open bounty
+            (
+              resource.data.status in ['active', 'open']
+              && request.resource.data.status in ['completed', 'ended', 'active', 'open']
+              && onlyChanges(['status', 'winner_id', 'winner_ids', 'winner_count', 'winners_declared_at', 'updated_at'])
+            )
+          )
+        );
+
+      allow delete: if hasAdminRole(['super_admin', 'community_manager', 'admin']);
+    }
+
+    match /bounty_submissions/{submissionId} {
+      allow read: if isOwner(resource.data.user_id) || isAdmin();
+      allow create: if isOwner(request.resource.data.user_id)
+        && request.resource.data.status == 'submitted';
+      allow update: if hasAdminRole(['super_admin', 'community_manager']);
+    }
+
+    match /bounty_applications/{appId} {
+      allow read: if isOwner(resource.data.user_id) || isAdmin();
+      allow create: if isSignedIn() && request.resource.data.user_id == request.auth.uid
+        && request.resource.data.status == 'applied';
+      allow update: if hasAdminRole(['super_admin', 'community_manager']);
+      allow delete: if isSuperAdmin();
+    }
+
+    match /settings/{doc} {
+      allow read: if doc == 'platform' || isAdmin();
+      allow write: if isSuperAdmin();
+    }
+
+    match /rate_limits/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow write: if false;  
+    }
+
+    match /audit_logs/{logId} {
+      allow read: if isSuperAdmin();
+      allow write: if false;  
+    }
+
+    match /applications/{appId} {
+      allow read: if isOwner(resource.data.user_id) ||
+                     hasAdminRole(['super_admin', 'course_manager', 'admin']);
+
+      allow create: if isSignedIn()
+        && request.resource.data.user_id == request.auth.uid
+        && request.resource.data.status == 'submitted';
+
+      allow update: if isOwner(resource.data.user_id)
+        && resource.data.status == 'awaiting_balance'
+        && request.resource.data.status == 'payment_submitted'
+        && onlyChanges(['status', 'payment_method', 'payment_submitted_at', 'updated_at']);
+
+      allow update: if hasAdminRole(['super_admin', 'course_manager', 'admin']);
+      allow delete: if isSuperAdmin();
+    }
+
+    match /cohorts/{cohortId} {
+      allow read: if isSignedIn();
+      allow write: if hasAdminRole(['super_admin', 'course_manager']);
+    }
+
+    match /discount_codes/{codeId} {
+      allow read: if isAdmin() ||
+                     (isSignedIn() && resource.data.status == 'active');
+      allow write: if hasAdminRole(['super_admin', 'finance_admin']);
+
+      allow update: if isSignedIn()
+        && resource.data.status == 'active'
+        && onlyChanges(['uses_count', 'updated_at'])
+        && request.resource.data.uses_count == resource.data.uses_count + 1
+        && (!('max_uses' in resource.data) || resource.data.max_uses == null
+            || resource.data.uses_count < resource.data.max_uses);
+    }
+
+    match /discount_usage/{usageId} {
+      allow read: if isAdmin() || isOwner(resource.data.user_id);
+      allow create: if isSignedIn()
+        && request.resource.data.user_id == request.auth.uid
+        && request.resource.data.code is string
+        && request.resource.data.discount_id is string
+        && usageId == request.auth.uid + '_' + request.resource.data.code;
+
+      allow update, delete: if isAdmin();
+    }
+
+    match /counters/{counterId} {
+      allow read: if isAdmin();
+      allow read, write: if isSignedIn();
+    }
+
+    match /leaderboard/{uid} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /leaderboard_archive/{periodId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin(); 
+
+      match /entries/{uid} {
+        allow read: if isAdmin();
+        allow write: if isAdmin();
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

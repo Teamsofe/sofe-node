@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://js.paystack.co https://apis.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://firestore.googleapis.com https://checkout.paystack.com; frame-src 'self' https://checkout.paystack.com https://accounts.google.com https://apis.google.com https://sofe-node.firebaseapp.com https://www.youtube.com;">
+<title>Course Details — Sofe Node</title>
+<link rel="stylesheet" href="./css/course-detail.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" />
+
+</head>
+<body>
+  <!-- Navbar (uses sofe-navbar.js) -->
+  <div id="navbar-root"></div>
+
+  <!-- Loading State -->
+  <div id="loadingState" style="display:flex;align-items:center;justify-content:center;min-height:100vh;">
+    <div style="text-align:center;">
+      <div style="font-size:2rem;margin-bottom:1rem;">📚</div>
+      <div style="color:var(--muted);">Loading course...</div>
+    </div>
+  </div>
+
+  <!-- Error State -->
+  <div id="errorState" style="display:none;padding:5rem 2rem;text-align:center;">
+    <div style="font-size:3rem;margin-bottom:1rem;">⚠️</div>
+    <h2>Course Not Found</h2>
+    <p style="color:var(--muted);margin:1rem 0 2rem;">This course doesn't exist or has been removed.</p>
+    <a href="./academy.html" class="btn btn-primary">← Browse All Courses</a>
+  </div>
+
+  <!-- Course Content -->
+  <div id="courseContent" style="display:none;">
+    
+    <!-- Hero Section -->
+    <section class="course-hero">
+      <div class="course-hero-content">
+        <div class="course-main-info">
+          <div id="courseTierBadge" class="course-tier-badge"></div>
+          <h1 id="courseTitle">Loading...</h1>
+          <p id="courseDescription" class="course-description"></p>
+          
+          <div class="course-meta" id="courseMeta"></div>
+        </div>
+        
+        <div class="course-sidebar-card">
+          <div class="sidebar-price">
+            <div id="coursePrice" class="price-main">₦0</div>
+            <div class="price-sub" id="priceSub">one-time payment</div>
+          </div>
+          
+          <div class="sidebar-includes" id="sidebarIncludes"></div>
+          
+          <button class="enrol-btn" id="enrolBtn" onclick="goToPayment()">
+            Enrol Now →
+          </button>
+          
+          <div id="foundationNotice" style="display:none;" class="foundation-notice">
+            ✓ Foundation Course included — must be completed before track modules unlock.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Content -->
+    <div class="course-content">
+      
+      <!-- Introductory Video -->
+      <section class="content-section" id="videoSection" style="display:none;">
+        <h2 class="section-title">Course Overview</h2>
+        <div id="courseVideoContainer" style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 12px; border: 1px solid var(--border);">
+        <!-- iframe will be injected here -->
+        </div>
+      </section>
+
+      <!-- Long Description -->
+      <section class="content-section" id="longDescriptionSection" style="display:none;">
+        <h2 class="section-title">About This Course</h2>
+        <div id="longDescription" class="long-description"></div>
+      </section>
+
+      <!-- Curriculum -->
+      <section class="content-section" id="curriculumSection" style="display:none;">
+        <h2 class="section-title">Course Curriculum</h2>
+        <div id="curriculumGrid" class="curriculum-grid"></div>
+      </section>
+
+      <!-- Career Paths -->
+      <section class="content-section" id="careersSection" style="display:none;">
+        <h2 class="section-title">Career Opportunities</h2>
+        <div id="careersGrid" class="careers-grid"></div>
+      </section>
+
+      <!-- CTA Banner -->
+      <div class="cta-banner">
+        <h2>Ready to Start Learning?</h2>
+        <p>Join thousands of students building their Web3 careers with Sofe Node</p>
+        <button class="enrol-btn" style="max-width:400px;margin:0 auto;" onclick="goToPayment()">
+          Enrol Now →
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { auth, db, onAuthStateChanged, doc, getDoc, getDocs, collection, query, where, orderBy } from './firebase.js';
+
+    let _user = null;
+    let _course = null;
+    let _courseId = null;
+
+    // Get course ID from URL
+    const params = new URLSearchParams(window.location.search);
+    _courseId = params.get('id');
+
+    if (!_courseId) {
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('errorState').style.display = 'block';
+    }
+
+    // Check auth and load course
+    onAuthStateChanged(auth, async (user) => {
+      _user = user;
+      await loadCourse();
+    });
+
+    async function loadCourse() {
+      try {
+        const courseSnap = await getDoc(doc(db, 'courses', _courseId));
+        
+        if (!courseSnap.exists()) {
+          document.getElementById('loadingState').style.display = 'none';
+          document.getElementById('errorState').style.display = 'block';
+          return;
+        }
+
+        _course = { id: courseSnap.id, ...courseSnap.data() };
+        
+        // Check if already enrolled
+        if (_user) {
+          const enrolSnap = await getDocs(query(
+            collection(db, 'enrolments'),
+            where('user_id', '==', _user.uid),
+            where('course_id', '==', _courseId),
+            where('status', 'in', ['active', 'completed'])
+          ));
+
+          if (!enrolSnap.empty) {
+            // Already enrolled, redirect to dashboard
+            window.location.href = './dashboard.html';
+            return;
+          }
+        }
+
+        renderCourse();
+        
+        document.getElementById('loadingState').style.display = 'none';
+        document.getElementById('courseContent').style.display = 'block';
+
+      } catch (err) {
+        console.error('Load error:', err);
+        document.getElementById('loadingState').style.display = 'none';
+        document.getElementById('errorState').style.display = 'block';
+      }
+    }
+
+    function renderIncludes() {
+      const sidebarIncludes = document.getElementById('sidebarIncludes');
+      let features = [...(_course.includes || [])]; // Safely clone the array
+
+      // Check if this course needs the Foundation notice
+      if (_course.tier !== 'foundation' && _course.includes_foundation) {
+          const alreadyListed = features.some(f => f.toLowerCase().includes('foundation'));
+          if (!alreadyListed) {
+              features.push('Includes full access to the Foundation Course');
+          }
+      }
+
+      // Print to screen
+      if (features.length > 0) {
+          sidebarIncludes.innerHTML = `
+              <h3>What's Included:</h3>
+              ${features.map(item => `
+                  <div class="sidebar-includes-item">
+                      <span class="check-icon">✓</span>
+                      <span>${item.replace('✓ ', '')}</span>
+                  </div>
+              `).join('')}
+          `;
+      }
+    }
+
+    function renderCareerPaths() {
+      // Target the correct IDs defined in the HTML
+      const section = document.getElementById('careersSection');
+      const grid = document.getElementById('careersGrid');
+
+      if (!grid || !section) return;
+
+      // Check if the database has career paths for this specific course
+      if (!_course.career_paths || _course.career_paths.length === 0) {
+          section.style.display = 'none';
+          return;
+      }
+
+      // Map over the database array and utilize the clean CSS classes
+      grid.innerHTML = _course.career_paths.map(path => {
+          if (typeof path === 'object') {
+              return `
+                  <div class="career-card">
+                      <div class="career-icon">${path.icon || '💼'}</div>
+                      <div class="career-title">${path.title}</div>
+                      <div class="career-salary">${path.salary || 'Varies'}</div>
+                      <div class="career-description">${path.description || ''}</div>
+                  </div>
+              `;
+          } else {
+              return `
+                  <div class="career-card">
+                      <div class="career-icon">💼</div>
+                      <div class="career-title">${path}</div>
+                  </div>
+              `;
+          }
+      }).join('');
+      
+      // Ensure the parent section is unhidden
+      section.style.display = 'block'; 
+    }
+
+    function renderCourse() {
+      const tier = _course.tier || _course.category || 'track';
+      const price = _course.price !== undefined ? _course.price : (_course.fee || 0);
+      const description = _course.description || _course.short_description || '';
+      const longDescription = _course.long_description || '';
+      const moduleCount = _course.module_count || _course.total_modules || 0;
+
+      // Tier badge
+      const tierLabels = {
+        foundation: 'Foundation',
+        track: 'Career Track',
+        executive: 'Executive Tier'
+      };
+      document.getElementById('courseTierBadge').textContent = tierLabels[tier] || 'Course';
+      document.getElementById('courseTierBadge').className = `course-tier-badge ${tier}`;
+
+      // Title and description
+      document.getElementById('courseTitle').textContent = _course.title || 'Untitled Course';
+      document.getElementById('courseDescription').textContent = description;
+
+      // Meta info
+      const metaItems = [];
+      if (_course.duration_weeks) {
+        metaItems.push(`
+          <div class="meta-item">
+            <div class="meta-icon">📅</div>
+            <div class="meta-text">
+              <div class="meta-label">Duration</div>
+              <div class="meta-value">${_course.duration_weeks} weeks</div>
+            </div>
+          </div>
+        `);
+      }
+      if (moduleCount) {
+        metaItems.push(`
+          <div class="meta-item">
+            <div class="meta-icon">📚</div>
+            <div class="meta-text">
+              <div class="meta-label">Modules</div>
+              <div class="meta-value">${moduleCount} modules</div>
+            </div>
+          </div>
+        `);
+      }
+      const paceLabel = _course.cohort_based ? 'Cohort-based' : 'Self-paced';
+      metaItems.push(`
+        <div class="meta-item">
+          <div class="meta-icon">${_course.cohort_based ? '👥' : '⏱'}</div>
+          <div class="meta-text">
+            <div class="meta-label">Learning Mode</div>
+            <div class="meta-value">${paceLabel}</div>
+          </div>
+        </div>
+      `);
+      document.getElementById('courseMeta').innerHTML = metaItems.join('');
+
+      // Price
+      if (price === 0) {
+        document.getElementById('coursePrice').textContent = 'FREE';
+        document.getElementById('priceSub').textContent = 'self-paced learning';
+      } else {
+        document.getElementById('coursePrice').textContent = '₦' + price.toLocaleString('en-NG');
+        document.getElementById('priceSub').textContent = 'one-time payment';
+      }
+
+      // Call the renderIncludes function to handle sidebar items
+      renderIncludes();
+
+      // Foundation notice
+      if (tier !== 'foundation' && _course.includes_foundation) {
+        document.getElementById('foundationNotice').style.display = 'block';
+      }
+
+      // Long description
+      if (longDescription) {
+        document.getElementById('longDescriptionSection').style.display = 'block';
+        document.getElementById('longDescription').innerHTML = longDescription;
+      }
+
+      // Introductory Video Embed Logic
+      if (_course.video_url) {
+        let embedUrl = _course.video_url;
+        
+        // Convert standard YouTube URLs to the /embed/ format
+        const videoIdMatch = _course.video_url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&?]+)/);
+        if (videoIdMatch && videoIdMatch[1]) {
+          embedUrl = `https://www.youtube.com/embed/${videoIdMatch[1]}`;
+        }
+        
+        document.getElementById('videoSection').style.display = 'block';
+        document.getElementById('courseVideoContainer').innerHTML = `
+          <iframe src="${embedUrl}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" 
+                  frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                  allowfullscreen></iframe>
+        `;
+      }
+
+      // Load modules if available
+      loadCurriculum();
+      
+      // Load career paths
+      renderCareerPaths();
+    }
+
+    async function loadCurriculum() {
+      try {
+        const modulesSnap = await getDocs(query(
+          collection(db, 'modules'),
+          where('course_id', '==', _courseId),
+          where('is_published', '==', true),
+          orderBy('order', 'asc')
+        ));
+
+        if (modulesSnap.empty) return;
+
+        const modules = modulesSnap.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+        document.getElementById('curriculumSection').style.display = 'block';
+        document.getElementById('curriculumGrid').innerHTML = modules.map((m, i) => `
+          <div class="curriculum-module">
+            <div class="module-header">
+              <div>
+                <div class="module-number">M${i + 1}</div>
+                <h3 class="module-title">${m.title || 'Untitled Module'}</h3>
+              </div>
+            </div>
+            <p class="module-description">${m.description || ''}</p>
+          </div>
+        `).join('');
+
+      } catch (err) {
+        console.error('Load curriculum error:', err);
+      }
+    }
+
+    window.goToPayment = function() {
+      // 1. First, check if the user is logged in
+      if (!_user) {
+          // If not logged in, send them to signup, then route them back here
+          window.location.href = `./signup.html?next=enrol&course=${_courseId}`;
+          return;
+      }
+
+      // 2. Make sure the course data has actually loaded before proceeding
+      if (!_course) return;
+
+      // 3. Route based on the course tier
+      if (_course.tier === 'executive') {
+          // Dynamically build the URL using the exact course ID.
+          const formattedId = _courseId.toLowerCase();
+          window.location.href = `./${formattedId}-application.html?course=${_courseId}`;
+      } else {
+          // Route all other regular tiers to the standard payment flow
+          window.location.href = `./payment-flow.html?course=${_courseId}`;
+      }
+    };
+  </script>
+
+  <script type="module" src="./js/sofe-navbar.js"></script>
+</body>
+</html>

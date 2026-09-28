@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Bounty Details — Sofe Node</title>
+<link rel="icon" href="./images/favicon.ico" type="image/x-icon"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --black: #04080F;
+  --deep: #080E1A;
+  --panel: #0D1526;
+  --border: rgba(20,40,255,0.18);
+  --blue: #1428FF;
+  --blue-dim: rgba(20,40,255,0.10);
+  --orange: #FF8A00;
+  --orange-dim: rgba(255,138,0,0.12);
+  --white: #EEF4FF;
+  --muted: rgba(238,244,255,0.7);
+}
+
+body.light {
+  --black: #F8FAFB;
+  --deep: #FFFFFF;
+  --panel: #FFFFFF;
+  --border: rgba(20,40,255,0.12);
+  --white: #0A1420;
+  --muted: rgba(10,20,32,0.6);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--black);
+  color: var(--white);
+  font-family: 'Poppins', sans-serif;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* Loading State */
+.loading-state {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+/* Container */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 8rem 2rem 4rem;
+}
+
+/* Header */
+.bounty-header {
+  margin-bottom: 3rem;
+}
+
+.back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 0.85rem;
+  margin-bottom: 2rem;
+  transition: color 0.2s;
+}
+
+.back-button:hover {
+  color: var(--orange);
+}
+
+.bounty-badges {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+
+.badge {
+  padding: 0.4rem 0.9rem;
+  border-radius: 50px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.badge-status { background: rgba(16,185,129,0.2); color: #10b981; }
+.badge-category { background: rgba(20,40,255,0.15); color: var(--blue); }
+.badge-track { background: rgba(255,138,0,0.15); color: var(--orange); }
+.badge-validated { background: rgba(16,185,129,0.2); color: #10b981; }
+.badge-application { background: rgba(168,85,247,0.2); color: #a855f7; }
+
+.bounty-title {
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 900;
+  line-height: 1.2;
+  margin-bottom: 1rem;
+}
+
+.bounty-meta {
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.bounty-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Prize Section */
+.prize-section {
+  background: linear-gradient(135deg, rgba(255,138,0,0.12), rgba(20,40,255,0.08));
+  border: 2px solid rgba(255,138,0,0.3);
+  border-radius: 16px;
+  padding: 2rem;
+  margin-bottom: 3rem;
+}
+
+.prize-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+}
+
+.prize-item {
+  text-align: center;
+}
+
+.prize-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.5rem;
+}
+
+.prize-value {
+  font-size: 2rem;
+  font-weight: 900;
+  color: var(--orange);
+}
+
+/* Content Grid */
+.content-grid {
+  display: grid;
+  grid-template-columns: 1fr 350px;
+  gap: 3rem;
+  margin-bottom: 3rem;
+}
+
+@media (max-width: 968px) {
+  .content-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Main Content */
+.main-content {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 2.5rem;
+}
+
+.content-section {
+  margin-bottom: 2.5rem;
+}
+
+.content-section:last-child {
+  margin-bottom: 0;
+}
+
+.section-title {
+  font-size: 1.3rem;
+  font-weight: 800;
+  margin-bottom: 1rem;
+  color: var(--white);
+}
+
+.section-text {
+  color: var(--muted);
+  line-height: 1.8;
+  white-space: pre-wrap;
+}
+
+.deliverables-list {
+  list-style: none;
+  padding: 0;
+}
+
+.deliverables-list li {
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: start;
+  gap: 0.75rem;
+}
+
+.deliverables-list li:last-child {
+  border-bottom: none;
+}
+
+.deliverables-list li::before {
+  content: '✓';
+  color: var(--orange);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* Sidebar */
+.sidebar {
+  position: sticky;
+  top: 6rem;
+  align-self: start;
+}
+
+.sidebar-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 2rem;
+  margin-bottom: 1.5rem;
+}
+
+.sidebar-title {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 1rem;
+}
+
+.cta-button {
+  width: 100%;
+  padding: 1rem 2rem;
+  background: var(--orange);
+  color: #000;
+  border: none;
+  border-radius: 50px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+  text-decoration: none;
+  display: block;
+}
+
+.cta-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(255,138,0,0.3);
+}
+
+.cta-button:disabled {
+  background: rgba(255,255,255,0.1);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.info-list {
+  list-style: none;
+  padding: 0;
+}
+
+.info-list li {
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+}
+
+.info-list li:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  color: var(--muted);
+}
+
+.info-value {
+  font-weight: 600;
+  color: var(--white);
+}
+
+/* Warning Box */
+.warning-box {
+  background: rgba(255,138,0,0.1);
+  border: 1px solid rgba(255,138,0,0.3);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.warning-title {
+  font-weight: 700;
+  color: var(--orange);
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.warning-text {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+/* Auth Guard */
+#auth-guard {
+  position: fixed;
+  inset: 0;
+  background: var(--black);
+  z-index: 999;
+}
+</style>
+</head>
+
+<body data-nav-active="bounties">
+
+<div id="auth-guard"></div>
+<div id="sofe-navbar"></div>
+
+<!-- Loading State -->
+<div id="loadingState" class="loading-state">
+  <div style="font-size: 3rem; margin-bottom: 1rem;">⏳</div>
+  Loading bounty details...
+</div>
+
+<!-- Main Content -->
+<div id="mainContent" style="display: none;">
+  <div class="container">
+    
+    <!-- Header -->
+    <div class="bounty-header">
+      <a href="./bounties.html" class="back-button">← Back to Bounties</a>
+      
+      <div class="bounty-badges" id="bountyBadges"></div>
+      
+      <h1 class="bounty-title" id="bountyTitle">Loading...</h1>
+      
+      <div class="bounty-meta" id="bountyMeta"></div>
+    </div>
+    
+    <!-- Prize Section -->
+    <div class="prize-section">
+      <div class="prize-grid" id="prizeGrid"></div>
+    </div>
+    
+    <!-- Warning Box (if not eligible) -->
+    <div id="warningBox" style="display: none;"></div>
+    
+    <!-- Content Grid -->
+    <div class="content-grid">
+      
+      <!-- Main Content -->
+      <div class="main-content">
+        
+        <!-- Description -->
+        <div class="content-section">
+          <h2 class="section-title">About This Bounty</h2>
+          <div class="section-text" id="bountyDescription"></div>
+        </div>
+        
+        <!-- Deliverables -->
+        <div class="content-section">
+          <h2 class="section-title">What You Need to Deliver</h2>
+          <ul class="deliverables-list" id="deliverablesList"></ul>
+        </div>
+        
+      </div>
+      
+      <!-- Sidebar -->
+      <div class="sidebar">
+        
+        <!-- CTA Card -->
+        <div class="sidebar-card">
+          <button class="cta-button" id="ctaButton" onclick="handleApply()">
+            Apply Now
+          </button>
+        </div>
+        
+        <!-- Info Card -->
+        <div class="sidebar-card">
+          <div class="sidebar-title">Bounty Details</div>
+          <ul class="info-list" id="infoList"></ul>
+        </div>
+        
+      </div>
+      
+    </div>
+    
+  </div>
+</div>
+
+<script type="module">
+import { auth, db, onAuthStateChanged, collection, doc, getDoc, getDocs,
+         addDoc, updateDoc, query, where, serverTimestamp, increment }
+  from './firebase.js';
+
+let currentBounty = null;
+let currentUser = null;
+let userCompletedTracks = [];
+
+// Get bounty ID from URL
+const urlParams = new URLSearchParams(window.location.search);
+const bountyId = urlParams.get('id');
+
+if (!bountyId) {
+  window.location.href = './bounties.html';
+}
+
+// Auth State
+onAuthStateChanged(auth, async (user) => {
+  currentUser = user;
+  
+  if (!user) {
+    window.location.href = './login.html';
+    return;
+  }
+  
+  // Load user's completed tracks
+  await loadUserTracks(user.uid);
+  
+  // Load bounty
+  await loadBounty();
+  
+  // Remove auth guard
+  document.getElementById('auth-guard').remove();
+});
+
+// Track state
+let userFoundationComplete = false;
+let existingApplication = null; // set if user already applied to this bounty
+
+// Load user's real eligibility data from Firestore (not fake fields)
+async function loadUserTracks(userId) {
+  try {
+    // 1. Check Foundation completion — this is the BASE gate for every bounty,
+    //    regardless of eligible_tracks. Checked via module_progress: every
+    //    published foundation module must have completed_at set.
+    const modSnap = await getDocs(query(
+      collection(db, 'modules'),
+      where('course_id', '==', 'foundation')
+    ));
+    const foundationModules = modSnap.docs.filter(d => d.data().is_published !== false);
+
+    if (foundationModules.length > 0) {
+      const progSnap = await getDocs(query(
+        collection(db, 'module_progress'),
+        where('user_id', '==', userId),
+        where('course_id', '==', 'foundation')
+      ));
+      const completedModuleIds = new Set(
+        progSnap.docs.filter(d => !!d.data().completed_at).map(d => d.data().module_id)
+      );
+      userFoundationComplete = foundationModules.every(m => completedModuleIds.has(m.id));
+    } else {
+      // No foundation modules published yet — don't block on missing content
+      userFoundationComplete = true;
+    }
+
+    // 2. Check track/career-path completion — via completed enrolments whose
+    //    course tier === 'track' and matches the track name.
+    const enrolSnap = await getDocs(query(
+      collection(db, 'enrolments'),
+      where('user_id', '==', userId),
+      where('status', '==', 'completed')
+    ));
+    const completedCourseIds = enrolSnap.docs.map(d => d.data().course_id).filter(Boolean);
+
+    userCompletedTracks = [];
+    if (completedCourseIds.length > 0) {
+      await Promise.all(completedCourseIds.map(async (cid) => {
+        try {
+          const courseSnap = await getDoc(doc(db, 'courses', cid));
+          if (courseSnap.exists()) {
+            const c = courseSnap.data();
+            if (c.tier === 'track' && c.title) userCompletedTracks.push(c.title);
+          }
+        } catch(e) { /* skip unreadable course */ }
+      }));
+    }
+
+  } catch (err) {
+    console.warn('Error loading user eligibility:', err);
+    userFoundationComplete = false;
+  }
+}
+
+// Load bounty details
+async function loadBounty() {
+  try {
+    const bountyDoc = await getDoc(doc(db, 'bounties', bountyId));
+    
+    if (!bountyDoc.exists()) {
+      alert('Bounty not found');
+      window.location.href = './bounties.html';
+      return;
+    }
+    
+    currentBounty = { id: bountyDoc.id, ...bountyDoc.data() };
+
+    // Check if user already applied to this bounty
+    try {
+      const existingSnap = await getDocs(query(
+        collection(db, 'bounty_applications'),
+        where('bounty_id', '==', bountyId),
+        where('user_id', '==', currentUser.uid)
+      ));
+      if (!existingSnap.empty) {
+        existingApplication = { id: existingSnap.docs[0].id, ...existingSnap.docs[0].data() };
+      }
+    } catch(e) { console.warn('Could not check existing application:', e.message); }
+
+    // Check eligibility
+    const isEligible = checkEligibility(currentBounty);
+
+    // Render bounty
+    renderBounty(currentBounty, isEligible);
+    
+    // Show content
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('mainContent').style.display = 'block';
+    
+  } catch (err) {
+    console.error('Error loading bounty:', err);
+    alert('Error loading bounty');
+    window.location.href = './bounties.html';
+  }
+}
+
+// Check eligibility
+function checkEligibility(bounty) {
+  // BASE GATE: Foundation course must always be complete, for every bounty
+  if (!userFoundationComplete) return false;
+
+  const eligibleTracks = bounty.eligible_tracks || ['ALL'];
+
+  // Check validation requirement
+  if (bounty.validated_users_only && !currentUser.emailVerified) {
+    return false;
+  }
+
+  // If open to all (still requires Foundation, checked above)
+  if (eligibleTracks.includes('ALL')) return true;
+
+  // Check tracks
+  return eligibleTracks.some(track =>
+    userCompletedTracks.some(userTrack =>
+      userTrack.toLowerCase().replace(/\s+/g, '-').replace(/&/g, '') ===
+      track.toLowerCase().replace(/\s+/g, '-').replace(/&/g, '')
+    )
+  );
+}
+
+// Human-readable reason why the user is not eligible (for UI messaging)
+function getIneligibilityReason(bounty) {
+  if (!userFoundationComplete) {
+    return 'Complete the Foundation Course to unlock bounty applications.';
+  }
+  const eligibleTracks = bounty.eligible_tracks || ['ALL'];
+  if (!eligibleTracks.includes('ALL')) {
+    return `This bounty requires completion of: ${eligibleTracks.join(', ')}.`;
+  }
+  return 'You are not eligible for this bounty.';
+}
+
+// Render bounty
+function renderBounty(bounty, isEligible) {
+  // Badges
+  const badges = [];
+  
+  // Status badge
+  if (bounty.status === 'open') {
+    badges.push('<span class="badge badge-status">🟢 ACTIVE</span>');
+  } else if (bounty.status === 'draft') {
+    badges.push('<span class="badge badge-status">📝 DRAFT</span>');
+  }
+  
+  // Category badge
+  if (bounty.category) {
+    badges.push(`<span class="badge badge-category">${bounty.category.toUpperCase()}</span>`);
+  }
+  
+  // Track badge
+  const eligibleTracks = bounty.eligible_tracks || ['ALL'];
+  if (eligibleTracks.includes('ALL')) {
+    badges.push('<span class="badge badge-track">🌐 OPEN TO ALL</span>');
+  } else {
+    badges.push(`<span class="badge badge-track">🎯 ${eligibleTracks.join(', ')}</span>`);
+  }
+  
+  // Validated badge
+  if (bounty.validated_users_only) {
+    badges.push('<span class="badge badge-validated">✓ VALIDATED ONLY</span>');
+  }
+  
+  // Application badge
+  if (bounty.type === 'application') {
+    badges.push('<span class="badge badge-application">📋 APPLICATION REQUIRED</span>');
+  }
+  
+  document.getElementById('bountyBadges').innerHTML = badges.join('');
+  
+  // Title
+  document.getElementById('bountyTitle').textContent = bounty.title || 'Untitled Bounty';
+  
+  // Meta
+  const metaItems = [];
+  
+  if (bounty.deadline) {
+    const deadline = new Date(bounty.deadline + 'T23:59:59+01:00');
+    metaItems.push(`
+      <div class="bounty-meta-item">
+        <span>⏱</span>
+        <span>Deadline: ${deadline.toLocaleDateString('en-NG', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+      </div>
+    `);
+  }
+  
+  if (bounty.max_applicants) {
+    metaItems.push(`
+      <div class="bounty-meta-item">
+        <span>👥</span>
+        <span>Max ${bounty.max_applicants} participants</span>
+      </div>
+    `);
+  }
+  
+  metaItems.push(`
+    <div class="bounty-meta-item">
+      <span>📊</span>
+      <span>${bounty.applicant_count || 0} applications</span>
+    </div>
+  `);
+  
+  document.getElementById('bountyMeta').innerHTML = metaItems.join('');
+  
+  // Prize Grid — show ranked breakdown if present, else flat cash + XP
+  const prizeItems = [];
+
+  if (bounty.prize_breakdown && bounty.prize_breakdown.length > 0) {
+    // Ranked rewards — one card per rank
+    const medalIcons = ['🥇', '🥈', '🥉'];
+    bounty.prize_breakdown
+      .slice()
+      .sort((a, b) => a.rank - b.rank)
+      .forEach((tier, i) => {
+        prizeItems.push(`
+          <div class="prize-item">
+            <div class="prize-label">${medalIcons[i] || '🏅'} ${tier.label || 'Rank ' + tier.rank}</div>
+            <div class="prize-value" style="font-size:1.3rem;">₦${(tier.prize_ngn || 0).toLocaleString('en-NG')}</div>
+            ${tier.prize_xp ? `<div style="font-size:.75rem;color:var(--muted);margin-top:2px;">+${tier.prize_xp} XP</div>` : ''}
+          </div>
+        `);
+      });
+  } else {
+    // Flat reward — split among winners
+    prizeItems.push(`
+      <div class="prize-item">
+        <div class="prize-label">Cash Reward</div>
+        <div class="prize-value">₦${(bounty.prize_ngn || 0).toLocaleString('en-NG')}</div>
+        ${(bounty.max_winners || 1) > 1 ? `<div style="font-size:.68rem;color:var(--muted);margin-top:2px;">Split among ${bounty.max_winners} winners</div>` : ''}
+      </div>
+    `);
+
+    prizeItems.push(`
+      <div class="prize-item">
+        <div class="prize-label">XP Reward</div>
+        <div class="prize-value">${bounty.prize_xp || 0} XP</div>
+      </div>
+    `);
+  }
+
+  document.getElementById('prizeGrid').innerHTML = prizeItems.join('');
+  
+  // Date Display - Add after prize section
+  const startDate = bounty.start_date ? new Date(bounty.start_date + 'T00:00:00+01:00') : null;
+  const deadline = bounty.deadline ? new Date(bounty.deadline + 'T23:59:59+01:00') : null;
+  const now = new Date();
+  const daysLeft = deadline ? Math.ceil((deadline - now) / (1000 * 60 * 60 * 24)) : 0;
+  
+  const dateHTML = `
+    <div style="background:rgba(20,40,255,0.1);border:1px solid rgba(20,40,255,0.3);border-radius:12px;padding:1.5rem;margin-bottom:2rem;">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1.5rem;">
+        ${startDate ? `
+          <div>
+            <div style="font-size:0.7rem;color:var(--muted);margin-bottom:0.5rem;text-transform:uppercase;letter-spacing:0.05em;">Start Date</div>
+            <div style="font-weight:700;font-size:1.1rem;">${startDate.toLocaleDateString('en-US', {month: 'long', day: 'numeric', year: 'numeric'})}</div>
+          </div>
+        ` : ''}
+        ${deadline ? `
+          <div>
+            <div style="font-size:0.7rem;color:var(--muted);margin-bottom:0.5rem;text-transform:uppercase;letter-spacing:0.05em;">Deadline</div>
+            <div style="font-weight:700;font-size:1.1rem;">${deadline.toLocaleDateString('en-US', {month: 'long', day: 'numeric', year: 'numeric'})}</div>
+          </div>
+          <div>
+            <div style="font-size:0.7rem;color:var(--muted);margin-bottom:0.5rem;text-transform:uppercase;letter-spacing:0.05em;">Time Left</div>
+            <div style="font-weight:700;font-size:1.1rem;color:${daysLeft < 7 ? '#ff3b30' : daysLeft < 14 ? 'var(--orange)' : '#10b981'};">
+              ${daysLeft > 0 ? daysLeft + ' days' : 'Expired'}
+            </div>
+          </div>
+        ` : ''}
+      </div>
+    </div>
+  `;
+  
+  // Insert date display after prize section
+  const prizeSection = document.querySelector('.prize-section');
+  if (prizeSection) {
+    prizeSection.insertAdjacentHTML('afterend', dateHTML);
+  }
+  
+  // Warning box
+  if (!isEligible) {
+    let warningHTML = '';
+
+    if (bounty.validated_users_only && !currentUser.emailVerified) {
+      warningHTML = `
+        <div class="warning-box">
+          <div class="warning-title">⚠️ Email Verification Required</div>
+          <div class="warning-text">You need to verify your email to participate in this bounty. Check your inbox for the verification link.</div>
+        </div>
+      `;
+    } else if (!userFoundationComplete) {
+      warningHTML = `
+        <div class="warning-box">
+          <div class="warning-title">🔒 Foundation Course Required</div>
+          <div class="warning-text">Complete the Foundation Course to unlock bounty applications. <a href="./course-view.html?course=foundation" style="color:var(--orange);text-decoration:underline;">Continue learning →</a></div>
+        </div>
+      `;
+    } else if (!eligibleTracks.includes('ALL')) {
+      warningHTML = `
+        <div class="warning-box">
+          <div class="warning-title">🔒 Not Eligible</div>
+          <div class="warning-text">Complete a ${eligibleTracks.filter(t => t !== 'ALL').join(' or ')} course to participate in this bounty.</div>
+        </div>
+      `;
+    }
+
+    document.getElementById('warningBox').innerHTML = warningHTML;
+    document.getElementById('warningBox').style.display = '';
+  }
+  
+  // Description
+  document.getElementById('bountyDescription').textContent = bounty.description || 'No description provided.';
+  
+  // Deliverables
+  const deliverables = bounty.deliverables || [];
+  if (deliverables.length > 0) {
+    document.getElementById('deliverablesList').innerHTML = deliverables
+      .map(d => `<li>${d}</li>`)
+      .join('');
+  } else {
+    document.getElementById('deliverablesList').innerHTML = '<li>No specific deliverables listed</li>';
+  }
+  
+  // Info List
+  const infoItems = [];
+  
+  infoItems.push(`
+    <li>
+      <span class="info-label">Category</span>
+      <span class="info-value">${bounty.category || 'General'}</span>
+    </li>
+  `);
+  
+  infoItems.push(`
+    <li>
+      <span class="info-label">Type</span>
+      <span class="info-value">${bounty.type === 'application' ? 'Application Required' : 'Open Submission'}</span>
+    </li>
+  `);
+  
+  if (bounty.deadline) {
+    const deadline = new Date(bounty.deadline + 'T23:59:59+01:00');
+    const daysLeft = Math.ceil((deadline - new Date()) / (1000 * 60 * 60 * 24));
+    infoItems.push(`
+      <li>
+        <span class="info-label">Deadline</span>
+        <span class="info-value">${daysLeft > 0 ? daysLeft + ' days left' : 'Expired'}</span>
+      </li>
+    `);
+  }
+  
+  document.getElementById('infoList').innerHTML = infoItems.join('');
+  
+  // CTA Button
+  const ctaButton = document.getElementById('ctaButton');
+
+  if (existingApplication) {
+    // User already applied — show their status, no re-apply
+    if (existingApplication.status === 'winner') {
+      const rankLabel = existingApplication.rank_label || 'Winner';
+      const wonNgn = existingApplication.prize_ngn_awarded || 0;
+      const wonXp  = existingApplication.prize_xp_awarded  || 0;
+      ctaButton.textContent = `🏆 You Won — ${rankLabel}!`;
+      ctaButton.disabled = true;
+      ctaButton.style.background = 'linear-gradient(135deg,#FFD700,#FF8A00)';
+      ctaButton.style.color = '#000';
+      // Show a small breakdown under the button
+      const existingNote = document.getElementById('winnerPrizeNote');
+      if (!existingNote) {
+        const note = document.createElement('div');
+        note.id = 'winnerPrizeNote';
+        note.style.cssText = 'margin-top:.75rem;font-size:.8rem;color:#FFD700;text-align:center;';
+        note.textContent = `You earned ₦${wonNgn.toLocaleString('en-NG')}${wonXp ? ' + ' + wonXp + ' XP' : ''}`;
+        ctaButton.parentNode.appendChild(note);
+      }
+    } else if (existingApplication.status === 'not_selected') {
+      ctaButton.textContent = 'Not Selected This Time';
+      ctaButton.disabled = true;
+      ctaButton.style.background = 'rgba(255,255,255,.08)';
+      ctaButton.style.color = 'var(--muted)';
+    } else {
+      ctaButton.textContent = '✓ Application Submitted';
+      ctaButton.disabled = true;
+      ctaButton.style.background = 'rgba(16,185,129,.15)';
+      ctaButton.style.color = '#10b981';
+    }
+  } else if (!isEligible) {
+    ctaButton.textContent = '🔒 Not Eligible';
+    ctaButton.disabled = true;
+  } else if (bounty.status !== 'open') {
+    ctaButton.textContent = 'Bounty Closed';
+    ctaButton.disabled = true;
+  } else {
+    ctaButton.textContent = bounty.type === 'application' ? 'Apply Now' : 'Submit Entry';
+    ctaButton.disabled = false;
+  }
+}
+
+// Handle apply button
+window.handleApply = async function() {
+  if (!currentUser) {
+    alert('Please login to apply');
+    window.location.href = './login.html';
+    return;
+  }
+  
+  if (!currentBounty) return;
+
+  // Re-check eligibility (defense in depth — button should already be disabled if ineligible)
+  if (!checkEligibility(currentBounty)) {
+    alert(getIneligibilityReason(currentBounty));
+    return;
+  }
+
+  // Check if bounty is open
+  if (currentBounty.status !== 'open') {
+    alert('This bounty is not currently open for applications. Please check back later!');
+    return;
+  }
+  
+  // Check if bounty has started
+  if (currentBounty.start_date) {
+    const startDate = new Date(currentBounty.start_date + 'T00:00:00+01:00');
+    const now = new Date();
+    if (now < startDate) {
+      alert(`This bounty hasn't started yet. It will open on ${startDate.toLocaleDateString()}`);
+      return;
+    }
+  }
+  
+  // Check if bounty deadline passed
+  if (currentBounty.deadline) {
+    const deadline = new Date(currentBounty.deadline + 'T23:59:59+01:00');
+    const now = new Date();
+    if (now > deadline) {
+      alert('This bounty deadline has passed. Applications are closed.');
+      return;
+    }
+  }
+  
+  try {
+    // Check if already applied
+    const appQuery = query(
+      collection(db, 'bounty_applications'),
+      where('bounty_id', '==', bountyId),
+      where('user_id', '==', currentUser.uid)
+    );
+    
+    const existing = await getDocs(appQuery);
+    if (!existing.empty) {
+      alert('You have already applied to this bounty!');
+      return;
+    }
+    
+    // Create application
+    await addDoc(collection(db, 'bounty_applications'), {
+      bounty_id: bountyId,
+      user_id: currentUser.uid,
+      user_name: currentUser.displayName || currentUser.email || 'Anonymous',
+      user_email: currentUser.email,
+      status: 'applied',
+      applied_at: serverTimestamp()
+    });
+
+    // applicant_count is now kept in sync automatically by the
+    // syncBountyApplicantCount Cloud Function — no client-side update needed
+    // (removes the earlier failure point where this write could silently
+    // fail due to rules/timing and leave the count permanently stale).
+
+    // Show inline success instead of alert
+    const ctaBtn = document.getElementById('ctaButton');
+    if (ctaBtn) {
+      ctaBtn.disabled = true;
+      ctaBtn.textContent = '✓ Application Submitted!';
+      ctaBtn.style.background = '#10b981';
+      ctaBtn.style.color = '#fff';
+    }
+    const successDiv = document.createElement('div');
+    successDiv.style.cssText = 'background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);border-radius:8px;padding:14px 18px;margin-top:12px;font-size:.85rem;color:#10b981;';
+    successDiv.innerHTML = '✓ You\'re in! Winners will be announced after the deadline. Check your dashboard for updates.';
+    ctaBtn?.parentNode?.appendChild(successDiv);
+
+    // Reload after short delay so user sees the success message
+    setTimeout(() => location.reload(), 2500);
+    
+  } catch (error) {
+    console.error('Error applying:', error);
+    
+    // Better error messages
+    if (error.code === 'permission-denied') {
+      alert('Unable to submit application. This may be due to bounty settings. Please contact support.');
+    } else if (error.message.includes('Missing or insufficient permissions')) {
+      alert('This bounty is not yet accepting applications. Please try again later or contact support.');
+    } else {
+      alert('Error submitting application: ' + error.message);
+    }
+  }
+};
+
+// Open submission modal
+window.openSubmissionModal = function() {
+  document.getElementById('submissionModal').style.display = 'flex';
+};
+
+// Close submission modal
+window.closeSubmissionModal = function() {
+  document.getElementById('submissionModal').style.display = 'none';
+  document.getElementById('submissionUrl').value = '';
+  document.getElementById('submissionText').value = '';
+};
+
+// Submit work
+window.submitWork = async function() {
+  if (!currentUser) {
+    alert('Please login to submit');
+    return;
+  }
+  
+  const url = document.getElementById('submissionUrl').value.trim();
+  const text = document.getElementById('submissionText').value.trim();
+  
+  if (!url && !text) {
+    alert('Please provide a submission URL or description');
+    return;
+  }
+  
+  try {
+    await addDoc(collection(db, 'bounty_submissions'), {
+      bounty_id: bountyId,
+      user_id: currentUser.uid,
+      user_name: currentUser.displayName || currentUser.email || 'Anonymous',
+      user_email: currentUser.email,
+      submission_url: url,
+      submission_text: text,
+      status: 'submitted',
+      submitted_at: serverTimestamp()
+    });
+    
+    alert('Submission successful! You will be notified when it is reviewed.');
+    closeSubmissionModal();
+    
+  } catch (error) {
+    console.error('Error submitting:', error);
+    alert('Error submitting work: ' + error.message);
+  }
+};
+
+</script>
+
+<!-- Submission Modal -->
+<div id="submissionModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;align-items:center;justify-content:center;padding:2rem;">
+  <div style="max-width:600px;width:100%;background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:2.5rem;max-height:90vh;overflow-y:auto;">
+    <h2 style="font-size:1.8rem;font-weight:800;margin-bottom:1.5rem;color:var(--white);">Submit Your Work</h2>
+    
+    <div style="margin-bottom:1.5rem;">
+      <label style="display:block;margin-bottom:0.5rem;font-weight:600;font-size:0.9rem;">Submission Link/URL *</label>
+      <input type="url" id="submissionUrl" placeholder="https://..." style="width:100%;padding:0.75rem;background:var(--deep);border:1px solid var(--border);border-radius:8px;color:var(--white);font-family:inherit;"/>
+      <p style="font-size:0.75rem;color:var(--muted);margin-top:0.25rem;">Link to your work (Google Drive, GitHub, etc.)</p>
+    </div>
+    
+    <div style="margin-bottom:2rem;">
+      <label style="display:block;margin-bottom:0.5rem;font-weight:600;font-size:0.9rem;">Description *</label>
+      <textarea id="submissionText" rows="5" placeholder="Describe your submission..." style="width:100%;padding:0.75rem;background:var(--deep);border:1px solid var(--border);border-radius:8px;color:var(--white);font-family:inherit;resize:vertical;"></textarea>
+      <p style="font-size:0.75rem;color:var(--muted);margin-top:0.25rem;">Explain what you've done and how you met the requirements</p>
+    </div>
+    
+    <div style="display:flex;gap:1rem;">
+      <button onclick="submitWork()" style="flex:1;padding:1rem 2rem;background:var(--orange);color:#000;border:none;border-radius:50px;font-weight:700;font-size:1rem;cursor:pointer;font-family:inherit;">Submit Work</button>
+      <button onclick="closeSubmissionModal()" style="flex:1;padding:1rem 2rem;background:rgba(255,255,255,0.1);color:var(--white);border:1px solid var(--border);border-radius:50px;font-weight:700;font-size:1rem;cursor:pointer;font-family:inherit;">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script src="./navbar.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,63 @@
+{
+  "name": "Sofe Node — Learn, Earn, Build Your Web3 Career",
+  "short_name": "Sofe Node",
+  "description": "Africa's leading Web3 learning platform. Master blockchain, earn certifications, and earn while you learn.",
+  "start_url": "/dashboard.html?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#040810",
+  "theme_color": "#FF8A00",
+  "lang": "en-NG",
+  "dir": "ltr",
+  "categories": ["education", "finance", "productivity"],
+  "icons": [
+    {
+      "src": "/images/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/images/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/images/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/images/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "My Dashboard",
+      "short_name": "Dashboard",
+      "description": "View your learning progress and earnings",
+      "url": "/dashboard.html?source=pwa-shortcut",
+      "icons": [{ "src": "/images/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Browse Academy",
+      "short_name": "Academy",
+      "description": "Explore courses and bootcamps",
+      "url": "/academy.html?source=pwa-shortcut",
+      "icons": [{ "src": "/images/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Apply for CBIE",
+      "short_name": "CBIE",
+      "description": "Executive blockchain certification",
+      "url": "/cbie-application.html?source=pwa-shortcut",
+      "icons": [{ "src": "/images/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

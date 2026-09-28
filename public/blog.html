@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sofe Blog | Insights on Africa’s Web3 Infrastructure</title>
+<link rel="icon" href="./images/favicon.ico" type="image/x-icon" />
+<meta name="title" content="Sofe Blog | Insights on Africa’s Web3 Infrastructure">
+<meta name="description" content="Explore deep dives into blockchain infrastructure, protocol expansion in Africa, and the latest trends in the decentralized economy. Stay ahead with Sofe Node.">
+<meta name="keywords" content="Web3 Blog Africa, Blockchain Trends 2026, Sofe Node Insights, Crypto Market Africa, Tech Thought Leadership, DeFi Infrastructure Analysis, Web3 education, crypto insights, industry news and career guides from Sofe Node — Africa's node for blockchain growth.">
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="./css/blog.css" />
+</head>
+<body data-nav-active="resources">
+
+<canvas id="hexCanvas"></canvas>
+
+<div id="sofe-navbar"></div>
+
+<!-- PAGE HEADER -->
+<div class="page-header">
+  <div class="page-tag">Sofe Node Blog</div>
+  <h1>Web3 Insights for <em>Africa</em></h1>
+  <p>Education, industry news, career guides and on-chain analysis — written for the next generation of African blockchain talent.</p>
+</div>
+
+<!-- BLOG BODY -->
+<div class="blog-body">
+
+  <!-- Category filter -->
+  <div class="cat-bar reveal">
+    <button class="cat-btn active" onclick="filterCat(this,'all')">All Posts</button>
+    <button class="cat-btn" onclick="filterCat(this,'web3')">Web3 &amp; Blockchain</button>
+    <button class="cat-btn" onclick="filterCat(this,'education')">Education</button>
+    <button class="cat-btn" onclick="filterCat(this,'career')">Careers</button>
+    <button class="cat-btn orange" onclick="filterCat(this,'africa')">Africa</button>
+    <button class="cat-btn" onclick="filterCat(this,'defi')">DeFi</button>
+    <button class="cat-btn" onclick="filterCat(this,'ai')">AI &amp; Web3</button>
+  </div>
+
+  <!-- Featured post -->
+  <div class="featured-post reveal" onclick="window.location='#'">
+    <div class="feat-img">
+      <span class="feat-img-emoji">🌍</span>
+    </div>
+    <div class="feat-content">
+      <div>
+        <div class="feat-meta">
+          <span class="post-cat africa">Africa</span>
+          <span class="post-cat web3">Web3</span>
+          <span class="post-date">March 18, 2026</span>
+        </div>
+        <h2>Why Africa Is Poised to Lead the Next Wave of Web3 Adoption</h2>
+        <p>With over 1.4 billion people, a median age of 19, and one of the world's fastest-growing smartphone penetration rates, the African continent is uniquely positioned to leapfrog traditional finance and embrace decentralised systems. Here's why the world's next blockchain revolution will be built in Africa — and why Sofe Node is at the centre of it.</p>
+      </div>
+      <div class="feat-footer">
+        <div class="author-row">
+          <div class="author-avatar">CN</div>
+          <div>
+            <div class="author-name">Chidi Nwosu</div>
+            <div class="read-time">8 min read</div>
+          </div>
+        </div>
+        <a href="#" class="read-btn">Read Article →</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main blog layout: posts grid + sidebar -->
+  <div class="blog-layout">
+
+    <!-- Posts grid -->
+    <div>
+      <div class="posts-grid">
+
+        <!-- Post 1 -->
+        <div class="post-card reveal" data-cat="education" onclick="window.location='#'">
+          <div class="post-thumb t-blue">📚</div>
+          <div class="post-body">
+            <div class="post-meta">
+              <span class="post-cat education">Education</span>
+              <span class="post-date">Mar 14, 2026</span>
+            </div>
+            <h3>Blockchain Basics: What Every First-Timer in Nigeria Needs to Know</h3>
+            <p>Starting your Web3 journey can feel overwhelming. We break down the five core concepts every beginner must understand before they touch a crypto wallet.</p>
+            <div class="post-card-footer">
+              <div class="author-row">
+                <div class="author-avatar" style="background:rgba(0,200,100,.1);color:#00c864;border-color:rgba(0,200,100,.2);font-size:.6rem;">AO</div>
+                <div>
+                  <div class="author-name" style="font-size:.68rem;">Amaka Obi</div>
+                  <div class="read-time">5 min</div>
+                </div>
+              </div>
+              <a href="#" class="read-btn" style="font-size:.64rem;">Read →</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Post 2 -->
+        <div class="post-card reveal" data-cat="defi" onclick="window.location='#'">
+          <div class="post-thumb t-orange">💱</div>
+          <div class="post-body">
+            <div class="post-meta">
+              <span class="post-cat defi">DeFi</span>
+              <span class="post-date">Mar 10, 2026</span>
+            </div>
+            <h3>DeFi vs. CeFi: Which Is Safer for the African Retail Trader?</h3>
+            <p>Centralised and decentralised finance each carry distinct risks in African markets. We compare liquidity, custody, regulation and user experience side by side.</p>
+            <div class="post-card-footer">
+              <div class="author-row">
+                <div class="author-avatar" style="background:rgba(255,138,0,.1);color:var(--orange);border-color:rgba(255,138,0,.2);font-size:.6rem;">KA</div>
+                <div>
+                  <div class="author-name" style="font-size:.68rem;">Kunle Adeyemi</div>
+                  <div class="read-time">7 min</div>
+                </div>
+              </div>
+              <a href="#" class="read-btn" style="font-size:.64rem;">Read →</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Post 3 -->
+        <div class="post-card reveal" data-cat="career" onclick="window.location='#'">
+          <div class="post-thumb t-green">🚀</div>
+          <div class="post-body">
+            <div class="post-meta">
+              <span class="post-cat career">Career</span>
+              <span class="post-date">Mar 6, 2026</span>
+            </div>
+            <h3>6 High-Paying Web3 Roles You Can Land Without a Computer Science Degree</h3>
+            <p>Web3 is one of the few industries where your skills — not your certificate — determine your income. Here are six roles hiring right now across Africa and globally.</p>
+            <div class="post-card-footer">
+              <div class="author-row">
+                <div class="author-avatar" style="background:rgba(0,200,100,.1);color:#00c864;border-color:rgba(0,200,100,.2);font-size:.6rem;">FI</div>
+                <div>
+                  <div class="author-name" style="font-size:.68rem;">Fatima Ibrahim</div>
+                  <div class="read-time">6 min</div>
+                </div>
+              </div>
+              <a href="#" class="read-btn" style="font-size:.64rem;">Read →</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Post 4 -->
+        <div class="post-card reveal" data-cat="ai" onclick="window.location='#'">
+          <div class="post-thumb t-teal">🤖</div>
+          <div class="post-body">
+            <div class="post-meta">
+              <span class="post-cat ai">AI &amp; Web3</span>
+              <span class="post-date">Feb 28, 2026</span>
+            </div>
+            <h3>How AI Agents Are Changing On-Chain Trading — and What It Means for You</h3>
+            <p>AI-powered trading bots, autonomous DeFi agents and prompt-driven analytics are reshaping how crypto markets work. Here's what everyday traders need to understand.</p>
+            <div class="post-card-footer">
+              <div class="author-row">
+                <div class="author-avatar" style="background:rgba(26,188,156,.1);color:#1ABC9C;border-color:rgba(26,188,156,.2);font-size:.6rem;">TO</div>
+                <div>
+                  <div class="author-name" style="font-size:.68rem;">Tolu Okoye</div>
+                  <div class="read-time">9 min</div>
+                </div>
+              </div>
+              <a href="#" class="read-btn" style="font-size:.64rem;">Read →</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Post 5 -->
+        <div class="post-card reveal" data-cat="africa" onclick="window.location='#'">
+          <div class="post-thumb t-purple">🏛️</div>
+          <div class="post-body">
+            <div class="post-meta">
+              <span class="post-cat africa">Africa</span>
+              <span class="post-date">Feb 22, 2026</span>
+            </div>
+            <h3>Nigeria's Crypto Regulation in 2026: What's Changed and What's Next</h3>
+            <p>From the SEC's Digital Assets framework to CBN's evolving stance on P2P trading — we break down every major regulatory update affecting Nigerian crypto users this year.</p>
+            <div class="post-card-footer">
+              <div class="author-row">
+                <div class="author-avatar" style="background:rgba(155,89,182,.1);color:#C39BD3;border-color:rgba(155,89,182,.2);font-size:.6rem;">EB</div>
+                <div>
+                  <div class="author-name" style="font-size:.68rem;">Emeka Bello</div>
+                  <div class="read-time">10 min</div>
+                </div>
+              </div>
+              <a href="#" class="read-btn" style="font-size:.64rem;">Read →</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Post 6 -->
+        <div class="post-card reveal" data-cat="web3" onclick="window.location='#'">
+          <div class="post-thumb t-red">⛓️</div>
+          <div class="post-body">
+            <div class="post-meta">
+              <span class="post-cat web3">Web3</span>
+              <span class="post-date">Feb 15, 2026</span>
+            </div>
+            <h3>Solana vs Ethereum in 2026: Which Chain Should African Developers Build On?</h3>
+            <p>Transaction fees, ecosystem grants, community size, and job demand — we run a full comparison to help African developers choose their primary blockchain stack.</p>
+            <div class="post-card-footer">
+              <div class="author-row">
+                <div class="author-avatar" style="background:rgba(231,76,60,.1);color:#ff5555;border-color:rgba(231,76,60,.2);font-size:.6rem;">DA</div>
+                <div>
+                  <div class="author-name" style="font-size:.68rem;">David Aina</div>
+                  <div class="read-time">8 min</div>
+                </div>
+              </div>
+              <a href="#" class="read-btn" style="font-size:.64rem;">Read →</a>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- end posts-grid -->
+
+      <!-- Pagination -->
+      <div class="pagination reveal">
+        <button class="pg-btn pg-arrow">&#8592;</button>
+        <button class="pg-btn active">1</button>
+        <button class="pg-btn" onclick="this.closest('.pagination').querySelectorAll('.pg-btn').forEach(b=>b.classList.remove('active'));this.classList.add('active')">2</button>
+        <button class="pg-btn" onclick="this.closest('.pagination').querySelectorAll('.pg-btn').forEach(b=>b.classList.remove('active'));this.classList.add('active')">3</button>
+        <button class="pg-btn" style="font-size:.7rem;letter-spacing:.04em;">…</button>
+        <button class="pg-btn" onclick="this.closest('.pagination').querySelectorAll('.pg-btn').forEach(b=>b.classList.remove('active'));this.classList.add('active')">8</button>
+        <button class="pg-btn pg-arrow">&#8594;</button>
+      </div>
+
+    </div><!-- end posts main -->
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+
+      <!-- Trending -->
+      <div class="sidebar-card reveal">
+        <div class="sidebar-title">Trending Now</div>
+        <div class="trend-item">
+          <div class="trend-num">01</div>
+          <div>
+            <div class="trend-text">Why Africa Is Poised to Lead the Next Wave of Web3</div>
+            <div class="trend-cat">Africa · Web3</div>
+          </div>
+        </div>
+        <div class="trend-item">
+          <div class="trend-num">02</div>
+          <div>
+            <div class="trend-text">6 High-Paying Web3 Roles Without a CS Degree</div>
+            <div class="trend-cat">Career</div>
+          </div>
+        </div>
+        <div class="trend-item">
+          <div class="trend-num">03</div>
+          <div>
+            <div class="trend-text">How AI Agents Are Changing On-Chain Trading</div>
+            <div class="trend-cat">AI &amp; Web3</div>
+          </div>
+        </div>
+        <div class="trend-item">
+          <div class="trend-num">04</div>
+          <div>
+            <div class="trend-text">Nigeria's Crypto Regulation in 2026</div>
+            <div class="trend-cat">Africa · Regulation</div>
+          </div>
+        </div>
+        <div class="trend-item">
+          <div class="trend-num">05</div>
+          <div>
+            <div class="trend-text">Solana vs Ethereum: Which Chain for African Devs?</div>
+            <div class="trend-cat">Development</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Topics -->
+      <div class="sidebar-card reveal">
+        <div class="sidebar-title">Browse Topics</div>
+        <div style="display:flex;flex-wrap:wrap;gap:.5rem;">
+          <a href="#" style="font-size:.66rem;font-weight:600;color:var(--muted);text-decoration:none;border:1px solid var(--border);border-radius:100px;padding:.3rem .75rem;transition:all .2s;" onmouseover="this.style.borderColor='var(--blue)';this.style.color='var(--white)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">Blockchain Basics</a>
+          <a href="#" style="font-size:.66rem;font-weight:600;color:var(--muted);text-decoration:none;border:1px solid var(--border);border-radius:100px;padding:.3rem .75rem;transition:all .2s;" onmouseover="this.style.borderColor='var(--blue)';this.style.color='var(--white)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">DeFi</a>
+          <a href="#" style="font-size:.66rem;font-weight:600;color:var(--muted);text-decoration:none;border:1px solid var(--border);border-radius:100px;padding:.3rem .75rem;transition:all .2s;" onmouseover="this.style.borderColor='var(--blue)';this.style.color='var(--white)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">Careers</a>
+          <a href="#" style="font-size:.66rem;font-weight:600;color:var(--muted);text-decoration:none;border:1px solid var(--border);border-radius:100px;padding:.3rem .75rem;transition:all .2s;" onmouseover="this.style.borderColor='var(--blue)';this.style.color='var(--white)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">Nigeria</a>
+          <a href="#" style="font-size:.66rem;font-weight:600;color:var(--muted);text-decoration:none;border:1px solid var(--border);border-radius:100px;padding:.3rem .75rem;transition:all .2s;" onmouseover="this.style.borderColor='var(--blue)';this.style.color='var(--white)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">NFTs</a>
+          <a href="#" style="font-size:.66rem;font-weight:600;color:var(--muted);text-decoration:none;border:1px solid var(--border);border-radius:100px;padding:.3rem .75rem;transition:all .2s;" onmouseover="this.style.borderColor='var(--blue)';this.style.color='var(--white)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">AI &amp; Web3</a>
+          <a href="#" style="font-size:.66rem;font-weight:600;color:var(--muted);text-decoration:none;border:1px solid var(--border);border-radius:100px;padding:.3rem .75rem;transition:all .2s;" onmouseover="this.style.borderColor='var(--blue)';this.style.color='var(--white)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">Trading</a>
+          <a href="#" style="font-size:.66rem;font-weight:600;color:var(--muted);text-decoration:none;border:1px solid var(--border);border-radius:100px;padding:.3rem .75rem;transition:all .2s;" onmouseover="this.style.borderColor='var(--blue)';this.style.color='var(--white)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">Regulation</a>
+          <a href="#" style="font-size:.66rem;font-weight:600;color:var(--muted);text-decoration:none;border:1px solid var(--border);border-radius:100px;padding:.3rem .75rem;transition:all .2s;" onmouseover="this.style.borderColor='var(--blue)';this.style.color='var(--white)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">DAO</a>
+          <a href="#" style="font-size:.66rem;font-weight:600;color:var(--muted);text-decoration:none;border:1px solid var(--border);border-radius:100px;padding:.3rem .75rem;transition:all .2s;" onmouseover="this.style.borderColor='var(--blue)';this.style.color='var(--white)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">Solana</a>
+          <a href="#" style="font-size:.66rem;font-weight:600;color:var(--muted);text-decoration:none;border:1px solid var(--border);border-radius:100px;padding:.3rem .75rem;transition:all .2s;" onmouseover="this.style.borderColor='var(--blue)';this.style.color='var(--white)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">Ethereum</a>
+        </div>
+      </div>
+
+      <!-- Enrol CTA -->
+      <div class="sidebar-card reveal" style="background:linear-gradient(135deg,rgba(20,40,255,.1),rgba(255,138,0,.07));border-color:rgba(255,138,0,.25);text-align:center;">
+        <div style="font-size:2rem;margin-bottom:.8rem;">🎓</div>
+        <div style="font-size:.88rem;font-weight:800;color:var(--white);margin-bottom:.4rem;">Start Learning Web3 Today</div>
+        <p style="font-size:.74rem;color:var(--muted);line-height:1.6;margin-bottom:1rem;">Join 5,000+ Sofians who've launched their blockchain journey with our free Foundation Course.</p>
+        <a href="./talent.html" style="display:block;background:var(--orange);color:#fff;border-radius:5px;padding:.65rem;font-family:'Poppins',sans-serif;font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;text-decoration:none;transition:opacity .2s;" onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">Enrol Today →</a>
+      </div>
+
+    </aside>
+  </div><!-- end blog-layout -->
+
+  <!-- Newsletter CTA -->
+  <div class="newsletter-cta reveal">
+    <h3>Get Web3 Insights <em>Straight to Your Inbox</em></h3>
+    <p>Weekly articles, career opportunities, and on-chain analysis — curated for African blockchain talent.</p>
+    <div class="newsletter-form">
+      <input type="email" placeholder="your@email.com" />
+      <button onclick="this.textContent='Subscribed ✓';this.style.background='#00c864';setTimeout(()=>{this.textContent='Subscribe';this.style.background='var(--orange)'},3000)">Subscribe</button>
+    </div>
+  </div>
+
+</div><!-- end blog-body -->
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <a href="./" class="nav-logo" style="margin-bottom:.6rem;">
+        <img src="./images/Nodes/SofeLogoHome.png" class="logo-img" alt="Sofe Node Logo" />
+      </a>
+      <p>A Sofe Group company. Empowering the next generation to lead Africa's tech revolution.</p>
+      <div class="social-row">
+         <a class="social-btn" href="http://x.com/sofenode" title="X/Twitter" target="_blank"> <img src="./images/Social/SofeNodeX(twitter).png" alt="X/Twitter"></a> 
+        <a class="social-btn" href="https://www.linkedin.com/company/sofe-group" title="LinkedIn" target="_blank"> <img src="./images/Social/SofeNodeLInkedIn.png" alt="LinkedIn"></a>
+        <a class="social-btn" href="http://youtube.com/@sofegroupofficial" title="YouTube" target="_blank"> <img src="./images/Social/SofeNodeYoutubelogo.png" alt="YouTube"></a>
+        <a class="social-btn" href="https://www.facebook.com/profile.php?id=100063995682203&mibextid=ZbWKwL" title="Facebook" target="_blank"> <img src="./images/Social/SofeNodeFacebooklogo.png" alt="Facebook"></a>
+        <a class="social-btn" href="https://t.me/sofegroupofficial" title="Telegram" target="_blank"> <img src="./images/Social/SofeNodeTelegram.png" alt="Telegram"></a>
+      </div>
+    </div>
+    <div class="footer-col">
+      <h4>Quick Links</h4>
+      <ul>
+        <li><a href="./about.html">About Us</a></li>
+        <li><a href="./ecosystems.html">For Ecosystems</a></li>
+        <li><a href="./talent.html">For Talent</a></li>
+        <li><a href="./bce.html">BCE</a></li>
+        <li><a href="./blog.html">Blog</a></li>
+        <li><a href="./dashboard.html">Dashboard</a></li>
+        <li><a href="#">Verify Certificate</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Legal</h4>
+      <ul>
+        <li><a href="#">Privacy Policy</a></li>
+        <li><a href="#">Terms of Service</a></li>
+        <li><a href="#">Affiliate Terms</a></li>
+        <li><a href="#">Cookie Policy</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Web3 Job Alerts</h4>
+      <p style="font-size:.85rem;color:var(--muted);margin-bottom:.5rem;font-weight:300;">Get the latest Web3 opportunities in Africa.</p>
+      <div class="newsletter-row">
+        <input type="email" class="newsletter-input" placeholder="your@email.com" />
+        <button class="newsletter-btn">Join</button>
+      </div>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>&copy; 2026 Sofe Node &middot; A Sofe Group Company &middot; All rights reserved.</p>
+    <p style="color:var(--orange);">Africa's Node for Web3 Growth.</p>
+  </div>
+</footer>
+
+<script>
+// Category filter
+function filterCat(btn, cat) {
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.post-card').forEach(card => {
+    if (cat === 'all' || card.dataset.cat === cat) {
+      card.style.display = '';
+    } else {
+      card.style.display = 'none';
+    }
+  });
+}
+
+// Mobile services toggle
+function toggleMobServices(e) {
+  e.preventDefault();
+  const tgl = document.getElementById('mobServicesTgl');
+  const sub = document.getElementById('mobSub');
+  const isOpen = tgl.classList.contains('open');
+  tgl.classList.toggle('open', !isOpen);
+  sub.style.display = isOpen ? 'none' : 'block';
+}
+
+// Hamburger
+const hamburger = document.getElementById('hamburger');
+const mobileMenu = document.getElementById('mobileMenu');
+let menuOpen = false;
+hamburger.addEventListener('click', () => {
+  menuOpen = !menuOpen;
+  hamburger.classList.toggle('open', menuOpen);
+  mobileMenu.classList.toggle('open', menuOpen);
+});
+mobileMenu.querySelectorAll('a[href]').forEach(a => {
+  a.addEventListener('click', () => {
+    if (!a.classList.contains('mob-services-toggle')) {
+      menuOpen = false;
+      hamburger.classList.remove('open');
+      mobileMenu.classList.remove('open');
+    }
+  });
+});
+
+// Light mode
+const themeBtn = document.getElementById('themeToggle');
+const themeBtnMob = document.getElementById('themeToggleMob');
+let isLight = false;
+function applyTheme(light) {
+  isLight = light;
+  document.body.classList.toggle('light', isLight);
+  const icon = isLight ? '🌙' : '☀️';
+  themeBtn.textContent = icon;
+  themeBtnMob.textContent = icon;
+  document.getElementById('hexCanvas').style.opacity = isLight ? '0.18' : '1';
+}
+themeBtn.addEventListener('click', () => applyTheme(!isLight));
+themeBtnMob.addEventListener('click', () => applyTheme(!isLight));
+
+// Scroll
+window.addEventListener('scroll', () => {
+  document.getElementById('nav').style.background =
+    window.scrollY > 40 ? 'rgba(4,8,16,0.97)' : 'rgba(4,8,15,0.88)';
+});
+
+// Reveal
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) { setTimeout(() => e.target.classList.add('visible'), 80); obs.unobserve(e.target); }
+  });
+}, { threshold: .1 });
+document.querySelectorAll('.reveal').forEach(r => obs.observe(r));
+
+// Hex canvas
+(function(){
+  const canvas = document.getElementById('hexCanvas');
+  const ctx = canvas.getContext('2d');
+  let W, H, nodes = [];
+  function resize(){ W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
+  function hexPath(x,y,r,rot){ ctx.beginPath(); for(let i=0;i<6;i++){ const a=rot+Math.PI/180*60*i; ctx.lineTo(x+r*Math.cos(a),y+r*Math.sin(a)); } ctx.closePath(); }
+  function init(){
+    nodes=[];
+    const count = Math.floor(W*H/28000);
+    for(let i=0;i<count+8;i++){
+      const layer = Math.random()<.65?'small':'medium';
+      nodes.push({ x:Math.random()*W, y:Math.random()*H, r:layer==='small'?(6+Math.random()*8):(14+Math.random()*18), vx:(Math.random()-.5)*.22, vy:(Math.random()-.5)*.22, rot:Math.random()*Math.PI*2, rotV:(Math.random()-.5)*.004, phase:Math.random()*Math.PI*2, layer });
+    }
+  }
+  function draw(){
+    const lightMode = document.body.classList.contains('light');
+    ctx.clearRect(0,0,W,H);
+    for(let i=0;i<nodes.length;i++){
+      for(let j=i+1;j<nodes.length;j++){
+        const dx=nodes[i].x-nodes[j].x, dy=nodes[i].y-nodes[j].y, d=Math.sqrt(dx*dx+dy*dy), MAX=160;
+        if(d<MAX){ const a=(1-d/MAX)*0.22; ctx.beginPath(); ctx.moveTo(nodes[i].x,nodes[i].y); ctx.lineTo(nodes[j].x,nodes[j].y); ctx.strokeStyle=lightMode?`rgba(20,40,200,${(a*.7).toFixed(3)})`:`rgba(255,138,0,${a.toFixed(3)})`; ctx.lineWidth=(1-d/MAX)*1.6; ctx.stroke(); }
+      }
+    }
+    nodes.forEach(n=>{
+      n.x+=n.vx; n.y+=n.vy; n.rot+=n.rotV; n.phase+=0.013;
+      if(n.x<-n.r*2)n.x=W+n.r; if(n.x>W+n.r*2)n.x=-n.r;
+      if(n.y<-n.r*2)n.y=H+n.r; if(n.y>H+n.r*2)n.y=-n.r;
+      const p=0.5+0.5*Math.sin(n.phase), isSmall=n.layer==='small';
+      const glowR=n.r*(isSmall?1.6:2.2), glowA=isSmall?0.07*p:0.13*p;
+      const grd=ctx.createRadialGradient(n.x,n.y,0,n.x,n.y,glowR);
+      grd.addColorStop(0,lightMode?`rgba(20,40,220,${glowA.toFixed(3)})`:`rgba(255,138,0,${glowA.toFixed(3)})`);
+      grd.addColorStop(1,lightMode?'rgba(20,40,220,0)':'rgba(255,138,0,0)');
+      ctx.beginPath(); ctx.arc(n.x,n.y,glowR,0,Math.PI*2); ctx.fillStyle=grd; ctx.fill();
+      const fillA=isSmall?(0.03+0.04*p):(0.05+0.07*p);
+      hexPath(n.x,n.y,n.r,n.rot);
+      ctx.fillStyle=lightMode?`rgba(20,40,220,${(fillA*1.4).toFixed(3)})`:`rgba(255,138,0,${fillA.toFixed(3)})`; ctx.fill();
+      const strokeA=isSmall?(0.28+0.28*p):(0.50+0.32*p);
+      hexPath(n.x,n.y,n.r,n.rot);
+      ctx.strokeStyle=lightMode?`rgba(20,40,220,${(strokeA*.9).toFixed(3)})`:`rgba(255,160,40,${strokeA.toFixed(3)})`; ctx.lineWidth=isSmall?.8:1.3; ctx.stroke();
+      if(!isSmall){ hexPath(n.x,n.y,n.r*.5,n.rot); ctx.strokeStyle=`rgba(255,138,0,${(0.18+0.18*p).toFixed(3)})`; ctx.lineWidth=0.7; ctx.stroke(); }
+      const dotR=isSmall?1.4:2.4, dotA=isSmall?(0.4+0.3*p):(0.65+0.35*p);
+      ctx.beginPath(); ctx.arc(n.x,n.y,dotR,0,Math.PI*2);
+      ctx.fillStyle=lightMode?`rgba(255,120,0,${dotA.toFixed(3)})`:`rgba(255,180,60,${dotA.toFixed(3)})`; ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  window.addEventListener('resize',()=>{resize();init()});
+  resize(); init(); draw();
+})();
+</script>
+<script type="module" src="./js/sofe-navbar.js"></script>
+</body>
+</html>

@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Bounty Campaign - Sofe Node</title>
+<link rel="icon" href="./images/favicon.ico" type="image/x-icon" />
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg: #040810;
+  --deep: #060d1a;
+  --panel: #0a1628;
+  --border: rgba(200,215,240,0.1);
+  --white: #c8d7f0;
+  --muted: rgba(200,215,240,0.5);
+  --orange: #FF8A00;
+  --blue: #1428FF;
+  --gold: #C9A84C;
+}
+
+/* Light Mode */
+body.light {
+  --bg: #F8FAFB;
+  --deep: #FFFFFF;
+  --panel: #FFFFFF;
+  --border: rgba(20,40,255,0.12);
+  --white: #0A1420;
+  --muted: rgba(10,20,32,0.6);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--white);
+  font-family: 'Poppins', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+ body.light footer { background: #E4EAFF; }
+
+/* Hero Section */
+.bounty-hero {
+  padding: 8rem 2rem 4rem;
+  text-align: center;
+  background:
+    radial-gradient(circle at 20% 30%, rgba(20,40,255,0.15), transparent 40%),
+    radial-gradient(circle at 80% 60%, rgba(255,138,0,0.1), transparent 40%);
+  position: relative;
+}
+
+.bounty-eyebrow {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--white);
+  margin-bottom: 1.5rem;
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  background: rgba(255,255,255,0.05);
+  border-radius: 50px;
+}
+
+.bounty-title {
+  font-size: clamp(2.5rem, 8vw, 5rem);
+  font-weight: 900;
+  line-height: 1;
+  margin-bottom: 1rem;
+  text-transform: uppercase;
+}
+
+.bounty-title-word {
+  display: block;
+  color: var(--white);
+}
+
+.bounty-title-word.blue {
+  color: var(--blue);
+  font-size: clamp(3rem, 10vw, 6.5rem);
+  letter-spacing: -0.02em;
+}
+
+.bounty-title-word.live {
+  color: var(--orange);
+  font-style: italic;
+  margin-top: -0.5rem;
+}
+
+.bounty-subtitle {
+  font-size: clamp(1rem, 2.5vw, 1.5rem);
+  font-weight: 600;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.bounty-subtitle span:first-child {
+  color: var(--white);
+}
+
+.bounty-subtitle span:last-child {
+  color: var(--orange);
+}
+
+.bounty-icon {
+  font-size: 2rem;
+}
+
+/* Main Container */
+.bounty-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+/* Grid Layout */
+.bounty-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+/* Card Styles */
+.bounty-card {
+  background: rgba(10,22,40,0.6);
+  border: 2px solid var(--border);
+  border-radius: 16px;
+  padding: 2rem;
+  backdrop-filter: blur(10px);
+}
+
+.bounty-card-header {
+  background: var(--blue);
+  color: white;
+  text-align: center;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 1.5rem;
+}
+
+.bounty-card-header.rewards {
+  background: var(--blue);
+}
+
+.bounty-card-header.pool {
+  background: linear-gradient(135deg, var(--blue), var(--orange));
+}
+
+/* How to Win */
+.win-step {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.win-step-icon {
+  width: 60px;
+  height: 60px;
+  background: rgba(20,40,255,0.15);
+  border: 2px solid var(--blue);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+  flex-shrink: 0;
+}
+
+.win-step-content {
+  flex: 1;
+}
+
+.win-step-number {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--orange);
+  line-height: 1;
+  margin-bottom: 0.25rem;
+}
+
+.win-step-text {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--white);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+/* Prize Items */
+.prize-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: rgba(255,255,255,0.02);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+.prize-badge {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  font-weight: 900;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.prize-badge::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 3px solid;
+  opacity: 0.3;
+}
+
+.prize-badge.first {
+  background: linear-gradient(135deg, #FFD700, #FFA500);
+  color: #1a1a2e;
+}
+.prize-badge.first::after { border-color: #FFD700; }
+
+.prize-badge.second {
+  background: linear-gradient(135deg, #C0C0C0, #808080);
+  color: #1a1a2e;
+}
+.prize-badge.second::after { border-color: #C0C0C0; }
+
+.prize-badge.third {
+  background: linear-gradient(135deg, #CD7F32, #8B4513);
+  color: #fff;
+}
+.prize-badge.third::after { border-color: #CD7F32; }
+
+.prize-badge.other {
+  background: linear-gradient(135deg, rgba(20,40,255,0.3), rgba(255,138,0,0.2));
+  color: var(--white);
+  border: 2px solid var(--blue);
+}
+
+.prize-content {
+  flex: 1;
+}
+
+.prize-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.25rem;
+}
+
+.prize-amount {
+  font-size: 1.8rem;
+  font-weight: 900;
+  color: var(--orange);
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+/* Total Prize Pool */
+.prize-pool {
+  text-align: center;
+  padding: 2rem;
+}
+
+.prize-pool-icon {
+  font-size: 5rem;
+  margin-bottom: 1rem;
+  filter: drop-shadow(0 0 20px rgba(255,138,0,0.5));
+}
+
+.prize-pool-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  margin-bottom: 0.5rem;
+}
+
+.prize-pool-amount {
+  font-size: clamp(2.5rem, 6vw, 4rem);
+  font-weight: 900;
+  color: var(--orange);
+  line-height: 1;
+}
+
+/* Campaign Details */
+.details-card {
+  grid-column: 1 / -1;
+  background: linear-gradient(135deg, rgba(20,40,255,0.1), rgba(255,138,0,0.05));
+  border: 2px solid var(--blue);
+}
+
+.details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 2rem;
+  margin-top: 1.5rem;
+}
+
+.detail-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.detail-icon {
+  font-size: 2.5rem;
+  color: var(--blue);
+}
+
+.detail-content h3 {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--white);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.5rem;
+}
+
+.detail-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--orange);
+  margin-bottom: 0.25rem;
+}
+
+.detail-text {
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+/* CTA Button */
+.bounty-cta {
+  text-align: center;
+  margin: 3rem 0;
+}
+
+.cta-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 1rem;
+  background: var(--orange);
+  color: #000;
+  font-size: 1.2rem;
+  font-weight: 800;
+  padding: 1.2rem 3rem;
+  border-radius: 50px;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  transition: all 0.3s;
+  box-shadow: 0 10px 40px rgba(255,138,0,0.3);
+}
+
+.cta-button:hover {
+  background: #ffa333;
+  transform: translateY(-2px);
+  box-shadow: 0 15px 50px rgba(255,138,0,0.4);
+}
+
+/* Leaderboard */
+.leaderboard-section {
+  margin-top: 4rem;
+}
+
+.leaderboard-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.leaderboard-title {
+  font-size: 2rem;
+  font-weight: 800;
+  margin-bottom: 0.5rem;
+}
+
+.leaderboard-subtitle {
+  color: var(--muted);
+}
+
+.leaderboard-table {
+  background: rgba(10,22,40,0.6);
+  border: 2px solid var(--border);
+  border-radius: 16px;
+  padding: 1.5rem;
+  backdrop-filter: blur(10px);
+}
+
+.leaderboard-row {
+  display: grid;
+  grid-template-columns: 60px 1fr auto;
+  gap: 1rem;
+  align-items: center;
+  padding: 1rem;
+  margin-bottom: 0.5rem;
+  background: rgba(255,255,255,0.02);
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.leaderboard-row:hover {
+  background: rgba(255,255,255,0.05);
+}
+
+.leaderboard-rank {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--orange);
+  text-align: center;
+}
+
+.leaderboard-rank.top3 {
+  font-size: 2rem;
+}
+
+.leaderboard-name {
+  font-weight: 600;
+}
+
+.leaderboard-score {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--blue);
+}
+
+/* Loading & Empty States */
+.loading-state, .empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: var(--muted);
+}
+
+.loading-state {
+  font-size: 2rem;
+}
+
+.empty-state {
+  font-size: 1.2rem;
+}
+
+/* MOBILE MENU PANEL */
+  #mobileMenu {
+    display: none; position: fixed; top: 62px; left: 0; right: 0;
+    z-index: 190; background: rgba(4,8,15,0.98);
+    backdrop-filter: blur(24px);
+    border-bottom: 1px solid var(--border);
+    padding: 1.2rem 5vw 1.6rem;
+    transform: translateY(-8px); opacity: 0;
+    transition: transform .25s ease, opacity .25s ease;
+  }
+  #mobileMenu.open {
+    display: block;
+    animation: mobileIn .25s ease forwards;
+  }
+  @keyframes mobileIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .mob-links { list-style: none; margin-bottom: 1.2rem; }
+  .mob-links li { border-bottom: 1px solid var(--border); }
+  .mob-links li:last-child { border-bottom: none; }
+  .mob-links a {
+    display: flex; align-items: center; justify-content: space-between;
+    font-family: 'Poppins', sans-serif; font-size: .88rem; font-weight: 500;
+    color: var(--muted); text-decoration: none; padding: .9rem 0;
+    transition: color .2s; text-transform: uppercase; letter-spacing: .04em;
+  }
+  .mob-links a:hover { color: var(--white); }
+  /* Mobile services sub-items */
+  .mob-sub { list-style: none; padding: 0 0 .5rem 1rem; }
+  .mob-sub li { border-bottom: none; }
+  .mob-sub a {
+    font-size: .8rem; text-transform: none; letter-spacing: .02em;
+    color: rgba(200,215,240,.5); padding: .5rem 0;
+    display: flex; align-items: center; gap: .6rem;
+  }
+  .mob-sub a:hover { color: var(--white); }
+  .mob-sub .dd-icon { width: 24px; height: 24px; border-radius: 5px; font-size: .75rem; display:flex;align-items:center;justify-content:center; }
+  .mob-sub a:first-child .dd-icon { background: var(--blue-dim); }
+  .mob-sub a:last-child .dd-icon { background: var(--orange-dim); }
+  .mob-services-toggle { cursor: pointer; }
+  .mob-chevron { font-size: .6rem; transition: transform .25s; }
+  .mob-services-toggle.open .mob-chevron { transform: rotate(180deg); }
+  .mob-sub { display: none; }
+  .mob-services-toggle.open + .mob-sub { display: block; }
+  /* Mobile bottom row */
+  .mob-bottom { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-top: .8rem; border-top: 1px solid var(--border); }
+
+  /* Light mode — mobile menu */
+  body.light #mobileMenu { background: rgba(225,232,255,0.98); }
+  body.light .mob-links a { color: rgba(10,15,36,.5); }
+  body.light .mob-links a:hover { color: rgba(10,15,36,.9); }
+  body.light .mob-sub a { color: rgba(10,15,36,.4); }
+  body.light .mob-sub a:hover { color: rgba(10,15,36,.85); }
+  body.light .hamburger span { background: var(--white); }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .bounty-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .details-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .leaderboard-row {
+    grid-template-columns: 50px 1fr auto;
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
+  
+}
+
+ /* FOOTER */
+
+  footer { background: var(--deep); border-top: 1px solid var(--border); padding: 4rem 5vw 2rem; }
+  .footer-grid { display: grid; grid-template-columns: 1.5fr 1fr 1fr 1.2fr; gap: 3rem; margin-bottom: 3rem; }
+  .footer-brand { display: flex; flex-direction: column; }
+  .footer-brand .nav-logo { display: inline-block; }
+  .footer-brand .logo-img { height: 32px; width: auto; object-fit: contain; }
+  .footer-brand p { font-family: 'Poppins', sans-serif; color: var(--muted); font-size: .86rem; font-weight: 300; margin-top: .8rem; max-width: 220px; line-height: 1.65; }
+  .footer-col h4 { font-family: 'Poppins', sans-serif; font-size: .6rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--blue); margin-bottom: 1.2rem; }
+  .footer-col ul { list-style: none; }
+  .footer-col li { margin-bottom: .6rem; }
+  .footer-col a { font-family: 'Poppins', sans-serif; color: var(--muted); text-decoration: none; font-size: .86rem; font-weight: 300; transition: color .2s; }
+  .footer-col a:hover { color: var(--white); }
+  .newsletter-row { display: flex; gap: .5rem; margin-top: .8rem; }
+  .newsletter-input { flex: 1; background: var(--panel); border: 1px solid var(--border); border-radius: 4px; padding: .6rem .8rem; color: var(--white); font-family: 'Poppins', sans-serif; font-size: .82rem; font-weight: 300; outline: none; }
+  .newsletter-input::placeholder { color: var(--muted); }
+  .newsletter-input:focus { border-color: var(--blue); }
+  .newsletter-btn { background: var(--blue); color: #fff; border: none; border-radius: 4px; padding: .6rem 1rem; font-family: 'Poppins', sans-serif; font-size: .62rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; cursor: pointer; transition: opacity .2s; }
+  .newsletter-btn:hover { opacity: .85; }
+  .social-row { display: flex; gap: .7rem; margin-top: 1.2rem; }
+  .social-btn { width: 36px; height: 36px; border: 1px solid var(--border); border-radius: 5px; display: flex; align-items: center; justify-content: center; background: var(--panel); color: var(--muted); font-size: .8rem; text-decoration: none; transition: border-color .2s, color .2s; }
+  .social-btn img {
+    width: 24px; height: 24px;
+  }
+  .social-btn:hover { border-color: var(--blue); color: var(--blue); }
+  .footer-bottom { border-top: 1px solid var(--border); padding-top: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
+  .footer-bottom p { font-family: 'Poppins', sans-serif; font-size: .6rem; font-weight: 500; letter-spacing: .08em; color: var(--muted); }
+
+</style>
+</head>
+<body data-nav-active="bounties">
+
+<div id="sofe-navbar"></div>
+
+<!-- Hero Section -->
+<section style="position:relative;padding:8rem 2rem 3rem;text-align:center;background:linear-gradient(180deg, var(--deep) 0%, var(--black) 100%);">
+  <div style="max-width:900px;margin:0 auto;">
+    <!-- Label -->
+    <div style="display:inline-flex;align-items:center;gap:0.5rem;padding:0.5rem 1rem;background:rgba(255,138,0,0.12);border:1px solid rgba(255,138,0,0.3);border-radius:50px;margin-bottom:1.5rem;">
+      <span style="font-size:1.2rem;">🎯</span>
+      <span style="font-size:0.7rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--orange);">Sofe Bounties</span>
+    </div>
+    
+    <!-- Headline -->
+    <h1 style="font-size:clamp(2.5rem, 6vw, 4rem);font-weight:900;line-height:1.1;margin-bottom:1rem;">
+      Activate the Network.<br/>
+      <span style="color:var(--orange);">Claim the Bounty.</span>
+    </h1>
+    
+    <!-- Subtitle -->
+    <p style="font-size:clamp(1rem, 2vw, 1.2rem);color:var(--muted);max-width:680px;margin:0 auto 2rem;line-height:1.7;">
+      Complete challenges, earn rewards, and build your Web3 portfolio — from referrals to development tasks.
+    </p>
+  </div>
+</section>
+
+<!-- Loading State -->
+<div id="loadingState" class="loading-state">
+  <div style="font-size: 3rem; margin-bottom: 1rem;">⏳</div>
+  Loading bounty campaigns...
+</div>
+
+<!-- Filters Section -->
+<div id="filtersSection" style="display: none;">
+  <div style="max-width: 1200px; margin: 0 auto; padding: 2rem 2rem 1rem;">
+    
+    <!-- Track Filters -->
+    <div style="margin-bottom: 1rem;">
+      <div style="font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.75rem;">
+        Filter by Track:
+      </div>
+      <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;" id="trackFilters">
+        <button class="filter-pill active" data-filter="all" onclick="filterByTrack('all', this)">All Tracks</button>
+        <button class="filter-pill" data-filter="development" onclick="filterByTrack('development', this)">Development</button>
+        <button class="filter-pill" data-filter="data-analysis" onclick="filterByTrack('data-analysis', this)">Data Analysis</button>
+        <button class="filter-pill" data-filter="ai-automation" onclick="filterByTrack('ai-automation', this)">AI & Automation</button>
+        <button class="filter-pill" data-filter="design" onclick="filterByTrack('design', this)">Design</button>
+        <button class="filter-pill" data-filter="management" onclick="filterByTrack('management', this)">Management</button>
+        <button class="filter-pill" data-filter="growth-media" onclick="filterByTrack('growth-media', this)">Growth & Media</button>
+        <button class="filter-pill" data-filter="trading" onclick="filterByTrack('trading', this)">Trading</button>
+      </div>
+    </div>
+    
+    <!-- Status Filters -->
+    <div>
+      <div style="font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.75rem;">
+        Status:
+      </div>
+      <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;" id="statusFilters">
+        <button class="filter-pill active" data-filter="all" onclick="filterByStatus('all', this)">All</button>
+        <button class="filter-pill" data-filter="open" onclick="filterByStatus('open', this)">Open</button>
+        <button class="filter-pill" data-filter="application" onclick="filterByStatus('application', this)">Application Required</button>
+      </div>
+    </div>
+    
+  </div>
+</div>
+
+<style>
+.filter-pill {
+  padding: 0.5rem 1rem;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border);
+  border-radius: 50px;
+  color: var(--white);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.filter-pill:hover {
+  background: rgba(255,255,255,0.1);
+  border-color: var(--blue);
+}
+
+.filter-pill.active {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: white;
+}
+</style>
+
+<!-- Bounties List -->
+<div id="bountiesList" style="display: none; max-width: 1200px; margin: 0 auto; padding: 2rem;">
+</div>
+
+<!-- Main Bounty Content (Hidden until loaded) -->
+<div id="bountyContent" style="display: none;">
+  
+  <!-- Hero -->
+  <div class="bounty-hero">
+    <div class="bounty-eyebrow">
+      <span id="heroEyebrow">📚 Sofe Node Academy</span>
+    </div>
+    <h1 class="bounty-title">
+      <span class="bounty-title-word" id="heroTitle1">THE REFERRAL</span>
+      <span class="bounty-title-word blue" id="heroTitle2">BOUNTY</span>
+      <span class="bounty-title-word live" id="heroTitle3">IS LIVE!</span>
+    </h1>
+    <div class="bounty-subtitle">
+      <span class="bounty-icon">🚀</span>
+      <span id="heroSubtitle1">ACTIVATE THE NETWORK</span>
+      <span id="heroSubtitle2">CLAIM THE BOUNTY.</span>
+    </div>
+  </div>
+
+  <!-- Main Container -->
+  <div class="bounty-container">
+    
+    <!-- Grid -->
+    <div class="bounty-grid">
+      
+      <!-- How to Win -->
+      <div class="bounty-card">
+        <div class="bounty-card-header">How to Win:</div>
+        <div id="requirementsList"></div>
+      </div>
+      
+      <!-- Leaderboard Rewards -->
+      <div class="bounty-card">
+        <div class="bounty-card-header rewards">The Leaderboard Rewards:</div>
+        <div id="prizesList"></div>
+      </div>
+      
+      <!-- Total Prize Pool -->
+      <div class="bounty-card">
+        <div class="bounty-card-header pool">💰 Prize Pool</div>
+        <div class="prize-pool">
+          <div class="prize-pool-icon">🏆</div>
+          <div class="prize-pool-label">Total Prize Pool:</div>
+          <div class="prize-pool-amount" id="totalPrizePool">₦0</div>
+        </div>
+      </div>
+      
+    </div>
+    
+    <!-- Campaign Details -->
+    <div class="details-card bounty-card">
+      <div class="bounty-card-header">📋 Campaign Details:</div>
+      <div class="details-grid">
+        
+        <div class="detail-item">
+          <div class="detail-icon">📅</div>
+          <div class="detail-content">
+            <h3>Duration:</h3>
+            <div class="detail-value" id="campaignDuration">14 DAYS ONLY!</div>
+            <div class="detail-text" id="campaignDates">Ends on...</div>
+          </div>
+        </div>
+        
+        <div class="detail-item">
+          <div class="detail-icon">✅</div>
+          <div class="detail-content">
+            <h3>Validation:</h3>
+            <div class="detail-text" id="validationRules">Only verified entries count toward the final leaderboard.</div>
+          </div>
+        </div>
+        
+      </div>
+    </div>
+    
+    <!-- CTA -->
+    <div class="bounty-cta">
+      <a href="#" class="cta-button" id="ctaButton">
+        <span id="ctaText">START REFERRING NOW</span>
+        <span>→</span>
+      </a>
+    </div>
+    
+    <!-- Live Leaderboard -->
+    <div class="leaderboard-section" id="leaderboardSection">
+      <div class="leaderboard-header">
+        <h2 class="leaderboard-title">🏆 Live Leaderboard</h2>
+        <p class="leaderboard-subtitle">Top participants competing for prizes</p>
+      </div>
+      <div class="leaderboard-table" id="leaderboardTable"></div>
+    </div>
+    
+  </div>
+  
+</div>
+
+<!-- No Active Bounty State -->
+<div id="noBountyState" class="empty-state" style="display: none;">
+  <div style="font-size: 4rem; margin-bottom: 1rem;">📭</div>
+  <h2>No Active Bounty Campaign</h2>
+  <p style="margin-top: 1rem;">Check back soon for exciting bounty opportunities!</p>
+</div>
+
+<!-- FOOTER (would come from include) -->
+<footer>
+  <footer>
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <a href="/" class="nav-logo" style="margin-bottom:.6rem;">
+        <img src="./images/Nodes/SofeLogoHome.png" class="logo-img" alt="Sofe Node Logo" />
+  </a>
+      <p>A Sofe Group company. Empowering the next generation to lead Africa's tech revolution.</p>
+      <div class="social-row">
+         <a class="social-btn" href="http://x.com/sofenode" title="X/Twitter" target="_blank"> <img src="./images/Social/SofeNodeX(twitter).png" alt="X/Twitter"></a> 
+        <a class="social-btn" href="https://www.linkedin.com/company/sofe-group" title="LinkedIn" target="_blank"> <img src="./images/Social/SofeNodeLInkedIn.png" alt="LinkedIn"></a>
+        <a class="social-btn" href="http://youtube.com/@sofegroupofficial" title="YouTube" target="_blank"> <img src="./images/Social/SofeNodeYoutubelogo.png" alt="YouTube"></a>
+        <a class="social-btn" href="https://www.facebook.com/profile.php?id=100063995682203&mibextid=ZbWKwL" title="Facebook" target="_blank"> <img src="./images/Social/SofeNodeFacebooklogo.png" alt="Facebook"></a>
+        <a class="social-btn" href="https://t.me/sofegroupofficial" title="Telegram" target="_blank"> <img src="./images/Social/SofeNodeTelegram.png" alt="Telegram"></a>
+      </div>
+    </div>
+    <div class="footer-col">
+      <h4>Quick Links</h4>
+      <ul>
+        <li><a href="./about.html">About Us</a></li>
+        <li><a href="./ecosystems.html">For Ecosystems</a></li>
+        <li><a href="./talent.html">For Talent</a></li>
+        <li><a href="./bce.html">BCE</a></li>
+        <li><a href="./dashboard.html">Dashboard</a></li>
+        <li><a href="#">Verify Certificate</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Legal</h4>
+      <ul>
+        <li><a href="#">Privacy Policy</a></li>
+        <li><a href="#">Terms of Service</a></li>
+        <li><a href="#">Affiliate Terms</a></li>
+        <li><a href="#">Cookie Policy</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Web3 Job Alerts</h4>
+      <p style="font-size:.85rem;color:var(--muted);margin-bottom:.5rem;font-weight:300;">Get the latest Web3 opportunities in Africa, straight to your inbox.</p>
+      <div class="newsletter-row">
+        <input type="email" class="newsletter-input" placeholder="your@email.com" />
+        <button class="newsletter-btn">Join</button>
+      </div>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>&copy; 2025 Sofe Node &middot; A Sofe Group Company &middot; All rights reserved.</p>
+    <p style="color:var(--orange);">Africa's Node for Web3 Growth.</p>
+  </div>
+</footer>
+
+<script type="module">
+import { auth, db, onAuthStateChanged, collection, query, where, orderBy, limit, getDocs, doc, getDoc, onSnapshot }
+  from './firebase.js';
+
+let allBounties = [];
+let currentUser = null;
+let userCompletedTracks = [];
+let currentTrackFilter = 'all';
+let currentStatusFilter = 'all';
+
+// Auth State
+onAuthStateChanged(auth, async (user) => {
+  currentUser = user;
+  
+  if (user) {
+    // Load user's completed tracks/badges
+    await loadUserBadges(user.uid);
+  }
+  
+  loadAllBounties();
+});
+
+// ── LOAD USER BADGES ───────────────────────────────────────────────────────
+async function loadUserBadges(userId) {
+  try {
+    const userDoc = await getDoc(doc(db, 'users', userId));
+    if (userDoc.exists()) {
+      const userData = userDoc.data();
+      // Get completed tracks from user's badges or completed_courses
+      userCompletedTracks = userData.completed_tracks || [];
+      
+      // Alternative: Get from badges
+      if (userData.badges && Array.isArray(userData.badges)) {
+        const trackBadges = userData.badges.filter(b => 
+          ['Development', 'Data Analysis', 'AI & Automation', 'Design', 
+           'Management', 'Growth & Media', 'Trading'].includes(b)
+        );
+        userCompletedTracks = [...new Set([...userCompletedTracks, ...trackBadges])];
+      }
+    }
+  } catch (err) {
+    console.warn('Error loading user badges:', err);
+  }
+}
+
+// ── LOAD ALL BOUNTIES ──────────────────────────────────────────────────────
+async function loadAllBounties() {
+  try {
+    // Get all bounties and filter client-side (avoids index requirement)
+    const q = query(
+      collection(db, 'bounties'),
+      orderBy('created_at', 'desc')
+    );
+    
+    const snap = await getDocs(q);
+    
+    if (snap.empty) {
+      showNoBounties();
+      return;
+    }
+    
+    // Filter to only show 'open' bounties on public page
+    allBounties = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .filter(b => b.status === 'open'); // Only show open bounties
+    
+    if (allBounties.length === 0) {
+      showNoBounties();
+      return;
+    }
+    
+    // Show filters and render bounties
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('filtersSection').style.display = 'block';
+    document.getElementById('bountiesList').style.display = 'block';
+    
+    renderBounties();
+    
+  } catch (err) {
+    console.error('Error loading bounties:', err);
+    showNoBounties();
+  }
+}
+
+// ── FILTER FUNCTIONS ───────────────────────────────────────────────────────
+window.filterByTrack = function(track, btn) {
+  currentTrackFilter = track;
+  document.querySelectorAll('#trackFilters .filter-pill').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  renderBounties();
+};
+
+window.filterByStatus = function(status, btn) {
+  currentStatusFilter = status;
+  document.querySelectorAll('#statusFilters .filter-pill').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  renderBounties();
+};
+
+// ── RENDER BOUNTIES ────────────────────────────────────────────────────────
+function renderBounties() {
+  const container = document.getElementById('bountiesList');
+  
+  // Filter bounties
+  let filtered = allBounties.filter(bounty => {
+    // Track filter
+    if (currentTrackFilter !== 'all') {
+      const eligibleTracks = bounty.eligible_tracks || ['ALL'];
+      
+      // If bounty is open to ALL tracks, show it
+      if (eligibleTracks.includes('ALL')) {
+        // Show for all track filters
+      } else {
+        // Match the track
+        const trackNames = {
+          'development': 'Development',
+          'data-analysis': 'Data Analysis',
+          'ai-automation': 'AI & Automation',
+          'design': 'Design',
+          'management': 'Management',
+          'growth-media': 'Growth & Media',
+          'trading': 'Trading'
+        };
+        
+        const trackName = trackNames[currentTrackFilter];
+        if (!eligibleTracks.includes(trackName)) {
+          return false;
+        }
+      }
+    }
+    
+    // Status filter
+    if (currentStatusFilter === 'open') {
+      // Show bounties that are open and don't require application
+      return bounty.status === 'open' && bounty.type !== 'application';
+    } else if (currentStatusFilter === 'application') {
+      // Show bounties that require application
+      return bounty.type === 'application';
+    }
+    
+    return true;
+  });
+  
+  if (filtered.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div style="font-size:3rem;margin-bottom:1rem;">📭</div>
+        <h3>No bounties match your filters</h3>
+        <p style="margin-top:0.5rem;color:var(--muted);">Try adjusting your filter selection</p>
+      </div>
+    `;
+    return;
+  }
+  
+  container.innerHTML = filtered.map(bounty => renderBountyCard(bounty)).join('');
+}
+
+// ── RENDER BOUNTY CARD ─────────────────────────────────────────────────────
+function renderBountyCard(bounty) {
+  // Calculate dates from actual fields
+  const now = new Date();
+  const deadline = bounty.deadline ? new Date(bounty.deadline) : null;
+  const startDate = bounty.start_date ? new Date(bounty.start_date) : null;
+  const daysLeft = deadline ? Math.ceil((deadline - now) / (1000 * 60 * 60 * 24)) : 0;
+  
+  const eligibleTracks = bounty.eligible_tracks || ['ALL'];
+  const isEligible = checkEligibility(bounty);
+  
+  // Status badge
+  const statusBadge = bounty.status === 'open' 
+    ? '<span style="background:rgba(16,185,129,0.2);color:#10b981;padding:0.35rem 0.75rem;border-radius:50px;font-size:0.7rem;font-weight:700;">🟢 ACTIVE</span>'
+    : '<span style="background:rgba(59,130,246,0.2);color:#3b82f6;padding:0.35rem 0.75rem;border-radius:50px;font-size:0.7rem;font-weight:700;">📅 UPCOMING</span>';
+  
+  // Eligibility badge
+  const eligibilityBadge = eligibleTracks.includes('ALL')
+    ? '<span style="background:rgba(255,138,0,0.15);color:var(--orange);padding:0.35rem 0.75rem;border-radius:50px;font-size:0.7rem;font-weight:700;">🌐 OPEN TO ALL</span>'
+    : `<span style="background:rgba(20,40,255,0.15);color:var(--blue);padding:0.35rem 0.75rem;border-radius:50px;font-size:0.7rem;font-weight:700;">🎯 ${eligibleTracks.join(', ')}</span>`;
+  
+  // Category badge
+  const categoryBadge = bounty.category
+    ? `<span style="background:rgba(20,40,255,0.15);color:var(--blue);padding:0.35rem 0.75rem;border-radius:50px;font-size:0.7rem;font-weight:700;text-transform:uppercase;">${bounty.category}</span>`
+    : '';
+  
+  // Application badge
+  const applicationBadge = bounty.type === 'application'
+    ? '<span style="background:rgba(168,85,247,0.2);color:#a855f7;padding:0.35rem 0.75rem;border-radius:50px;font-size:0.7rem;font-weight:700;">📋 APPLICATION REQUIRED</span>'
+    : '';
+  
+  return `
+    <div class="bounty-card-item" style="background:rgba(10,22,40,0.6);border:2px solid var(--border);border-radius:16px;padding:1.75rem;margin-bottom:1.5rem;${!isEligible ? 'opacity:0.6;' : ''}">
+      
+      <!-- Badges -->
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;">
+        ${statusBadge}
+        ${categoryBadge}
+        ${eligibilityBadge}
+        ${applicationBadge}
+      </div>
+      
+      <!-- Title -->
+      <h2 style="font-size:1.5rem;font-weight:800;margin-bottom:0.5rem;color:var(--white);">
+        ${bounty.title || 'Untitled Bounty'}
+      </h2>
+      
+      <p style="color:var(--muted);font-size:0.85rem;margin-bottom:1.5rem;line-height:1.5;">
+        ${bounty.description ? bounty.description.substring(0, 120) + '...' : 'No description'}
+      </p>
+      
+      <!-- Compact Info Grid -->
+      <div style="display:flex;justify-content:space-around;align-items:center;padding:1rem;background:rgba(255,138,0,0.05);border-radius:8px;margin-bottom:1rem;">
+        <div style="text-align:center;">
+          <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;margin-bottom:0.25rem;">Prize Pool</div>
+          <div style="font-size:1.2rem;font-weight:700;color:var(--orange);">₦${(bounty.prize_ngn || 0).toLocaleString('en-NG')}</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;margin-bottom:0.25rem;">XP Reward</div>
+          <div style="font-size:1.2rem;font-weight:700;">${bounty.prize_xp || 0} XP</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;margin-bottom:0.25rem;">Deadline</div>
+          <div style="font-size:1.2rem;font-weight:700;">
+            ${deadline ? deadline.toLocaleDateString('en-US', {month: 'short', day: 'numeric'}) : 'TBA'}
+          </div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:0.65rem;color:var(--muted);text-transform:uppercase;margin-bottom:0.25rem;">Applicants</div>
+          <div style="font-size:1.2rem;font-weight:700;">${bounty.applicant_count || 0}</div>
+        </div>
+      </div>
+      
+      <!-- CTA -->
+      <div style="display:flex;gap:1rem;align-items:center;">
+        <a href="./bounty-detail.html?id=${bounty.id}" class="cta-button" style="flex:1;min-width:200px;text-align:center;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:0.5rem;background:${isEligible ? 'var(--orange)' : 'rgba(255,255,255,0.1)'};color:${isEligible ? '#000' : 'var(--muted)'};font-size:0.95rem;font-weight:700;padding:1rem 2rem;border-radius:50px;${isEligible ? '' : 'cursor:not-allowed;'}">
+          ${isEligible ? 'VIEW DETAILS →' : '🔒 LOCKED'}
+        </a>
+        ${daysLeft > 0 && daysLeft <= 7 ? `<span style="color:#ff3b30;font-size:0.85rem;font-weight:600;">⏰ ${daysLeft} days left!</span>` : ''}
+      </div>
+    </div>
+  `;
+}
+
+// ── CHECK ELIGIBILITY ──────────────────────────────────────────────────────
+function checkEligibility(bounty) {
+  const eligibleTracks = bounty.eligible_tracks || ['ALL'];
+  
+  // If user not logged in, assume not eligible for restricted bounties
+  if (!currentUser) {
+    // Open to all bounties are still viewable
+    return eligibleTracks.includes('ALL');
+  }
+  
+  // Check validation requirement
+  if (bounty.validated_users_only) {
+    // Check if user is email verified
+    if (!currentUser.emailVerified) {
+      return false; // Not validated
+    }
+  }
+  
+  // If open to all (and validated if required)
+  if (eligibleTracks.includes('ALL')) return true;
+  
+  // Check if user has completed any of the required tracks
+  return eligibleTracks.some(track => 
+    userCompletedTracks.some(userTrack =>
+      userTrack.toLowerCase().replace(/\s+/g, '-').replace(/&/g, '') === 
+      track.toLowerCase().replace(/\s+/g, '-').replace(/&/g, '')
+    )
+  );
+}
+
+// ── NO BOUNTIES STATE ──────────────────────────────────────────────────────
+function showNoBounties() {
+  document.getElementById('loadingState').style.display = 'none';
+  document.getElementById('noBountyState').style.display = 'block';
+}
+
+// ── HELPER FUNCTIONS ───────────────────────────────────────────────────────
+function getSuffix(num) {
+  const j = num % 10;
+  const k = num % 100;
+  if (j === 1 && k !== 11) return 'ST';
+  if (j === 2 && k !== 12) return 'ND';
+  if (j === 3 && k !== 13) return 'RD';
+  return 'TH';
+}
+
+</script>
+
+<!-- Universal navbar -->
+<script type="module" src="./js/sofe-navbar.js"></script>
+
+</body>
+</html>

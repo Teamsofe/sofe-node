@@ -1,0 +1,1319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Complete Your Enrolment — Sofe Node</title>
+<link rel="icon" href="./images/favicon.ico" type="image/x-icon" />
+<meta name="description" content="Complete your course enrolment payment via Paystack or bank transfer." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+
+<style>
+  :root {
+    --bg:#040810; --deep:#060d1a; --panel:#0a1628;
+    --border:rgba(200,215,240,.1); --white:#c8d7f0; --muted:rgba(200,215,240,.5);
+    --orange:#FF8A00; --blue:#1428FF; --gold:#C9A84C; --green:#00c864; --red:#ff5050;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--white);
+    font-family: 'Poppins', sans-serif;
+    margin: 0;
+    min-height: 100vh;
+  }
+
+  .pay-page {
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 5rem 1.5rem 4rem;
+  }
+
+  .pay-tier-badge {
+    display: inline-flex; align-items: center; gap: .35rem;
+    font-size: .58rem; font-weight: 700;
+    letter-spacing: .14em; text-transform: uppercase;
+    padding: .35rem .85rem; border-radius: 4px;
+    margin-bottom: 1rem;
+  }
+  .pay-tier-badge.foundation {
+    background: linear-gradient(135deg, rgba(20,40,255,.15), rgba(20,40,255,.08));
+    color: #6b8cff;
+    border: 1px solid rgba(20,40,255,.35);
+  }
+  .pay-tier-badge.track {
+    background: linear-gradient(135deg, rgba(255,138,0,.15), rgba(255,138,0,.08));
+    color: var(--orange);
+    border: 1px solid rgba(255,138,0,.35);
+  }
+  .pay-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: clamp(1.5rem, 4vw, 2.2rem);
+    font-weight: 700; line-height: 1.2;
+    margin-bottom: .8rem;
+  }
+  .pay-sub {
+    color: var(--muted); font-size: .9rem;
+    line-height: 1.6;
+  }
+
+  .loading-state {
+    text-align: center;
+    padding: 4rem 1rem;
+    color: var(--muted);
+  }
+
+  .auth-required {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 3rem 2rem;
+    text-align: center;
+  }
+
+  .pay-grid {
+    display: grid;
+    grid-template-columns: 1fr 380px;
+    gap: 2rem;
+    align-items: start;
+  }
+  @media (max-width: 768px) {
+    .pay-grid { grid-template-columns: 1fr; }
+  }
+
+  .summary-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.5rem;
+    position: sticky;
+    top: 100px;
+  }
+  @media (max-width: 768px) {
+    .summary-card { position: static; }
+  }
+  .summary-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1rem; font-weight: 700;
+    margin-bottom: 1.2rem;
+  }
+  .summary-course {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+  .summary-course-title {
+    font-weight: 700; font-size: .92rem;
+    margin-bottom: .25rem;
+  }
+  .summary-course-desc {
+    font-size: .72rem; color: var(--muted);
+    line-height: 1.55;
+  }
+  .summary-includes {
+    background: rgba(20,40,255,.06);
+    border: 1px solid rgba(20,40,255,.2);
+    border-radius: 8px;
+    padding: .7rem .9rem;
+    margin-bottom: 1rem;
+    font-size: .76rem;
+    color: #6b8cff;
+  }
+  .summary-includes strong { color: var(--white); }
+  .summary-line {
+    display: flex; justify-content: space-between;
+    padding: .55rem 0;
+    font-size: .85rem;
+    border-bottom: 1px solid rgba(200,215,240,.05);
+  }
+  .summary-line:last-of-type { border-bottom: none; }
+  .summary-line.total {
+    margin-top: .6rem;
+    padding-top: 1rem;
+    border-top: 2px solid rgba(200,215,240,.1);
+    font-weight: 700;
+    font-size: 1rem;
+  }
+  .summary-line.total .price-val {
+    color: var(--orange);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.25rem;
+  }
+  .summary-label { color: var(--muted); }
+  .summary-value { color: var(--white); font-weight: 600; }
+
+  .form-panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 2rem;
+  }
+  .form-section-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.05rem; font-weight: 700;
+    margin-bottom: .35rem;
+  }
+  .form-section-sub {
+    font-size: .78rem; color: var(--muted);
+    line-height: 1.55; margin-bottom: 1.5rem;
+  }
+
+  .payment-methods {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: .75rem;
+    margin-bottom: 1.5rem;
+  }
+  @media (max-width: 480px) {
+    .payment-methods { grid-template-columns: 1fr; }
+  }
+  .payment-method {
+    background: var(--bg);
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem;
+    cursor: pointer;
+    transition: all .15s;
+    text-align: center;
+  }
+  .payment-method:hover { border-color: rgba(255,138,0,.35); }
+  .payment-method.selected {
+    border-color: var(--orange);
+    background: rgba(255,138,0,.05);
+  }
+  .payment-method-icon {
+    font-size: 1.5rem;
+    margin-bottom: .35rem;
+  }
+  .payment-method-title {
+    font-weight: 700; font-size: .82rem;
+    margin-bottom: .2rem;
+  }
+  .payment-method-desc {
+    font-size: .65rem; color: var(--muted);
+    line-height: 1.4;
+  }
+
+  .bank-details {
+    background: var(--bg);
+    border: 1px dashed rgba(255,138,0,.3);
+    border-radius: 10px;
+    padding: 1.2rem;
+    margin-bottom: 1rem;
+  }
+  .bank-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: .5rem 0;
+    border-bottom: 1px solid rgba(200,215,240,.05);
+    font-size: .8rem;
+    gap: .8rem;
+  }
+  .bank-row:last-child { border-bottom: none; }
+  .bank-label {
+    color: var(--muted); font-size: .68rem;
+    text-transform: uppercase; letter-spacing: .06em;
+  }
+  .bank-value {
+    color: var(--white); font-weight: 600;
+    font-family: 'Space Grotesk', monospace;
+  }
+  .copy-btn {
+    background: transparent;
+    border: 1px solid rgba(200,215,240,.15);
+    color: var(--muted);
+    padding: .15rem .55rem;
+    border-radius: 4px;
+    font-size: .65rem; cursor: pointer;
+    transition: all .15s;
+    margin-left: .5rem;
+  }
+  .copy-btn:hover { color: var(--orange); border-color: rgba(255,138,0,.3); }
+
+  .upload-box {
+    background: var(--bg);
+    border: 2px dashed rgba(200,215,240,.15);
+    border-radius: 10px;
+    padding: 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all .15s;
+    margin-bottom: 1rem;
+  }
+  .upload-box:hover {
+    border-color: rgba(255,138,0,.4);
+    background: rgba(255,138,0,.03);
+  }
+  .upload-box.has-file {
+    border-style: solid;
+    border-color: var(--green);
+    background: rgba(0,200,100,.04);
+  }
+
+  .btn {
+    padding: .9rem 1.6rem;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: .85rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    transition: all .15s;
+    text-decoration: none;
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: .35rem;
+    width: 100%;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--orange), #ff7000);
+    color: #1a1a2e;
+  }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(255,138,0,.25); }
+  .btn-primary:disabled {
+    background: rgba(200,215,240,.1);
+    color: rgba(200,215,240,.4);
+    cursor: not-allowed;
+    transform: none; box-shadow: none;
+  }
+  .btn-back {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid rgba(200,215,240,.15);
+    text-decoration: none;
+    margin-bottom: 1rem;
+    font-size: .78rem;
+    padding: .55rem 1rem;
+    width: auto;
+  }
+
+  .alert {
+    padding: .9rem 1.1rem;
+    border-radius: 8px;
+    font-size: .82rem;
+    margin-bottom: 1.2rem;
+    display: none;
+    align-items: flex-start;
+    gap: .6rem;
+  }
+  .alert.active { display: flex; }
+  .alert.error {
+    background: rgba(255,80,80,.08);
+    border: 1px solid rgba(255,80,80,.25);
+    color: #ff7070;
+  }
+
+  .success-state {
+    text-align: center;
+    padding: 3rem 1rem;
+  }
+  .success-icon {
+    font-size: 3.5rem;
+    margin-bottom: 1.2rem;
+  }
+
+  .already-enrolled {
+    background: rgba(0,200,100,.06);
+    border: 1px solid rgba(0,200,100,.2);
+    border-radius: 14px;
+    padding: 2rem;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<!-- Universal navbar -->
+<div id="sofe-navbar"></div>
+
+<div class="pay-page">
+
+  <a href="./academy.html" class="btn btn-back">← Back to academy</a>
+
+  <div id="loadingState" class="loading-state">
+    <div style="font-size:1.5rem;margin-bottom:.5rem;">⏳</div>
+    Loading enrolment details…
+  </div>
+
+  <div id="alreadyEnrolled" class="already-enrolled" style="display:none;">
+    <div style="font-size:2.5rem;margin-bottom:1rem;">✓</div>
+    <h2 style="font-family:'Space Grotesk',sans-serif;font-size:1.3rem;font-weight:700;margin-bottom:.5rem;">You're already enrolled</h2>
+    <p style="color:var(--muted);margin-bottom:1.5rem;font-size:.88rem;">
+      You already have access to <strong id="alreadyCourseName" style="color:var(--white);">this course</strong>. Continue from your dashboard.
+    </p>
+    <a href="./dashboard.html" class="btn btn-primary" style="width:auto;display:inline-flex;">Go to dashboard →</a>
+  </div>
+
+  <div id="notFoundState" class="auth-required" style="display:none;">
+    <div style="font-size:2.5rem;margin-bottom:1rem;">⚠️</div>
+    <h2 style="font-family:'Space Grotesk',sans-serif;font-size:1.3rem;font-weight:700;margin-bottom:.5rem;">Course not available</h2>
+    <p style="color:var(--muted);margin-bottom:1.5rem;font-size:.88rem;" id="notFoundMessage">This course isn't currently available for direct enrolment.</p>
+    <a href="./academy.html" class="btn btn-primary" style="width:auto;display:inline-flex;">Browse other courses →</a>
+  </div>
+
+  <div id="mainContent" class="pay-grid" style="display:none;">
+
+    <div class="form-panel">
+      <h1 class="pay-title" style="margin-bottom:.4rem;">Complete your enrolment</h1>
+      <p class="pay-sub" style="margin-bottom:2rem;">Pay securely via Paystack or bank transfer.</p>
+
+      <div class="alert error" id="alertError"><span>⚠️</span><span id="alertErrorMsg"></span></div>
+
+      <h2 class="form-section-title">Payment method</h2>
+      <p class="form-section-sub">Card payments via Paystack are instant. Bank transfers are verified within 1–3 hours.</p>
+
+      <div class="payment-methods">
+        <div class="payment-method selected" data-method="paystack" onclick="selectPaymentMethod('paystack')">
+          <div class="payment-method-icon">💳</div>
+          <div class="payment-method-title">Card / Bank App</div>
+          <div class="payment-method-desc">Paystack — instant access</div>
+        </div>
+        <div class="payment-method" data-method="bank" onclick="selectPaymentMethod('bank')">
+          <div class="payment-method-icon">🏦</div>
+          <div class="payment-method-title">Bank Transfer</div>
+          <div class="payment-method-desc">Send to our account, upload proof</div>
+        </div>
+      </div>
+
+      <div id="bankSection" style="display:none;">
+        <div class="bank-details" id="bankDetails"></div>
+
+        <h3 style="font-family:'Space Grotesk',sans-serif;font-size:.85rem;font-weight:700;margin-bottom:.4rem;">Upload proof of payment</h3>
+        <label class="upload-box" id="uploadBox" for="proofFile">
+          <div id="uploadPrompt">
+            <div style="font-size:1.6rem;margin-bottom:.4rem;">📄</div>
+            <div style="font-weight:600;font-size:.82rem;margin-bottom:.25rem;">Click to upload screenshot or PDF</div>
+            <div style="font-size:.68rem;color:var(--muted);">JPG, PNG, WEBP, or PDF · Max 5MB</div>
+          </div>
+          <div id="uploadDone" style="display:none;">
+            <div style="font-size:1.6rem;margin-bottom:.4rem;color:var(--green);">✓</div>
+            <div style="font-weight:600;font-size:.82rem;color:var(--green);" id="uploadFileName">—</div>
+            <div style="font-size:.68rem;color:var(--muted);margin-top:.25rem;">Click to replace</div>
+          </div>
+        </label>
+        <input type="file" id="proofFile" accept="image/*,application/pdf" style="display:none;" onchange="handleProofUpload(event)" />
+      </div>
+
+      <!-- Discount Code Section -->
+      <div style="margin-top:1.5rem;margin-bottom:1rem;">
+        <h3 style="font-family:'Space Grotesk',sans-serif;font-size:.85rem;font-weight:700;margin-bottom:.6rem;">Have a discount code?</h3>
+        <div style="display:flex;gap:.5rem;align-items:flex-start;">
+          <input 
+            type="text" 
+            id="discountInput" 
+            placeholder="Enter code (e.g., EARLYBIRD2026)" 
+            style="flex:1;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;padding:.75rem 1rem;color:var(--white);font-family:'Poppins';font-size:.85rem;"
+            oninput="this.value = this.value.toUpperCase()"
+          />
+          <button 
+            type="button" 
+            id="applyDiscountBtn"
+            onclick="applyDiscount()" 
+            style="background:var(--orange);color:#000;border:none;border-radius:8px;padding:.75rem 1.5rem;font-family:'Poppins';font-size:.85rem;font-weight:700;cursor:pointer;transition:opacity .15s;white-space:nowrap;"
+            onmouseover="this.style.opacity='.85'"
+            onmouseout="this.style.opacity='1'"
+          >
+            Apply
+          </button>
+        </div>
+        <div id="discountFeedback" style="margin-top:.5rem;font-size:.75rem;display:none;"></div>
+      </div>
+
+      <button class="btn btn-primary" id="submitBtn" onclick="submitPayment()" style="margin-top:1rem;">
+        Complete payment →
+      </button>
+
+      <p style="font-size:.7rem;color:var(--muted);text-align:center;margin-top:1rem;line-height:1.55;">
+        🔒 Secure payment. Card data is handled by Paystack — never stored on our servers.
+      </p>
+    </div>
+
+    <div class="summary-card">
+      <div class="summary-title">Order summary</div>
+
+      <div class="summary-course">
+        <div id="summaryTierBadge" class="pay-tier-badge" style="margin-bottom:.5rem;">—</div>
+        <div class="summary-course-title" id="summaryCourseTitle">—</div>
+        <div class="summary-course-desc" id="summaryCourseDesc">—</div>
+      </div>
+
+      <div class="summary-includes" id="summaryIncludes" style="display:none;">
+        ✓ <strong>Foundation Course included</strong> — must be completed before track modules unlock.
+      </div>
+
+      <!-- Price Breakdown (shows when discount is applied) -->
+      <div id="priceBreakdown" style="display:none;background:rgba(20,40,255,.06);border-radius:8px;padding:1rem;margin-bottom:1rem;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:.5rem;font-size:.85rem;">
+          <span style="color:var(--muted);">Course fee</span>
+          <span id="originalPrice">₦0</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:.5rem;font-size:.85rem;color:var(--orange);">
+          <span>Discount (<span id="discountPercent">0</span>%)</span>
+          <span id="discountAmount">-₦0</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding-top:.75rem;border-top:1px solid var(--border);font-size:.95rem;font-weight:700;">
+          <span>You pay</span>
+          <span id="finalPrice" style="color:var(--orange);">₦0</span>
+        </div>
+      </div>
+
+      <div class="summary-line">
+        <span class="summary-label" id="summaryItemLabel">Course price</span>
+        <span class="summary-value" id="summaryItemPrice">—</span>
+      </div>
+
+      <div class="summary-line total">
+        <span>Total</span>
+        <span class="price-val" id="summaryTotal">—</span>
+      </div>
+
+      <p style="font-size:.65rem;color:var(--muted);margin-top:1rem;line-height:1.55;">
+        💎 <strong style="color:var(--white);">Lifetime access</strong> — learn at your own pace, no expiry.
+      </p>
+    </div>
+
+  </div>
+
+  <div id="successState" class="success-state" style="display:none;">
+    <div class="success-icon" id="successIcon">🎉</div>
+    <h2 style="font-family:'Space Grotesk',sans-serif;font-size:1.6rem;font-weight:700;margin-bottom:.6rem;" id="successTitle">Welcome to Sofe Node!</h2>
+    <p style="color:var(--muted);max-width:480px;margin:0 auto 1.5rem;line-height:1.65;font-size:.92rem;" id="successMessage">
+      Your enrolment is confirmed. Head to your dashboard to start learning.
+    </p>
+    <div style="display:flex;gap:.6rem;justify-content:center;flex-wrap:wrap;">
+      <a href="./dashboard.html" class="btn btn-primary" style="width:auto;display:inline-flex;">Go to dashboard →</a>
+      <a href="./academy.html" class="btn btn-back" style="margin-bottom:0;">Browse more courses</a>
+    </div>
+  </div>
+
+</div>
+
+<script type="module" src="./js/sofe-navbar.js"></script>
+<script src="https://js.paystack.co/v1/inline.js"></script>
+
+<script type="module">
+console.log('[PAY-FLOW] Module script loaded');
+
+import { auth, db, storage,
+         onAuthStateChanged,
+         doc, getDoc, getDocs, setDoc, updateDoc,
+         collection, query, where, serverTimestamp, increment,
+         ref, uploadBytes }
+  from './firebase.js';
+
+let _user = null;
+let _userProfile = null;
+let _settings = null;
+let _course = null;
+let _selectedPaymentMethod = 'paystack';
+let _proofFileRef = null;
+let _appliedDiscount = null; // Store applied discount code data
+
+// Admin dashboard stores discounts as { type: 'percent'|'fixed', value: number },
+// not a 'percent_off' field — compute the actual amount/percent off here.
+function getDiscountAmount(discount, originalPrice) {
+  if (!discount || !originalPrice) return 0;
+  if (discount.type === 'fixed') {
+    return Math.min(discount.value || 0, originalPrice);
+  }
+  return Math.round((originalPrice * (discount.value || 0)) / 100);
+}
+function getDiscountLabel(discount) {
+  if (!discount) return '';
+  return discount.type === 'fixed'
+    ? '₦' + (discount.value || 0).toLocaleString('en-NG')
+    : (discount.value || 0) + '%';
+}
+
+// Record that this user redeemed a discount code, and bump its uses_count.
+// Doc ID is deterministic (uid_code) so a second attempt is a Firestore
+// 'update' — which discount_usage rules don't grant — making this write-once
+// without needing a query or a transaction.
+async function recordDiscountUsage() {
+  if (!_appliedDiscount || !_user) return;
+  try {
+    await setDoc(doc(db, 'discount_usage', _user.uid + '_' + _appliedDiscount.code), {
+      user_id:     _user.uid,
+      code:        _appliedDiscount.code,
+      discount_id: _appliedDiscount.id,
+      course_id:   _course.id,
+      used_at:     serverTimestamp(),
+    });
+    await updateDoc(doc(db, 'discount_codes', _appliedDiscount.id), {
+      uses_count: increment(1),
+      updated_at: serverTimestamp(),
+    });
+    console.log('[PAY-FLOW] Discount usage recorded:', _appliedDiscount.code);
+  } catch (e) {
+    // Don't block the payment flow on this — the payment already succeeded.
+    console.error('[PAY-FLOW] Failed to record discount usage:', e);
+  }
+}
+
+const TIER_META = {
+  foundation: { label: '★ Foundation Course', cls: 'foundation' },
+  track:      { label: '◆ Career Track',     cls: 'track' },
+};
+
+onAuthStateChanged(auth, async (user) => {
+  console.log('[PAY-FLOW] Auth state:', user ? user.uid : 'null');
+
+  if (!user) {
+    const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+    window.location.replace('./login.html?next=' + returnUrl);
+    return;
+  }
+
+  _user = user;
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const paymentType = urlParams.get('type'); // 'cbie_balance' or null
+  const courseId = urlParams.get('course');
+  console.log('[PAY-FLOW] Payment type:', paymentType, 'Course requested:', courseId);
+
+  // Handle CBIE Balance Payment
+  if (paymentType === 'cbie_balance') {
+    const applicationId = urlParams.get('application');
+    const amount = parseInt(urlParams.get('amount'));
+    
+    if (!applicationId || !amount) {
+      showNotFound('Invalid payment request. Missing application or amount.');
+      return;
+    }
+    
+    try {
+      // Load application
+      const appSnap = await getDoc(doc(db, 'applications', applicationId));
+      if (!appSnap.exists()) {
+        showNotFound('Application not found.');
+        return;
+      }
+      
+      const appData = appSnap.data();
+      
+      // Verify this is the user's application
+      if (appData.user_id !== user.uid) {
+        showNotFound('Unauthorized access to application.');
+        return;
+      }
+      
+      // Verify status
+      if (appData.status !== 'awaiting_balance') {
+        showNotFound('This application is not awaiting payment.');
+        return;
+      }
+      
+      // Set up for CBIE balance payment
+      _course = {
+        id: 'cbie',
+        title: 'Certified Blockchain Industry Expert (Balance Payment)',
+        price: appData.balance_due || amount,
+        tier: 'executive'
+      };
+      
+      _paymentContext = {
+        type: 'cbie_balance',
+        applicationId: applicationId,
+        originalAmount: appData.original_amount,
+        scholarshipAmount: appData.scholarship_amount,
+        balanceDue: appData.balance_due,
+        scholarshipPercentage: appData.scholarship_percentage
+      };
+      
+      // Load user profile
+      const userSnap = await getDoc(doc(db, 'users', user.uid));
+      if (userSnap.exists()) {
+        _userProfile = userSnap.data();
+      }
+      
+      // Proceed to render payment page
+      await renderCBIEBalancePayment();
+      return;
+      
+    } catch (err) {
+      console.error('[PAY-FLOW] Error loading CBIE balance payment:', err);
+      showNotFound('Error loading payment: ' + err.message);
+      return;
+    }
+  }
+
+  if (!courseId) {
+    showNotFound('No course specified. Please pick a course from the academy.');
+    return;
+  }
+
+  if (courseId === 'cbie') {
+    window.location.replace('./cbie-application.html?course=cbie');
+    return;
+  }
+
+  try {
+    const userSnap = await getDoc(doc(db, 'users', user.uid));
+    if (!userSnap.exists()) throw new Error('Profile not found. Please complete signup first.');
+    _userProfile = userSnap.data();
+
+    const courseSnap = await getDoc(doc(db, 'courses', courseId));
+    if (!courseSnap.exists()) {
+      showNotFound('Course "' + courseId + '" not found.');
+      return;
+    }
+    _course = { id: courseSnap.id, ...courseSnap.data() };
+    console.log('[PAY-FLOW] Course loaded:', _course);
+
+    if (_course.tier === 'executive') {
+      window.location.replace('./cbie-application.html?course=' + courseId);
+      return;
+    }
+
+    // Check if already enrolled
+    const enrolSnap = await getDocs(query(
+      collection(db, 'enrolments'),
+      where('user_id', '==', user.uid),
+      where('course_id', '==', courseId)
+    ));
+    if (!enrolSnap.empty) {
+      const e = enrolSnap.docs[0].data();
+      if (['active', 'locked_pending_foundation', 'completed'].includes(e.status)) {
+        document.getElementById('alreadyCourseName').textContent = _course.title || courseId;
+        document.getElementById('loadingState').style.display = 'none';
+        document.getElementById('alreadyEnrolled').style.display = 'block';
+        return;
+      }
+    }
+
+    try {
+      const settingsSnap = await getDoc(doc(db, 'settings', 'platform'));
+      _settings = settingsSnap.exists() ? settingsSnap.data() : {};
+    } catch (e) { _settings = {}; }
+
+    renderSummary();
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('mainContent').style.display = 'grid';
+  } catch (err) {
+    console.error('[PAY-FLOW] Init error:', err);
+    document.getElementById('loadingState').style.display = 'none';
+    showNotFound(err.message || 'Could not load course details.');
+  }
+});
+
+function renderSummary() {
+  const tier = _course.tier || 'track';
+  const meta = TIER_META[tier] || TIER_META.track;
+
+  const badge = document.getElementById('summaryTierBadge');
+  badge.textContent = meta.label;
+  badge.className = 'pay-tier-badge ' + meta.cls;
+
+  document.getElementById('summaryCourseTitle').textContent = _course.title || _course.id;
+  document.getElementById('summaryCourseDesc').textContent = _course.description || '';
+
+  if (tier === 'track' && _course.includes_foundation !== false) {
+    document.getElementById('summaryIncludes').style.display = 'block';
+  }
+
+  const price = _course.price || 0;
+  const formatted = '₦' + price.toLocaleString('en-NG');
+  document.getElementById('summaryItemLabel').textContent = _course.title || 'Course';
+  document.getElementById('summaryItemPrice').textContent = formatted;
+  document.getElementById('summaryTotal').textContent = formatted;
+  
+  // Initialize price display
+  updatePriceDisplay();
+}
+
+// ── DISCOUNT CODE FUNCTIONS ────────────────────────────────────────────────
+window.applyDiscount = async function() {
+  const code = document.getElementById('discountInput').value.trim().toUpperCase();
+  const feedback = document.getElementById('discountFeedback');
+  const btn = document.getElementById('applyDiscountBtn');
+  
+  if (!code) {
+    feedback.style.display = 'none';
+    _appliedDiscount = null;
+    updatePriceDisplay();
+    return;
+  }
+  
+  btn.disabled = true;
+  btn.textContent = 'Checking...';
+  
+  try {
+    // Check if code exists and is valid
+    const snap = await getDocs(query(
+      collection(db, 'discount_codes'),
+      where('code', '==', code),
+      where('status', '==', 'active')
+    ));
+    
+    if (snap.empty) {
+      feedback.style.display = 'block';
+      feedback.style.color = '#ff5555';
+      feedback.textContent = '✗ Invalid or expired code';
+      _appliedDiscount = null;
+      updatePriceDisplay();
+      return;
+    }
+    
+    const discountDoc = snap.docs[0];
+    const discount = { id: discountDoc.id, ...discountDoc.data() };
+    
+    // Validate expiry
+    if (discount.valid_until && discount.valid_until.toMillis() < Date.now()) {
+      feedback.style.display = 'block';
+      feedback.style.color = '#ff5555';
+      feedback.textContent = '✗ This code has expired';
+      _appliedDiscount = null;
+      updatePriceDisplay();
+      return;
+    }
+    
+    // Validate usage limit
+    if (discount.max_uses && discount.uses_count >= discount.max_uses) {
+      feedback.style.display = 'block';
+      feedback.style.color = '#ff5555';
+      feedback.textContent = '✗ This code has reached its usage limit';
+      _appliedDiscount = null;
+      updatePriceDisplay();
+      return;
+    }
+    
+    // Check if user already used this code (doc ID is deterministic: uid_code)
+    // Fixed: Using query avoids rule crashes on documents that don't exist yet
+    const userUsage = await getDocs(query(
+      collection(db, 'discount_usage'),
+      where('user_id', '==', _user.uid),
+      where('code', '==', code)
+    ));
+    
+    if (!userUsage.empty) {
+      feedback.style.display = 'block';
+      feedback.style.color = '#ff5555';
+      feedback.textContent = '✗ You\'ve already used this code';
+      _appliedDiscount = null;
+      updatePriceDisplay();
+      return;
+    }
+    
+    // SUCCESS
+    _appliedDiscount = discount;
+    feedback.style.display = 'block';
+    feedback.style.color = 'var(--orange)';
+    feedback.textContent = `✓ ${getDiscountLabel(discount)} discount applied!`;
+    document.getElementById('discountInput').disabled = true;
+    btn.textContent = 'Applied ✓';
+    updatePriceDisplay();
+    
+  } catch (err) {
+    console.error('Discount check error:', err);
+    feedback.style.display = 'block';
+    feedback.style.color = '#ff5555';
+    feedback.textContent = '✗ Error checking code';
+  } finally {
+    btn.disabled = false;
+    if (!_appliedDiscount) btn.textContent = 'Apply';
+  }
+};
+
+function updatePriceDisplay() {
+  const originalPrice = _course.price || 0;
+  let finalPrice = originalPrice;
+  let discountAmount = 0;
+  let discountPercent = 0;
+  
+  if (_appliedDiscount && originalPrice > 0) {
+    discountAmount = getDiscountAmount(_appliedDiscount, originalPrice);
+    discountPercent = _appliedDiscount.type === 'fixed'
+      ? Math.round((discountAmount / originalPrice) * 100)
+      : (_appliedDiscount.value || 0);
+    finalPrice = originalPrice - discountAmount;
+  }
+  
+  // Update breakdown display
+  document.getElementById('originalPrice').textContent = '₦' + originalPrice.toLocaleString('en-NG');
+  document.getElementById('discountPercent').textContent = discountPercent;
+  document.getElementById('discountAmount').textContent = '-₦' + discountAmount.toLocaleString('en-NG');
+  document.getElementById('finalPrice').textContent = '₦' + finalPrice.toLocaleString('en-NG');
+  
+  // Show/hide breakdown
+  document.getElementById('priceBreakdown').style.display = _appliedDiscount ? 'block' : 'none';
+  
+  // Update main total display
+  document.getElementById('summaryTotal').textContent = '₦' + finalPrice.toLocaleString('en-NG');
+  
+  // Update summary item price if no discount
+  if (!_appliedDiscount) {
+    document.getElementById('summaryItemPrice').textContent = '₦' + originalPrice.toLocaleString('en-NG');
+  }
+}
+// ────────────────────────────────────────────────────────────────────────────
+
+window.selectPaymentMethod = function(method) {
+  _selectedPaymentMethod = method;
+  document.querySelectorAll('.payment-method').forEach(el => el.classList.remove('selected'));
+  document.querySelector('[data-method="' + method + '"]')?.classList.add('selected');
+
+  if (method === 'bank') {
+    document.getElementById('bankSection').style.display = 'block';
+    renderBankDetails();
+  } else {
+    document.getElementById('bankSection').style.display = 'none';
+  }
+};
+
+function renderBankDetails() {
+  const bankName = _settings.bank_name || '';
+  const acctNum  = _settings.bank_account_number || '';
+  const acctName = _settings.bank_account_name || '';
+  
+  // Use discounted price if applicable
+  const originalPrice = _course.price || 0;
+  const discountAmount = _appliedDiscount ? getDiscountAmount(_appliedDiscount, originalPrice) : 0;
+  const finalPrice = originalPrice - discountAmount;
+  const amount   = '₦' + finalPrice.toLocaleString('en-NG');
+
+  if (!bankName || !acctNum || !acctName) {
+    document.getElementById('bankDetails').innerHTML =
+      '<div style="text-align:center;color:var(--muted);padding:1rem;font-size:.78rem;">Bank details not configured. Please use card payment instead, or contact support.</div>';
+    return;
+  }
+
+  document.getElementById('bankDetails').innerHTML =
+    '<div class="bank-row"><span class="bank-label">Bank</span><span class="bank-value">' + bankName + '</span></div>' +
+    '<div class="bank-row"><span class="bank-label">Account number</span><span><span class="bank-value">' + acctNum + '</span><button class="copy-btn" onclick="copyToClipboard(\'' + acctNum + '\', this)">Copy</button></span></div>' +
+    '<div class="bank-row"><span class="bank-label">Account name</span><span class="bank-value">' + acctName + '</span></div>' +
+    '<div class="bank-row"><span class="bank-label">Amount</span><span class="bank-value" style="color:var(--orange);">' + amount + '</span></div>';
+}
+
+window.copyToClipboard = async function(text, btn) {
+  try {
+    await navigator.clipboard.writeText(text);
+    const orig = btn.textContent;
+    btn.textContent = '✓ Copied';
+    setTimeout(() => { btn.textContent = orig; }, 1500);
+  } catch (e) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    ta.remove();
+    btn.textContent = '✓ Copied';
+    setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
+  }
+};
+
+window.handleProofUpload = async function(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  if (file.size > 5 * 1024 * 1024) {
+    showError('File too large. Max 5MB.');
+    return;
+  }
+
+  const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf'];
+  if (!validTypes.includes(file.type)) {
+    showError('File type not allowed. Please upload JPG, PNG, WEBP, or PDF.');
+    return;
+  }
+
+  document.getElementById('uploadBox').classList.add('has-file');
+  document.getElementById('uploadPrompt').style.display = 'none';
+  document.getElementById('uploadDone').style.display = 'block';
+  document.getElementById('uploadFileName').textContent = '⏳ Uploading ' + file.name + '...';
+  _proofFileRef = null;
+
+  try {
+    const ts = Date.now();
+    const ext = file.name.split('.').pop().toLowerCase();
+    const path = 'payment_proofs/' + _user.uid + '/' + ts + '.' + ext;
+    console.log('[PAY-FLOW] Uploading to:', path);
+
+    const fileRef = ref(storage, path);
+    await uploadBytes(fileRef, file, { contentType: file.type });
+    console.log('[PAY-FLOW] ✓ Upload complete');
+
+    _proofFileRef = path;
+    document.getElementById('uploadFileName').textContent = '✓ ' + file.name + ' uploaded';
+  } catch (err) {
+    console.error('[PAY-FLOW] Upload error:', err);
+    showError('Could not upload file: ' + (err.message || err.code));
+    document.getElementById('uploadBox').classList.remove('has-file');
+    document.getElementById('uploadPrompt').style.display = 'block';
+    document.getElementById('uploadDone').style.display = 'none';
+    _proofFileRef = null;
+  }
+};
+
+window.submitPayment = async function() {
+  hideAlerts();
+  console.log('[PAY-FLOW] Submit clicked. Method:', _selectedPaymentMethod);
+
+  if (_selectedPaymentMethod === 'bank' && !_proofFileRef) {
+    showError('Please upload proof of payment first, or switch to card payment.');
+    return;
+  }
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.textContent = 'Processing…';
+
+  try {
+    if (_selectedPaymentMethod === 'paystack') {
+      await initiatePaystackPayment();
+    } else {
+      await recordBankTransfer();
+    }
+  } catch (err) {
+    console.error('[PAY-FLOW] Submit error:', err);
+    let userMsg = err.message || err.code || 'Unknown error';
+    if (err.code === 'permission-denied' || (err.message || '').includes('insufficient permissions')) {
+      userMsg = 'Permission error. Please refresh and try again. If this persists, contact support.';
+    }
+    showError('Could not process payment: ' + userMsg);
+    btn.disabled = false;
+    btn.textContent = 'Complete payment →';
+  }
+};
+
+async function initiatePaystackPayment() {
+  const publicKey = _settings.paystack_public_key;
+  if (!publicKey || !publicKey.startsWith('pk_')) {
+    throw new Error('Card payments are temporarily unavailable. Please use bank transfer.');
+  }
+
+  const originalPrice = _course.price;
+  if (!originalPrice || originalPrice <= 0) {
+    throw new Error('Invalid course price. Please contact support.');
+  }
+
+  // Calculate final price with discount
+  const discountAmount = _appliedDiscount ? getDiscountAmount(_appliedDiscount, originalPrice) : 0;
+  const finalPrice = originalPrice - discountAmount;
+
+  const reference = 'ENROL-' + _course.id.toUpperCase() + '-' + Date.now();
+
+  await setDoc(doc(db, 'payments', reference), {
+    user_id:           _user.uid,
+    course_id:         _course.id,
+    payment_type:      'enrolment',
+    amount:            finalPrice,                    // Final amount charged
+    original_amount:   originalPrice,                 // Original price before discount
+    discount_code:     _appliedDiscount?.code || null,
+    discount_percent:  _appliedDiscount ? (_appliedDiscount.type === 'fixed' ? Math.round((discountAmount / originalPrice) * 100) : (_appliedDiscount.value || 0)) : 0,
+    discount_amount:   discountAmount,
+    discount_id:       _appliedDiscount?.id || null,
+    currency:          'NGN',
+    method:            'paystack',
+    paystack_reference: reference,
+    paystack_verified: false,
+    status:            'pending_approval',
+    created_at:        serverTimestamp(),
+    updated_at:        serverTimestamp(),
+  });
+  console.log('[PAY-FLOW] Payment record created:', reference);
+
+  const handler = window.PaystackPop && window.PaystackPop.setup({
+    key: publicKey,
+    email: _userProfile.email || _user.email,
+    amount: finalPrice * 100,  // Use discounted price
+    currency: 'NGN',
+    ref: reference,
+    metadata: {
+      payment_type: 'enrolment',
+      course_id: _course.id,
+      user_id: _user.uid,
+    },
+    onClose: function() {
+      document.getElementById('submitBtn').disabled = false;
+      document.getElementById('submitBtn').textContent = 'Complete payment →';
+      showError('Payment was cancelled. You can try again.');
+    },
+    callback: async function(response) {
+      try {
+        await updateDoc(doc(db, 'payments', reference), {
+          paystack_reference: response.reference,
+          status: 'pending_approval',
+          updated_at: serverTimestamp(),
+        });
+
+        await createEnrolments();
+        await recordDiscountUsage();
+        showSuccessState();
+      } catch (e) {
+        console.error('[PAY-FLOW] Post-payment error:', e);
+        showError('Payment received but enrolment creation failed. Our team will sort it out — your payment is recorded.');
+      }
+    }
+  });
+
+  if (!handler) throw new Error('Could not load Paystack. Please refresh and try again.');
+  handler.openIframe();
+}
+
+async function recordBankTransfer() {
+  const reference = 'ENROL-BANK-' + _course.id.toUpperCase() + '-' + Date.now();
+
+  // Calculate final price with discount
+  const originalPrice = _course.price;
+  const discountAmount = _appliedDiscount ? getDiscountAmount(_appliedDiscount, originalPrice) : 0;
+  const finalPrice = originalPrice - discountAmount;
+
+  await setDoc(doc(db, 'payments', reference), {
+    user_id:           _user.uid,
+    course_id:         _course.id,
+    payment_type:      'enrolment',
+    amount:            finalPrice,                    // Final amount charged
+    original_amount:   originalPrice,                 // Original price before discount
+    discount_code:     _appliedDiscount?.code || null,
+    discount_percent:  _appliedDiscount ? (_appliedDiscount.type === 'fixed' ? Math.round((discountAmount / originalPrice) * 100) : (_appliedDiscount.value || 0)) : 0,
+    discount_amount:   discountAmount,
+    discount_id:       _appliedDiscount?.id || null,
+    currency:          'NGN',
+    method:            'bank_transfer',
+    bank_proof_url:    _proofFileRef,
+    status:            'pending_approval',
+    created_at:        serverTimestamp(),
+    updated_at:        serverTimestamp(),
+  });
+  console.log('[PAY-FLOW] Bank transfer payment created:', reference);
+  await recordDiscountUsage();
+
+  showSuccessState({
+    icon: '🏦',
+    title: 'Payment received — awaiting verification',
+    message: "We've received your bank transfer details and will verify within 1–3 hours. You'll get an email once your enrolment is active. Meanwhile, you can browse other courses.",
+  });
+}
+
+async function createEnrolments() {
+  const tier = _course.tier || 'track';
+  const includesFoundation = (tier === 'track' && _course.includes_foundation !== false);
+
+  // Track status: locked_pending_foundation if Foundation included; active if standalone
+  const mainStatus = (tier === 'track' && includesFoundation) ? 'locked_pending_foundation' : 'active';
+
+  const mainEnrolId = _user.uid + '_' + _course.id;
+  await setDoc(doc(db, 'enrolments', mainEnrolId), {
+    user_id:        _user.uid,
+    course_id:      _course.id,
+    course_title:   _course.title,
+    tier:           tier,
+    status:         mainStatus,
+    progress_pct:   0,
+    enrolled_at:    serverTimestamp(),
+    updated_at:     serverTimestamp(),
+  });
+  console.log('[PAY-FLOW] Main enrolment created:', mainEnrolId, 'status:', mainStatus);
+
+  if (includesFoundation) {
+    const foundationEnrolId = _user.uid + '_foundation';
+    const existingFoundation = await getDoc(doc(db, 'enrolments', foundationEnrolId));
+
+    if (!existingFoundation.exists()) {
+      await setDoc(doc(db, 'enrolments', foundationEnrolId), {
+        user_id:        _user.uid,
+        course_id:      'foundation',
+        course_title:   'Blockchain & Cryptocurrency Foundation',
+        tier:           'foundation',
+        status:         'active',
+        progress_pct:   0,
+        enrolled_at:    serverTimestamp(),
+        updated_at:     serverTimestamp(),
+        granted_via:    _course.id,
+      });
+      console.log('[PAY-FLOW] Foundation enrolment auto-created');
+    } else {
+      const fData = existingFoundation.data();
+      if (fData.progress_pct >= 100 || fData.status === 'completed') {
+        // Foundation already completed — unlock the track immediately
+        await updateDoc(doc(db, 'enrolments', mainEnrolId), {
+          status: 'active',
+          updated_at: serverTimestamp(),
+        });
+        console.log('[PAY-FLOW] Foundation already complete — track unlocked immediately');
+      }
+    }
+  }
+}
+
+function showSuccessState(opts) {
+  opts = opts || {};
+  document.getElementById('mainContent').style.display = 'none';
+  document.getElementById('successState').style.display = 'block';
+  if (opts.icon)    document.getElementById('successIcon').textContent = opts.icon;
+  if (opts.title)   document.getElementById('successTitle').textContent = opts.title;
+  if (opts.message) document.getElementById('successMessage').textContent = opts.message;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function showNotFound(msg) {
+  document.getElementById('loadingState').style.display = 'none';
+  document.getElementById('notFoundMessage').textContent = msg;
+  document.getElementById('notFoundState').style.display = 'block';
+}
+
+function showError(msg) {
+  document.getElementById('alertErrorMsg').textContent = msg;
+  document.getElementById('alertError').classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function hideAlerts() {
+  document.getElementById('alertError').classList.remove('active');
+}
+
+// ─── CBIE BALANCE PAYMENT FUNCTIONS ────────────────────────────────────────
+
+async function renderCBIEBalancePayment() {
+  try {
+    console.log('[CBIE-BALANCE] Rendering payment page...');
+    
+    // Hide loading state, show main content
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('mainContent').style.display = 'grid';
+    
+    console.log('[CBIE-BALANCE] Payment context:', _paymentContext);
+    console.log('[CBIE-BALANCE] Course:', _course);
+    console.log('[CBIE-BALANCE] Amount:', _course.price);
+    
+    // Populate order summary
+    document.getElementById('summaryTierBadge').textContent = '👑 EXECUTIVE TIER';
+    document.getElementById('summaryTierBadge').style.background = 'linear-gradient(135deg, #FF8A00, #FFA500)';
+    document.getElementById('summaryTierBadge').style.color = '#000';
+    
+    document.getElementById('summaryCourseTitle').textContent = 'Certified Blockchain Industry Expert';
+    document.getElementById('summaryCourseDesc').textContent = 'Balance Payment - Scholarship Applied';
+    
+    // Show scholarship breakdown in price section
+    const priceBreakdown = document.getElementById('priceBreakdown');
+    if (priceBreakdown && _paymentContext.scholarshipPercentage > 0) {
+      priceBreakdown.style.display = 'block';
+      document.getElementById('originalPrice').textContent = '₦' + (_paymentContext.originalAmount || 0).toLocaleString('en-NG');
+      document.getElementById('discountPercent').textContent = _paymentContext.scholarshipPercentage;
+      document.getElementById('discountAmount').textContent = '-₦' + (_paymentContext.scholarshipAmount || 0).toLocaleString('en-NG');
+      document.getElementById('finalPrice').textContent = '₦' + _course.price.toLocaleString('en-NG');
+      
+      // Hide the regular price line since we're showing breakdown
+      document.getElementById('summaryItemLabel').parentElement.style.display = 'none';
+    } else {
+      document.getElementById('summaryItemPrice').textContent = '₦' + _course.price.toLocaleString('en-NG');
+    }
+    
+    document.getElementById('summaryTotal').textContent = '₦' + _course.price.toLocaleString('en-NG');
+    
+    // Load settings for bank details
+    try {
+      const settingsSnap = await getDoc(doc(db, 'settings', 'platform'));
+      _settings = settingsSnap.exists() ? settingsSnap.data() : {};
+    } catch (e) {
+      _settings = {};
+      console.warn('[CBIE-BALANCE] Could not load settings:', e);
+    }
+    
+    // Update bank details if needed
+    if (_settings.bank_name) {
+      selectPaymentMethod('paystack'); // Default to paystack
+    }
+    
+  } catch (err) {
+    console.error('[CBIE-BALANCE] Render error:', err);
+    alert('Error loading payment page. Please try again or contact support.');
+  }
+}
+
+// Update submitTransferProof to handle CBIE balance
+const originalSubmitTransferProof = window.submitTransferProof;
+window.submitTransferProof = async function() {
+  if (_paymentContext && _paymentContext.type === 'cbie_balance') {
+    await submitCBIEBalanceTransferProof();
+  } else if (originalSubmitTransferProof) {
+    await originalSubmitTransferProof();
+  }
+};
+
+async function submitCBIEBalanceTransferProof() {
+  const proofInput = document.getElementById('transferProofFile');
+  if (!proofInput || !proofInput.files || !proofInput.files.length) {
+    alert('Please upload payment proof');
+    return;
+  }
+  
+  const submitBtn = document.querySelector('#transferModal button[onclick*="submitTransferProof"]');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Uploading...';
+  
+  try {
+    // Upload proof image (you'll need to implement file upload)
+    const file = proofInput.files[0];
+    const reader = new FileReader();
+    
+    reader.onload = async function(e) {
+      try {
+        // Create payment record
+        await addDoc(collection(db, 'payments'), {
+          user_id: _user.uid,
+          application_id: _paymentContext.applicationId,
+          course_id: 'cbie',
+          type: 'cbie_balance',
+          amount: _course.price,
+          original_amount: _paymentContext.originalAmount,
+          scholarship_amount: _paymentContext.scholarshipAmount,
+          scholarship_percentage: _paymentContext.scholarshipPercentage,
+          payment_method: 'transfer',
+          payment_proof_base64: e.target.result, // Store base64 image
+          status: 'pending_confirmation',
+          created_at: serverTimestamp()
+        });
+        
+        // Update application status
+        await updateDoc(doc(db, 'applications', _paymentContext.applicationId), {
+          status: 'payment_submitted',
+          payment_method: 'transfer',
+          payment_submitted_at: serverTimestamp()
+        });
+        
+        // Show success
+        alert('Payment proof submitted successfully! Admin will confirm your payment within 24 hours.');
+        window.location.href = './dashboard.html';
+        
+      } catch (err) {
+        console.error('[CBIE-BALANCE] Submission error:', err);
+        alert('Error submitting payment: ' + err.message);
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit Proof';
+      }
+    };
+    
+    reader.readAsDataURL(file);
+    
+  } catch (err) {
+    console.error('[CBIE-BALANCE] Error:', err);
+    alert('Error: ' + err.message);
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Submit Proof';
+  }
+}
+
+// Update initiatePaystackPayment to handle CBIE balance
+const originalInitiatePaystack = window.initiatePaystackPayment;
+window.initiatePaystackPayment = async function() {
+  if (_paymentContext && _paymentContext.type === 'cbie_balance') {
+    await initiateCBIEBalancePaystack();
+  } else if (originalInitiatePaystack) {
+    await originalInitiatePaystack();
+  }
+};
+
+async function initiateCBIEBalancePaystack() {
+  // Implement Paystack for CBIE balance (similar to regular payment)
+  // This would use the existing Paystack integration with CBIE context
+  alert('Paystack payment for CBIE balance - implement Paystack handler here');
+}
+
+let _paymentContext = null; // Store CBIE payment context
+</script>
+
+</body>
+</html>

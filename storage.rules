@@ -1,0 +1,77 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Helpers
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(uid) { return isSignedIn() && request.auth.uid == uid; }
+    function isAdmin() {
+      return isSignedIn() &&
+        firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    function isImage() {
+      return request.resource.contentType.matches('image/(jpeg|jpg|png|webp)');
+    }
+    function isPdf() {
+      return request.resource.contentType == 'application/pdf';
+    }
+    function sizeUnder(maxMb) {
+      return request.resource.size < maxMb * 1024 * 1024;
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // PAYMENT PROOFS — bank transfer receipts
+    // ═════════════════════════════════════════════════════════════════════════
+    match /payment_proofs/{uid}/{fileId} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow write: if isOwner(uid)
+        && (isImage() || isPdf())
+        && sizeUnder(5);  // 5MB max
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // PROFILE AVATARS
+    // ═════════════════════════════════════════════════════════════════════════
+    match /avatars/{uid}/{fileId} {
+      allow read: if true;  // public
+      allow write: if isOwner(uid) && isImage() && sizeUnder(2);
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // COURSE MATERIALS — admin uploads, enrolled users read
+    // ═════════════════════════════════════════════════════════════════════════
+    match /courses/{courseId}/{allPaths=**} {
+      allow read: if isSignedIn();  // Refine with enrolment check in Cloud Function
+      allow write: if isAdmin() && sizeUnder(100);
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // BOUNTY SUBMISSIONS
+    // ═════════════════════════════════════════════════════════════════════════
+    match /bounty_submissions/{uid}/{fileId} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow write: if isOwner(uid) && sizeUnder(20);
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // CERTIFICATE TEMPLATES — admin-only
+    // ═════════════════════════════════════════════════════════════════════════
+    match /certificate_templates/{fileId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin() && isImage() && sizeUnder(10);
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // BLOG IMAGES — admin writes, public read
+    // ═════════════════════════════════════════════════════════════════════════
+    match /blog/{postId}/{fileId} {
+      allow read: if true;
+      allow write: if isAdmin() && isImage() && sizeUnder(10);
+    }
+
+    // CATCH-ALL
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

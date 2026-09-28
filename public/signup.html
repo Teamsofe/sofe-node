@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sign Up — Sofe Node</title>
+<link rel="icon" href="./images/favicon.ico" type="image/x-icon" />
+<meta name="description" content="Create your free Sofian account — start your Web3 education, earn commissions, and track your progress." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="./css/signup.css" />
+<style>
+  /* Alerts hidden by default — only show when JS adds .active class */
+  .auth-alert { display: none !important; }
+  .auth-alert.active { display: flex !important; }
+</style>
+</head>
+<body>
+<canvas id="hexCanvas"></canvas>
+
+<div class="auth-page">
+
+  <!-- LEFT panel -->
+  <div class="auth-brand">
+    <a href="./" class="auth-brand-logo">
+      <img src="./images/Nodes/SofeLogoHome.png" alt="Sofe Node" />
+    </a>
+
+    <div class="auth-brand-body">
+      <div class="auth-brand-tag">Free to Join</div>
+      <h1>Learn, Earn &amp;<br/>Build Your <em>Web3 Career.</em></h1>
+      <p>Join 5,000+ Africans who've used Sofe Node to break into blockchain — for free. Your journey starts with one click.</p>
+
+      <div class="benefit-list">
+        <div class="benefit-item">
+          <div class="benefit-icon blue">📚</div>
+          <div>
+            <div class="benefit-title">Free Foundation Course</div>
+            <div class="benefit-desc">Start with the Blockchain &amp; Crypto Bootcamp — fully subsidised by our global partners.</div>
+          </div>
+        </div>
+        <div class="benefit-item">
+          <div class="benefit-icon orange">💰</div>
+          <div>
+            <div class="benefit-title">Earn While You Learn</div>
+            <div class="benefit-desc">Unlock your referral link on graduation. Earn 10–20% commission on every friend you bring in.</div>
+          </div>
+        </div>
+        <div class="benefit-item">
+          <div class="benefit-icon green">🏆</div>
+          <div>
+            <div class="benefit-title">Verified Certificates</div>
+            <div class="benefit-desc">Download and share on-chain certificates to LinkedIn and your portfolio.</div>
+          </div>
+        </div>
+        <div class="benefit-item">
+          <div class="benefit-icon blue">🚀</div>
+          <div>
+            <div class="benefit-title">6 Career Tracks</div>
+            <div class="benefit-desc">Development, Data, Design, Management, Growth &amp; AI — choose your specialisation.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="xp-strip">
+        <span class="xp-chip">🌱 Genesis Node</span>
+        <span class="xp-chip">⚡ Validator</span>
+        <span class="xp-chip">⚔️ Crypto Knight</span>
+        <span class="xp-chip">🔥 Chain Architect</span>
+        <span class="xp-chip">👑 Node Sovereign</span>
+      </div>
+    </div>
+
+    <div style="font-size:.7rem;color:var(--muted);opacity:.6;">
+      Aligned to UN SDGs 1 · 4 · 8 · 9 · 10
+    </div>
+  </div>
+
+  <!-- RIGHT form panel -->
+  <div class="auth-form-panel">
+    <div class="auth-form-box">
+
+      <!-- Success screen (shown after registration) -->
+      <div class="success-screen" id="successScreen">
+        <div class="success-icon">🎉</div>
+        <h2>Welcome to Sofe Group!</h2>
+        <p id="successChapterLine">Your Sofian account has been created.</p>
+
+        <div id="successWhatsappBox" style="display:none;margin-top:1.5rem;">
+          <a id="successWhatsappBtn" href="#" target="_blank" rel="noopener noreferrer"
+             style="display:inline-flex;align-items:center;gap:.5rem;background:#25D366;color:#062f1a;
+                    text-decoration:none;font-weight:700;font-size:.85rem;padding:.9rem 1.6rem;
+                    border-radius:50px;">
+            💬 <span id="successWhatsappBtnLabel">Join Your Chapter WhatsApp Group</span>
+          </a>
+        </div>
+
+        <a id="successContinueLink" href="./dashboard.html"
+           style="display:block;margin-top:1.5rem;font-size:.78rem;color:var(--muted);text-decoration:underline;">
+          Continue to your dashboard →
+        </a>
+      </div>
+
+      <!-- Form -->
+      <div id="formContent">
+        <h2 class="auth-form-title">Create your account</h2>
+        <p class="auth-form-sub">Already have one? <a href="./login.html">Log in</a></p>
+
+        <!-- Step indicator -->
+        <!-- Google profile completion banner (shown only when ?google=1) -->
+        <div id="googleBanner" style="display:none;background:linear-gradient(135deg,rgba(20,40,255,.12),rgba(255,138,0,.06));border:1px solid rgba(20,40,255,.25);border-radius:10px;padding:1rem 1.2rem;margin-bottom:1.2rem;">
+          <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.4rem;">
+            <span style="font-size:1.2rem;">✓</span>
+            <span style="font-size:.85rem;font-weight:700;color:var(--white);">Signed in with Google</span>
+          </div>
+          <div style="font-size:.74rem;color:var(--muted);line-height:1.55;">
+            Welcome <strong id="googleNameDisplay" style="color:var(--white);font-weight:600;">—</strong>! Just a few more details to set up your Sofian profile.
+          </div>
+        </div>
+
+        <div class="step-bar" id="stepBar">
+          <div class="step active" id="step1">
+            <div class="step-num">1</div>
+            <div class="step-label">Account</div>
+          </div>
+          <div class="step-line"></div>
+          <div class="step" id="step2">
+            <div class="step-num">2</div>
+            <div class="step-label">Profile</div>
+          </div>
+          <div class="step-line"></div>
+          <div class="step" id="step3">
+            <div class="step-num">3</div>
+            <div class="step-label">Node</div>
+          </div>
+        </div>
+
+        <div class="auth-alert error" id="alertError">
+          <span>⚠️</span><span id="alertMsg">Please fix the errors above.</span>
+        </div>
+
+        <!-- STEP 1: Account -->
+        <div id="formStep1">
+          <!-- Google Sign-Up button (top of form) -->
+          <button type="button" class="social-login-btn" onclick="signupWithGoogle()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:.5rem;padding:.75rem 1rem;background:rgba(255,255,255,.04);border:1px solid rgba(200,215,240,.15);border-radius:8px;color:var(--white);font-family:'Poppins',sans-serif;font-size:.85rem;font-weight:600;cursor:pointer;margin-bottom:1.2rem;transition:background .15s, border-color .15s;" onmouseover="this.style.background='rgba(255,255,255,.07)';this.style.borderColor='rgba(255,138,0,.4)';" onmouseout="this.style.background='rgba(255,255,255,.04)';this.style.borderColor='rgba(200,215,240,.15)';">
+            <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.3 1.2 8.4 3.2l6.3-6.3C34.9 2.8 29.8.5 24 .5 14.8.5 6.9 6.2 3.3 14.3l7.4 5.7C12.5 13.5 17.8 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h12.7c-.6 3-2.3 5.6-4.8 7.3l7.4 5.7c4.3-4 6.8-9.9 7.2-17z"/><path fill="#FBBC05" d="M10.7 28.7C10.2 27.2 10 25.6 10 24s.2-3.2.7-4.7L3.3 13.6C1.2 17.6 0 22.1 0 24s1.2 6.4 3.3 10.4l7.4-5.7z"/><path fill="#34A853" d="M24 47.5c5.8 0 10.6-1.9 14.2-5.1l-7.4-5.7c-2 1.3-4.5 2.1-6.8 2.1-6.2 0-11.5-4-13.3-9.5l-7.4 5.7C6.9 41.8 14.8 47.5 24 47.5z"/></svg>
+            Continue with Google
+          </button>
+
+          <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1.2rem;color:var(--muted);font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;">
+            <div style="flex:1;height:1px;background:rgba(200,215,240,.1);"></div>
+            <span>or sign up with email</span>
+            <div style="flex:1;height:1px;background:rgba(200,215,240,.1);"></div>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label" for="firstName">First Name</label>
+              <input class="form-input" type="text" id="firstName" placeholder="Emeka" autocomplete="given-name" />
+              <span class="form-error" id="firstNameErr">First name is required.</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="lastName">Last Name</label>
+              <input class="form-input" type="text" id="lastName" placeholder="Obi" autocomplete="family-name" />
+              <span class="form-error" id="lastNameErr">Last name is required.</span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="email">Email Address</label>
+            <input class="form-input" type="email" id="email" placeholder="emeka@email.com" autocomplete="email" />
+            <span class="form-error" id="emailErr">Please enter a valid email address.</span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="phone">Phone Number</label>
+            <input class="form-input" type="tel" id="phone" placeholder="+234 801 234 5678" autocomplete="tel" />
+            <span class="form-error" id="phoneErr">Please enter a valid phone number.</span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="password">Password</label>
+            <div class="form-input-wrap">
+              <input class="form-input" type="password" id="password" placeholder="Min. 8 characters" autocomplete="new-password" style="padding-right:2.8rem;" oninput="checkStrength(this.value)" />
+              <button type="button" class="eye-toggle" onclick="toggleEye('password',this)">👁</button>
+            </div>
+            <div class="pw-strength">
+              <div class="pw-strength-bar"><div class="pw-strength-fill" id="pwBar"></div></div>
+              <div class="pw-strength-label" id="pwLabel">Enter a password</div>
+            </div>
+            <span class="form-error" id="pwErr">Password must be at least 8 characters.</span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="confirmPw">Confirm Password</label>
+            <div class="form-input-wrap">
+              <input class="form-input" type="password" id="confirmPw" placeholder="Repeat your password" style="padding-right:2.8rem;" />
+              <button type="button" class="eye-toggle" onclick="toggleEye('confirmPw',this)">👁</button>
+            </div>
+            <span class="form-error" id="confirmPwErr">Passwords do not match.</span>
+          </div>
+
+          <button class="btn-submit" onclick="nextStep(1)" style="background:var(--blue);">
+            Continue →
+          </button>
+        </div>
+
+        <!-- STEP 2: Profile -->
+        <div id="formStep2" style="display:none;">
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label" for="countryInput">Country</label>
+              <input class="form-input" type="text" id="countryInput" list="countryList" placeholder="Select country..." value="Nigeria" autocomplete="country" />
+              <datalist id="countryList"></datalist>
+              <span class="form-error" id="countryErr" style="display:none;">Please enter your country.</span>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="stateInput">State / Region</label>
+              <input class="form-input" type="text" id="stateInput" list="stateList" placeholder="Select state..." autocomplete="address-level1" />
+              <datalist id="stateList"></datalist>
+              <span class="form-error" id="stateErr">Please enter your state or region.</span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="refCode">Referral Code <span style="font-size:.58rem;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></label>
+            <div class="ref-input-wrap">
+              <span class="ref-tag">SOFE-</span>
+              <input class="form-input" type="text" id="refCode" placeholder="ABC123" maxlength="10" style="text-transform:uppercase;" />
+            </div>
+            <span class="form-hint">If someone referred you, enter their code here.</span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">How did you hear about us?</label>
+            <select class="form-input" id="source">
+              <option value="">— Select —</option>
+              <option>A friend / referral link</option>
+              <option>Twitter / X</option>
+              <option>Instagram</option>
+              <option>WhatsApp group</option>
+              <option>Telegram group</option>
+              <option>YouTube</option>
+              <option>LinkedIn</option>
+              <option>University campus event</option>
+              <option>Online search (Google etc.)</option>
+              <option>Other</option>
+            </select>
+          </div>
+
+          <div style="display:flex;gap:.8rem;margin-bottom:1rem;">
+            <button class="btn-submit" onclick="prevStep(2)" style="background:transparent;border:1px solid var(--border);color:var(--muted);flex:0 0 auto;width:auto;padding:.9rem 1.4rem;">← Back</button>
+            <button class="btn-submit" onclick="nextStep(2)" style="background:var(--blue);flex:1;">Continue →</button>
+          </div>
+        </div>
+
+        <!-- STEP 3: Node + terms -->
+        <div id="formStep3" style="display:none;">
+          <div class="form-group">
+            <label class="form-label" for="nodeInput">Your Institution</label>
+            <input class="form-input" type="text" id="nodeInput" list="chapterList" placeholder="Type or Select your institution..." autocomplete="off" />
+            <datalist id="chapterList">
+              <!-- Populated dynamically from backend Chapters collection -->
+            </datalist>
+            <span class="form-hint">Type to search. If your institution isn't listed, type its full name to request a community group!</span>
+          </div>
+
+          <div class="terms-row">
+            <input type="checkbox" id="termsCheck" />
+            <label for="termsCheck">I agree to the <a href="#">Terms of Service</a>, <a href="#">Privacy Policy</a>, and <a href="#">Affiliate Terms</a>. I confirm I am 18 years or older.</label>
+          </div>
+          <span class="form-error" id="termsErr" style="margin-top:-.5rem;margin-bottom:.8rem;">You must accept the terms to continue.</span>
+
+          <div class="terms-row">
+            <input type="checkbox" id="marketingCheck" checked />
+            <label for="marketingCheck">Send me Web3 course updates, career opportunities, and Sofe Node news. <span style="opacity:.6;">(optional)</span></label>
+          </div>
+
+          <div style="display:flex;gap:.8rem;margin-top:.5rem;">
+            <button class="btn-submit" onclick="prevStep(3)" style="background:transparent;border:1px solid var(--border);color:var(--muted);flex:0 0 auto;width:auto;padding:.9rem 1.4rem;">← Back</button>
+            <button class="btn-submit" id="submitBtn" onclick="handleSignup()" style="flex:1;">
+              <span class="btn-text">Create Account 🚀</span>
+              <span class="btn-spinner"></span>
+            </button>
+          </div>
+
+          <p style="font-size:.65rem;color:var(--muted);text-align:center;margin-top:1rem;line-height:1.6;opacity:.7;">By creating an account you agree to our Terms. Your data is held securely and never sold to third parties.</p>
+        </div>
+
+
+      </div><!-- end formContent -->
+
+      <div class="auth-back">
+        <a href="./">← Back to sofenode.com</a>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script type="module">
+  // 1. Import Firebase tools
+  import { auth, db, onAuthStateChanged, createUserWithEmailAndPassword, fetchSignInMethodsForEmail,
+           sendEmailVerification, signOut,
+           GoogleAuthProvider, signInWithPopup,
+           doc, getDoc, setDoc, serverTimestamp, runTransaction,
+           getDocs, collection, query, where }
+    from './firebase.js';
+
+  let signingUp = false;
+  onAuthStateChanged(auth, (user) => {
+    if (user && !signingUp) window.location.replace('./dashboard.html');
+  });
+
+  const urlRef = new URLSearchParams(window.location.search).get('ref');
+  if (urlRef) document.getElementById('refCode').value = urlRef.toUpperCase();
+
+  // Load active chapters into the Institution Datalist dynamically
+  let _chaptersMap = {}; 
+  (async function loadChapterOptions() {
+    try {
+      const snap = await getDocs(query(collection(db, 'chapters'), where('active', '==', true)));
+      const datalist = document.getElementById('chapterList');
+      const chapters = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      chapters.forEach(c => {
+        _chaptersMap[c.id] = { name: c.name, whatsapp_link: c.whatsapp_link };
+        const opt = document.createElement('option');
+        opt.value = c.name;
+        datalist.appendChild(opt);
+      });
+    } catch (e) {
+      console.warn('Could not load chapters:', e.message);
+    }
+  })();
+
+  // ── DYNAMIC COUNTRY & STATE DATALISTS ──
+  let _globalLocationData = [];
+
+  async function loadGlobalLocations() {
+    try {
+      const response = await fetch('https://countriesnow.space/api/v0.1/countries/states');
+      const json = await response.json();
+      
+      if (!json.error) {
+        _globalLocationData = json.data;
+        const countryList = document.getElementById('countryList');
+        
+        _globalLocationData.forEach(country => {
+          const opt = document.createElement('option');
+          opt.value = country.name;
+          countryList.appendChild(opt);
+        });
+
+        updateStateDatalist("Nigeria");
+      }
+    } catch (err) {
+      console.warn('Failed to load geographic data.', err);
+    }
+  }
+
+  function updateStateDatalist(selectedCountryName) {
+    const stateList = document.getElementById('stateList');
+    stateList.innerHTML = ''; 
+
+    const countryData = _globalLocationData.find(c => c.name.toLowerCase() === selectedCountryName.toLowerCase());
+    
+    if (countryData && countryData.states) {
+      countryData.states.forEach(state => {
+        const opt = document.createElement('option');
+        opt.value = state.name.replace(/\s+State$/i, ''); 
+        stateList.appendChild(opt);
+      });
+    }
+  }
+
+  document.getElementById('countryInput').addEventListener('input', (e) => {
+    updateStateDatalist(e.target.value);
+    document.getElementById('stateInput').value = ''; 
+  });
+
+  loadGlobalLocations();
+
+  let currentStep = 1;
+  let isGoogleFlow = false;
+  let googleUser = null;
+
+  (async function detectGoogleFlow() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const isGoogle = urlParams.get('google') === '1';
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) return;
+      try {
+        const profile = await getDoc(doc(db, 'users', user.uid));
+        if (profile.exists()) {
+          window.location.replace('./dashboard.html');
+          return;
+        }
+      } catch(e) { console.warn('Profile check:', e.message); }
+
+      if (isGoogle || user.providerData.some(p => p.providerId === 'google.com')) {
+        enterGoogleFlow(user);
+      }
+    });
+  })();
+
+  function enterGoogleFlow(user) {
+    isGoogleFlow = true;
+    googleUser = user;
+    signingUp = true; 
+
+    document.getElementById('formStep1').style.display = 'none';
+
+    const banner = document.getElementById('googleBanner');
+    if (banner) {
+      banner.style.display = 'block';
+      const displayName = user.displayName || user.email.split('@')[0];
+      const nameEl = document.getElementById('googleNameDisplay');
+      if (nameEl) nameEl.textContent = displayName.split(' ')[0] || displayName;
+    }
+
+    const parts = (user.displayName || '').split(' ').filter(Boolean);
+    document.getElementById('firstName').value = parts[0] || '';
+    document.getElementById('lastName').value = parts.slice(1).join(' ') || '';
+    document.getElementById('email').value = user.email || '';
+
+    document.getElementById('formStep2').style.display = 'block';
+    currentStep = 2;
+    updateStepIndicator(2);
+
+    const s1 = document.getElementById('step1');
+    if (s1) s1.classList.add('completed');
+  }
+
+  function updateStepIndicator(step) {
+    for (let i = 1; i <= 3; i++) {
+      const el = document.getElementById('step' + i);
+      if (!el) continue;
+      el.classList.remove('active');
+      if (i < step) el.classList.add('completed');
+      if (i === step) el.classList.add('active');
+    }
+  }
+
+  window.signupWithGoogle = async function() {
+    try {
+      signingUp = true;
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+
+      const profile = await getDoc(doc(db, 'users', user.uid));
+      if (profile.exists()) {
+        window.location.replace('./dashboard.html');
+        return;
+      }
+      enterGoogleFlow(user);
+    } catch (error) {
+      signingUp = false; 
+      console.error('Google sign-up error:', error);
+      let msg = 'Google sign-up failed.';
+      if (error.code === 'auth/popup-closed-by-user') msg = 'Sign-up cancelled.';
+      else if (error.code === 'auth/popup-blocked') msg = 'Pop-up blocked. Please allow pop-ups and try again.';
+      else if (error.code === 'auth/account-exists-with-different-credential') msg = 'An account exists with this email but a different sign-in method. Please log in with your password instead.';
+      else if (error.message) msg = error.message;
+      
+      const alertEl = document.getElementById('alertError');
+      const msgEl = document.getElementById('alertMsg');
+      if (msgEl) msgEl.textContent = msg;
+      if (alertEl) alertEl.classList.add('active');
+    }
+  };
+
+  window.setStep = function(n) {
+    for (let i = 1; i <= 3; i++) {
+      const s = document.getElementById('formStep' + i);
+      if (s) s.style.display = i === n ? '' : 'none';
+      const stepEl = document.getElementById('step' + i);
+      if (stepEl) {
+        stepEl.classList.remove('active', 'done');
+        if (i < n) stepEl.classList.add('done');
+        if (i === n) stepEl.classList.add('active');
+      }
+    }
+    currentStep = n;
+    [1,2,3].forEach(i => {
+      const stepEl = document.getElementById('step' + i);
+      const numEl = stepEl && stepEl.querySelector('.step-num');
+      if (!numEl) return;
+      numEl.textContent = stepEl.classList.contains('done') ? '✓' : i;
+    });
+  };
+
+  window.nextStep = function(from) {
+    document.getElementById('alertError').classList.remove('active');
+    if (from === 1 && !validateStep1()) return;
+    if (from === 2 && !validateStep2()) return;
+    setStep(from + 1);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  
+  window.prevStep = function(from) { setStep(from - 1); };
+
+  function validateStep1() {
+    let ok = true;
+    function setErr(id, errId, condition) {
+      const el  = document.getElementById(id);
+      const err = document.getElementById(errId);
+      if (condition) {
+        el.classList.add('error'); if (err) err.classList.add('show'); ok = false;
+      } else {
+        el.classList.remove('error'); if (err) err.classList.remove('show');
+      }
+    }
+
+    const fn  = document.getElementById('firstName').value.trim();
+    const ln  = document.getElementById('lastName').value.trim();
+    const em  = document.getElementById('email').value.trim();
+    const ph  = document.getElementById('phone').value.trim();
+    const pw  = document.getElementById('password').value;
+    const cpw = document.getElementById('confirmPw').value;
+
+    setErr('firstName',  'firstNameErr',  !fn);
+    setErr('lastName',   'lastNameErr',   !ln);
+    setErr('email',      'emailErr',      !em || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em));
+    setErr('phone',      'phoneErr',      !ph || ph.length < 7);
+    setErr('password',   'pwErr',         pw.length < 8);
+    setErr('confirmPw',  'confirmPwErr',  pw !== cpw || !cpw);
+
+    return ok;
+  }
+
+  function validateStep2() {
+    let ok = true;
+    const countryEl = document.getElementById('countryInput');
+    const stateEl = document.getElementById('stateInput');
+    
+    if (!countryEl.value.trim()) { 
+      countryEl.classList.add('error'); 
+      document.getElementById('countryErr').classList.add('show');
+      ok = false; 
+    } else {
+      countryEl.classList.remove('error');
+      document.getElementById('countryErr').classList.remove('show');
+    }
+
+    if (!stateEl.value.trim()) { 
+      stateEl.classList.add('error'); 
+      document.getElementById('stateErr').classList.add('show');
+      ok = false; 
+    } else {
+      stateEl.classList.remove('error');
+      document.getElementById('stateErr').classList.remove('show');
+    }
+    return ok;
+  }
+
+  /* ── FIREBASE SIGNUP ── */
+  window.handleSignup = async function() {
+    const terms = document.getElementById('termsCheck');
+    if (!terms.checked) { document.getElementById('termsErr').classList.add('show'); return; }
+
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true; btn.classList.add('loading');
+
+    try {
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+
+      signingUp = true;
+
+      let user;
+      if (isGoogleFlow && googleUser) {
+        user = googleUser;
+      } else {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        user = userCredential.user;
+      }
+
+      if (!isGoogleFlow) {
+        try { await sendEmailVerification(user); } catch(e) { console.warn('Verification email:', e.message); }
+      }
+
+      const namePart  = document.getElementById('firstName').value.trim().slice(0,3).toUpperCase();
+      const randPart  = Math.random().toString(36).slice(2,8).toUpperCase();
+      const refCode   = 'SOFE-' + namePart + randPart;
+
+      const refInput    = document.getElementById('refCode').value.trim();
+      const referredBy  = refInput ? 'SOFE-' + refInput.replace(/^SOFE-/i,'') : null;
+
+      const countryVal = document.getElementById('countryInput').value.trim();
+      const stateVal   = document.getElementById('stateInput').value.trim();
+
+      const nodeInputValue = (document.getElementById('nodeInput')?.value || '').trim();
+      let chapterId = null;
+      let chapterName = nodeInputValue;
+      let whatsappLink = null;
+
+      for (const [id, data] of Object.entries(_chaptersMap)) {
+        if (data.name.toLowerCase() === nodeInputValue.toLowerCase()) {
+          chapterId = id;
+          chapterName = data.name;
+          whatsappLink = data.whatsapp_link;
+          break;
+        }
+      }
+
+      const userRef = doc(db, 'users', user.uid);
+      const counterRef = doc(db, 'counters', 'sofian_id');
+
+      await runTransaction(db, async (transaction) => {
+        const counterSnap = await transaction.get(counterRef);
+        const currentCount = counterSnap.exists() ? (counterSnap.data().value || 0) : 0;
+        const newCount = currentCount + 1;
+        const newSofianId = 'SN-' + String(newCount).padStart(6, '0');
+
+        transaction.set(userRef, {
+          uid:          user.uid,
+          sofian_id:    newSofianId,
+          first_name:   document.getElementById('firstName').value.trim(),
+          last_name:    document.getElementById('lastName').value.trim(),
+          email:        email,
+          email_verified: !!isGoogleFlow, 
+          phone:        document.getElementById('phone').value.trim(),
+          country:      countryVal,
+          state:        stateVal,
+          node:         chapterId || 'other',
+          node_label:   chapterName,
+          chapter_id:   chapterId,
+          chapter_name: chapterName,
+          referred_by:  referredBy,
+          referral_code: refCode,
+          source:       document.getElementById('source').value,
+          marketing_ok: document.getElementById('marketingCheck').checked,
+          role:         'student',
+          xp_total:     0,
+          xp_tier:      'Genesis',
+          wallet_balance: 0,
+          created_at:   serverTimestamp(),
+          updated_at:   serverTimestamp(),
+        });
+
+        transaction.set(counterRef, {
+          value: newCount,
+          updated_at: serverTimestamp()
+        }, { merge: true });
+      });
+
+      document.getElementById('formContent').style.display = 'none';
+      document.getElementById('successScreen').style.display = 'block';
+
+      if (whatsappLink) {
+        document.getElementById('successChapterLine').innerHTML = `Your institution: <strong style="color:var(--white);">${chapterName}</strong>`;
+        document.getElementById('successWhatsappBtnLabel').textContent = `Join ${chapterName} WhatsApp Group`;
+        document.getElementById('successWhatsappBtn').href = whatsappLink;
+        document.getElementById('successWhatsappBox').style.display = 'block';
+      } else if (chapterName && chapterName.toLowerCase() !== "i'm not currently a student") {
+        document.getElementById('successChapterLine').innerHTML = `Your institution: <strong style="color:var(--white);">${chapterName}</strong>`;
+        document.getElementById('successWhatsappBtnLabel').textContent = `Request to add your institution`;
+        
+        const msg = encodeURIComponent(`Hi! I just signed up on Sofe Node and I'd like my institution (${chapterName}) to be added to the community.`);
+        let csPhone = "2349064436846"; 
+        try {
+           const plat = await getDoc(doc(db, 'settings', 'platform'));
+           if(plat.exists() && plat.data().customer_service_whatsapp) {
+               csPhone = plat.data().customer_service_whatsapp;
+           }
+        } catch(e) {}
+        
+        document.getElementById('successWhatsappBtn').href = `https://wa.me/${csPhone}?text=${msg}`;
+        document.getElementById('successWhatsappBox').style.display = 'block';
+      } else {
+        setTimeout(() => { window.location.href = './dashboard.html'; }, 1800);
+      }
+
+    } catch (err) {
+      signingUp = false;
+      btn.disabled = false; btn.classList.remove('loading');
+      const alertBox = document.getElementById('alertError');
+      alertBox.classList.add('active');
+      const msgs = {
+        'sofe/google-account-exists': err.message,
+        'sofe/email-already-in-use':  err.message,
+        'auth/email-already-in-use': 'This email is already registered. If you signed up with Google, log in with "Continue with Google". Otherwise, use "Log in" or "Forgot password?".',
+        'auth/weak-password':        'Password is too weak. Use at least 8 characters.',
+        'auth/network-request-failed': 'Network error. Check your connection and try again.',
+      };
+      document.getElementById('alertMsg').textContent = msgs[err.code] || err.message;
+    }
+  };
+
+  /* ── UTILITIES ── */
+  window.checkStrength = function(val) {
+    const bar = document.getElementById('pwBar');
+    const lbl = document.getElementById('pwLabel');
+    let score = 0;
+    if (val.length >= 8) score++;
+    if (/[A-Z]/.test(val)) score++;
+    if (/[0-9]/.test(val)) score++;
+    if (/[^A-Za-z0-9]/.test(val)) score++;
+    const colors = ['','#ff5555','#ff8c00','#FFB800','#00c864'];
+    bar.style.width = (score * 25) + '%';
+    bar.style.background = colors[score];
+    lbl.textContent = ['','Weak','Fair','Good','Strong'][score];
+  };
+
+  window.toggleEye = function(id, btn) {
+    const input = document.getElementById(id);
+    input.type = input.type === 'password' ? 'text' : 'password';
+    btn.textContent = input.type === 'password' ? '👁' : '🙈';
+  };
+
+  (function(){
+    const canvas = document.getElementById('hexCanvas');
+    const ctx = canvas.getContext('2d');
+    let W, H, nodes = [];
+    function resize(){ W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
+    function hexPath(x,y,r,rot){ ctx.beginPath(); for(let i=0;i<6;i++){ const a=rot+Math.PI/180*60*i; ctx.lineTo(x+r*Math.cos(a),y+r*Math.sin(a)); } ctx.closePath(); }
+    function init(){
+      nodes=[];
+      for(let i=0;i<Math.floor(W*H/32000)+5;i++){
+        const l=Math.random()<.65?'small':'medium';
+        nodes.push({x:Math.random()*W,y:Math.random()*H,r:l==='small'?5+Math.random()*7:12+Math.random()*16,vx:(Math.random()-.5)*.18,vy:(Math.random()-.5)*.18,rot:Math.random()*Math.PI*2,rotV:(Math.random()-.5)*.004,phase:Math.random()*Math.PI*2,layer:l});
+      }
+    }
+    function draw(){
+      ctx.clearRect(0,0,W,H);
+      nodes.forEach(n=>{
+        n.x+=n.vx;n.y+=n.vy;n.rot+=n.rotV;n.phase+=0.013;
+        if(n.x<-n.r*2)n.x=W+n.r;if(n.x>W+n.r*2)n.x=-n.r;
+        const p=0.5+0.5*Math.sin(n.phase);
+        hexPath(n.x,n.y,n.r,n.rot);
+        ctx.strokeStyle=`rgba(20,40,220,${(.5+.32*p).toFixed(3)})`;
+        ctx.stroke();
+      });
+      requestAnimationFrame(draw);
+    }
+    window.addEventListener('resize',()=>{resize();init();});
+    resize();init();draw();
+  })();
+</script>
+</body>
+</html>

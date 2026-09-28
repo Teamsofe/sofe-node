@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Course — Sofe Node</title>
+<link rel="icon" href="./images/favicon.ico" type="image/x-icon"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+/* ── Sofe Node Brand Tokens ── */
+:root {
+  --bg:        #04080F;
+  --deep:      #080E1A;
+  --panel:     #0D1526;
+  --border:    rgba(20,40,255,0.18);
+  --blue:      #1428FF;
+  --blue-dim:  rgba(20,40,255,0.12);
+  --orange:    #FF8A00;
+  --orange-dim:rgba(255,138,0,0.12);
+  --white:     #EEF4FF;
+  --muted:     rgba(238,244,255,0.5);
+  --green:     #00c864;
+  --red:       #ff5555;
+  --radius:    10px;
+  --sidebar-w: 360px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  background: var(--bg); color: var(--white);
+  font-family: 'Poppins', sans-serif; font-size: 14px;
+  line-height: 1.6; min-height: 100vh; overflow-x: hidden;
+}
+a { color: inherit; text-decoration: none; }
+button { cursor: pointer; font-family: inherit; }
+
+/* ── TOP HEADER ── */
+.cv-header {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  height: 64px; background: var(--deep); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between; padding: 0 1.5rem;
+}
+.cv-header-left { display: flex; align-items: center; gap: 1rem; }
+.cv-header-back {
+  display: flex; align-items: center; gap: .5rem;
+  color: var(--muted); font-size: .85rem; font-weight: 600; transition: color .2s;
+}
+.cv-header-back:hover { color: var(--white); }
+.cv-header-course {
+  font-size: .95rem; font-weight: 700; color: var(--white);
+  border-left: 1px solid var(--border); padding-left: 1rem; margin-left: .5rem;
+}
+.cv-header-progress { display: flex; align-items: center; gap: .8rem; }
+.cv-header-pct { font-size: .8rem; font-weight: 700; color: var(--orange); }
+.cv-progress-bar {
+  width: 120px; height: 6px; background: rgba(255,138,0,.15); 
+  border-radius: 3px; overflow: hidden;
+}
+.cv-progress-fill {
+  height: 100%; background: var(--orange); border-radius: 3px; transition: width .4s ease;
+}
+
+/* ── LAYOUT ── */
+.cv-layout {
+  display: grid;
+  grid-template-columns: 1fr var(--sidebar-w);
+  gap: 1.5rem;
+  padding: 88px 1.5rem 2rem;
+  max-width: 1600px; margin: 0 auto;
+  align-items: start;
+}
+
+/* ── MAIN CONTENT (Video Area) ── */
+.cv-main {
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1.5rem;
+  min-height: 70vh; display: flex; flex-direction: column;
+}
+
+/* Video Player */
+.cv-video-thumb {
+  position: relative; border-radius: 10px; overflow: hidden;
+  background: #000; aspect-ratio: 16/9; width: 100%;
+  margin-bottom: 1.5rem; box-shadow: 0 12px 30px rgba(0,0,0,.5);
+}
+.cv-video-thumb-placeholder {
+  width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, var(--panel), var(--deep)); font-size: 4rem;
+}
+.cv-play-btn {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 72px; height: 72px; border-radius: 50%;
+  background: var(--blue); border: none; color: white;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.6rem; transition: transform .15s; padding-left: 5px;
+  box-shadow: 0 8px 24px rgba(20,40,255,.4); cursor: pointer;
+}
+.cv-video-thumb:hover .cv-play-btn { transform: translate(-50%, -50%) scale(1.05); }
+
+/* Session Metadata */
+.cv-session-header { margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); padding-bottom: 1.5rem; }
+.cv-session-h1 { font-size: 1.4rem; font-weight: 700; margin-bottom: .5rem; }
+.cv-session-meta { display: flex; gap: 1.5rem; font-size: .8rem; color: var(--muted); }
+.cv-text-content { font-size: .9rem; color: var(--muted); line-height: 1.7; }
+
+/* ── RIGHT SIDEBAR ── */
+.cv-sidebar {
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1.25rem;
+  position: sticky; top: 88px; height: calc(100vh - 110px);
+  display: flex; flex-direction: column;
+}
+
+/* Sidebar Tabs (Curriculum vs Chat) */
+.cv-side-tabs {
+  display: flex; gap: .4rem; margin-bottom: 1rem;
+  background: var(--deep); padding: 4px; border-radius: 8px; flex-shrink: 0;
+  border: 1px solid var(--border);
+}
+.cv-side-tab {
+  flex: 1; background: transparent; border: none; color: var(--muted);
+  font-size: .8rem; font-weight: 600; padding: .6rem; border-radius: 6px;
+  transition: all .2s;
+}
+.cv-side-tab.active { background: var(--blue); color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.2); }
+
+/* Scrollable Areas */
+.cv-sidebar-scroll {
+  flex: 1; overflow-y: auto; padding-right: .2rem;
+}
+.cv-sidebar-scroll::-webkit-scrollbar { width: 4px; }
+.cv-sidebar-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* Curriculum Modules */
+.cv-module-group { margin-bottom: .8rem; background: var(--deep); border-radius: 8px; border: 1px solid var(--border); overflow: hidden; }
+.cv-module-label {
+  display: flex; align-items: center; gap: .75rem; padding: 1rem;
+  cursor: pointer; user-select: none;
+}
+.cv-module-num {
+  width: 24px; height: 24px; border-radius: 6px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .7rem; font-weight: 700; background: var(--panel); border: 1px solid var(--border);
+}
+.cv-module-num.completed { background: rgba(0,200,100,.15); color: var(--green); border-color: rgba(0,200,100,.3); }
+.cv-module-title-text { font-size: .85rem; font-weight: 600; flex: 1; }
+.cv-module-title-text.locked { color: var(--muted); opacity: .6; }
+
+.cv-sessions { display: none; border-top: 1px solid var(--border); background: var(--panel); }
+.cv-sessions.open { display: block; }
+.cv-session-item {
+  display: flex; align-items: center; gap: .75rem; padding: .8rem 1rem;
+  cursor: pointer; transition: background .15s; border-left: 2px solid transparent;
+}
+.cv-session-item:hover:not(.locked) { background: var(--blue-dim); }
+.cv-session-item.active { background: var(--blue-dim); border-left-color: var(--blue); }
+.cv-session-item.completed .cv-session-icon { color: var(--green); }
+.cv-session-item.locked { opacity: .4; cursor: not-allowed; }
+.cv-session-icon { font-size: .85rem; flex-shrink: 0; }
+.cv-session-title { font-size: .8rem; font-weight: 500; flex: 1; color: var(--white); }
+
+/* Chat Panel UI */
+.cv-chat-area { display: flex; flex-direction: column; height: 100%; }
+.cv-chat-messages { flex: 1; overflow-y: auto; padding-bottom: 1rem; font-size: .82rem; color: var(--muted); }
+.cv-chat-input-wrap {
+  display: flex; gap: .5rem; margin-top: auto; padding-top: 1rem; border-top: 1px solid var(--border);
+}
+.cv-chat-input {
+  flex: 1; background: var(--deep); border: 1px solid var(--border);
+  padding: .7rem 1rem; border-radius: 50px; color: var(--white);
+  font-family: inherit; outline: none; font-size: .85rem;
+}
+.cv-chat-input:focus { border-color: var(--blue); }
+.cv-chat-send {
+  background: var(--blue); color: #fff; border: none; width: 40px; height: 40px;
+  border-radius: 50%; font-size: 1rem; display: flex; align-items: center; justify-content: center;
+}
+
+/* ── QUIZ & PROJECT UI ── */
+.cv-quiz-container, .cv-project-card { background: var(--deep); border: 1px solid var(--border); border-radius: 10px; padding: 1.5rem; margin-bottom: 1.5rem; }
+.cv-quiz-header { display: flex; justify-content: space-between; margin-bottom: 1.5rem; font-weight: 600; color: var(--orange); }
+.cv-question { margin-bottom: 1.5rem; }
+.cv-q-text { font-size: .95rem; font-weight: 600; margin-bottom: .8rem; }
+.cv-q-option {
+  display: flex; align-items: center; gap: .75rem; padding: .75rem 1rem;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
+  margin-bottom: .5rem; cursor: pointer; transition: border-color .2s;
+}
+.cv-q-option:hover { border-color: var(--blue); }
+.cv-q-option input[type="radio"] { accent-color: var(--blue); transform: scale(1.2); }
+
+.cv-project-input {
+  width: 100%; background: var(--panel); border: 1px solid var(--border);
+  border-radius: 8px; padding: .8rem 1rem; color: var(--white);
+  font-family: inherit; font-size: .85rem; margin-bottom: 1rem; outline: none;
+}
+.cv-project-input:focus { border-color: var(--blue); }
+
+/* ── PENALTY LOCK SCREEN ── */
+.cv-lock-screen {
+  text-align: center; padding: 4rem 2rem; background: rgba(255,85,85,.05);
+  border: 1px solid rgba(255,85,85,.2); border-radius: 14px;
+}
+.cv-lock-icon { font-size: 4rem; margin-bottom: 1rem; }
+.cv-lock-title { font-size: 1.5rem; font-weight: 800; color: var(--red); margin-bottom: .5rem; }
+.cv-lock-desc { font-size: .95rem; color: var(--muted); margin-bottom: 2rem; max-width: 400px; margin-inline: auto; }
+.cv-btn-repurchase {
+  background: var(--red); color: #fff; padding: .8rem 2rem; border-radius: 8px;
+  font-weight: 700; border: none; font-size: 1rem; box-shadow: 0 8px 20px rgba(255,85,85,.3);
+}
+
+/* ── ACTION BUTTONS ── */
+.cv-btn-primary {
+  background: var(--blue); color: white; padding: .85rem 1.5rem; border-radius: 8px;
+  font-weight: 600; border: none; font-size: .9rem; transition: opacity .2s;
+}
+.cv-btn-primary:hover:not(:disabled) { opacity: .9; }
+.cv-btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+
+/* ── NATIVE MOBILE EDGE-TO-EDGE RESPONSIVENESS ── */
+@media (max-width: 900px) {
+  .cv-layout { 
+    grid-template-columns: 1fr; 
+    padding: 64px 0 0 0; /* Edge-to-edge on mobile */
+    gap: 0;
+  }
+  .cv-main { 
+    order: 1; min-height: auto; 
+    border: none; border-radius: 0; 
+    padding: 1.25rem; background: var(--bg); 
+  }
+  .cv-video-thumb { 
+    margin: -1.25rem -1.25rem 1.5rem -1.25rem; 
+    border-radius: 0; border-left: none; border-right: none; 
+    width: calc(100% + 2.5rem); max-width: none; 
+  }
+  .cv-sidebar { 
+    order: 2; position: static; max-height: none; height: auto;
+    padding: 1.25rem; border: none; border-top: 1px solid var(--border); 
+    border-radius: 0; 
+  }
+  .cv-header-course { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── TOP HEADER ── -->
+<header class="cv-header">
+  <div class="cv-header-left">
+    <a href="./dashboard.html" class="cv-header-back">← Dashboard</a>
+    <div class="cv-header-course" id="headerCourseName">Loading Course...</div>
+  </div>
+  <div class="cv-header-progress">
+    <span class="cv-header-pct" id="headerPct">0%</span>
+    <div class="cv-progress-bar">
+      <div class="cv-progress-fill" id="headerProgressFill" style="width:0%"></div>
+    </div>
+  </div>
+</header>
+
+<!-- ── LAYOUT ── -->
+<div class="cv-layout">
+
+  <!-- ── MAIN CONTENT (Video / Quiz / Lock Screen) ── -->
+  <main class="cv-main" id="cvMain">
+    <div style="text-align:center; padding: 4rem; color: var(--muted);">
+      <h2>Loading your learning experience...</h2>
+    </div>
+  </main>
+
+  <!-- ── RIGHT SIDEBAR (Playlist / Chat) ── -->
+  <aside class="cv-sidebar">
+    <!-- Tabs -->
+    <div class="cv-side-tabs">
+      <button class="cv-side-tab active" id="tabBtnCurr" onclick="toggleSidebarTab('curr')">Curriculum</button>
+      <button class="cv-side-tab" id="tabBtnChat" onclick="toggleSidebarTab('chat')">Live Chat 🔴</button>
+    </div>
+
+    <!-- Curriculum Panel -->
+    <div class="cv-sidebar-scroll" id="sidePanelCurr">
+      <div id="sidebarModules"></div>
+    </div>
+
+    <!-- Live Chat Panel -->
+    <div id="sidePanelChat" class="cv-chat-area" style="display:none;">
+      <div class="cv-chat-messages">
+        <div style="text-align:center; padding: 3rem 1rem; color:rgba(238,244,255,.3);">
+          <div style="font-size: 2rem; margin-bottom: .5rem;">💬</div>
+          Live chat will connect when the session begins.
+        </div>
+      </div>
+      <div class="cv-chat-input-wrap">
+        <input type="text" class="cv-chat-input" placeholder="Say something to the class...">
+        <button class="cv-chat-send">➤</button>
+      </div>
+    </div>
+  </aside>
+
+</div>
+
+<!-- ── TOAST ── -->
+<div id="cvToast" style="position:fixed;bottom:20px;right:20px;background:var(--panel);color:#fff;padding:12px 20px;border-radius:8px;border:1px solid var(--blue);display:none;z-index:9999;font-weight:600;"></div>
+
+<!-- ── FIREBASE SCRIPT ── -->
+<script type="module">
+import {
+  auth, db, functions, onAuthStateChanged,
+  collection, doc, getDoc, getDocs, query,
+  where, httpsCallable, serverTimestamp, setDoc
+} from './firebase.js';
+
+let _user = null;
+let _courseId = null;   
+let _courseSlug = new URLSearchParams(window.location.search).get('course') || 'foundation';
+let _courseData = null;
+let _modules = [];     
+let _sessions = {};     
+let _progress = {};     
+let _moduleProgress = {}; 
+let _enrolmentStatus = null; 
+let _activeSessionId = null;
+let _activeModuleId = null;
+let _quizTimerInterval = null;
+
+onAuthStateChanged(auth, async (user) => {
+  if (!user) { window.location.href = './login.html'; return; }
+  _user = user;
+  await initCourseView();
+});
+
+async function initCourseView() {
+  try {
+    await resolveCourse();
+    if (!_courseId) return renderError('Course not found.');
+
+    const enrolled = await checkEnrolment();
+    if (!enrolled) return renderError('You are not enrolled in this course.');
+
+    if (_enrolmentStatus === 'failed_needs_repurchase') {
+      renderRepurchaseScreen();
+      return; 
+    }
+
+    await loadModulesAndSessions();
+    await loadProgress();
+    
+    renderSidebar();
+    autoSelectFirstSession();
+  } catch (err) {
+    renderError(err.message);
+  }
+}
+
+async function resolveCourse() {
+  const slug = _courseSlug.toLowerCase();
+  const direct = await getDoc(doc(db, 'courses', slug));
+  if (direct.exists()) {
+    _courseId = direct.id; _courseData = direct.data(); return;
+  }
+  const snap = await getDocs(query(collection(db, 'courses'), where('is_foundation', '==', true)));
+  if (!snap.empty && slug === 'foundation') {
+    _courseId = snap.docs[0].id; _courseData = snap.docs[0].data();
+  }
+}
+
+async function checkEnrolment() {
+  const snap = await getDocs(query(
+    collection(db, 'enrolments'),
+    where('user_id', '==', _user.uid),
+    where('course_id', '==', _courseId)
+  ));
+  if (snap.empty && _courseSlug !== 'foundation') return false;
+  if (!snap.empty) {
+    _enrolmentStatus = snap.docs[0].data().status; 
+  }
+  return true;
+}
+
+async function loadModulesAndSessions() {
+  const modSnap = await getDocs(query(collection(db, 'modules'), where('course_id', '==', _courseId)));
+  _modules = modSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (a.order || 0) - (b.order || 0));
+
+  await Promise.all(_modules.map(async (m) => {
+    const sessSnap = await getDocs(query(collection(db, 'sessions'), where('module_id', '==', m.id)));
+    _sessions[m.id] = sessSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (a.order || 0) - (b.order || 0));
+  }));
+}
+
+async function loadProgress() {
+  const progSnap = await getDocs(query(
+    collection(db, 'module_progress'),
+    where('user_id', '==', _user.uid),
+    where('course_id', '==', _courseId)
+  ));
+  progSnap.docs.forEach(d => {
+    const p = d.data();
+    _moduleProgress[p.module_id] = p;
+    const sc = p.sessions_completed || {};
+    Object.keys(sc).forEach(sid => { if (sc[sid]) _progress[sid] = { completed: true }; });
+  });
+}
+
+function isModuleUnlocked(moduleIndex) {
+  if (moduleIndex === 0) return true;
+  const prevModule = _modules[moduleIndex - 1];
+  return !!_moduleProgress[prevModule.id]?.completed_at;
+}
+
+function isSessionUnlocked(session, sessionIndex, moduleIndex) {
+  if (!isModuleUnlocked(moduleIndex)) return false;
+  if (sessionIndex === 0) return true;
+  const prevSession = _sessions[session.module_id][sessionIndex - 1];
+  return !!_progress[prevSession.id]?.completed;
+}
+
+function renderSidebar() {
+  document.getElementById('headerCourseName').textContent = _courseData?.title || 'Course';
+
+  let total = 0, done = 0;
+  
+  const html = _modules.map((m, mi) => {
+    const unlocked = isModuleUnlocked(mi);
+    const numClass = !!_moduleProgress[m.id]?.completed_at ? 'completed' : unlocked ? '' : 'locked';
+    
+    const sessHtml = (_sessions[m.id] || []).map((s, si) => {
+      total++; if (_progress[s.id]?.completed) done++;
+      const sUnlocked = isSessionUnlocked(s, si, mi);
+      const sDone = !!_progress[s.id]?.completed;
+      const isActive = s.id === _activeSessionId ? 'active' : '';
+      const icon = s.type === 'quiz' ? '📝' : s.type === 'assignment' ? '📁' : s.session_type === 'live' ? '📡' : '▶';
+
+      return `<div class="cv-session-item ${isActive} ${sDone?'completed':''} ${!sUnlocked?'locked':''}" 
+                   onclick="${sUnlocked ? `window.selectSession('${s.id}','${m.id}')` : `window.showToast('Complete previous session first', 'error')`}">
+                <span class="cv-session-icon">${sDone ? '✓' : icon}</span>
+                <span class="cv-session-title">${s.title || 'Session'}</span>
+              </div>`;
+    }).join('');
+
+    return `
+      <div class="cv-module-group">
+        <div class="cv-module-label" onclick="this.nextElementSibling.classList.toggle('open')">
+          <div class="cv-module-num ${numClass}">${mi + 1}</div>
+          <div class="cv-module-title-text ${!unlocked?'locked':''}">${m.title}</div>
+        </div>
+        <div class="cv-sessions ${unlocked || m.id === _activeModuleId ? 'open' : ''}">${sessHtml}</div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('sidebarModules').innerHTML = html;
+  
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+  document.getElementById('headerPct').textContent = pct + '%';
+  document.getElementById('headerProgressFill').style.width = pct + '%';
+}
+
+window.selectSession = async function(sessionId, moduleId) {
+  if (_quizTimerInterval) { clearInterval(_quizTimerInterval); _quizTimerInterval = null; }
+  _activeSessionId = sessionId;
+  _activeModuleId = moduleId;
+  renderSidebar(); 
+
+  const module = _modules.find(m => m.id === moduleId);
+  const session = _sessions[moduleId].find(s => s.id === sessionId);
+  const main = document.getElementById('cvMain');
+
+ // 🔴 QUIZ RENDERING LOGIC (WITH START SCREEN & COUNTDOWN TIMER)
+  if (session.type === 'quiz') {
+    const subSnap = await getDoc(doc(db, 'session_submissions', `${_user.uid}_${sessionId}`));
+    const attempts = subSnap.exists() ? subSnap.data().attempts : 0;
+    const max = session.max_attempts || 3;
+    const passed = subSnap.exists() && subSnap.data().passed;
+    const durationMins = Number(session.duration_minutes) || 30;
+    const passScore = session.passing_score || 70;
+    const qCount = (session.questions || []).length;
+
+    if (passed) {
+      main.innerHTML = `
+        <div class="cv-session-header">
+          <h1 class="cv-session-h1">📝 ${session.title}</h1>
+          <div class="cv-session-meta"><span style="color:var(--green);font-weight:700;">✓ Exam Passed</span></div>
+        </div>
+        <div class="cv-text-content">You have successfully passed this exam. Move on to the next session!</div>`;
+      return;
+    }
+
+    // Lobby Screen ("Start Exam" Gate)
+    main.innerHTML = `
+      <div class="cv-session-header">
+        <h1 class="cv-session-h1">📝 ${session.title}</h1>
+        <div class="cv-session-meta">
+          <span>Attempt ${attempts + 1} of ${max}</span>
+          <span>⏱ Duration: ${durationMins} mins</span>
+          <span>🎯 Pass Mark: ${passScore}%</span>
+          <span>❓ Questions: ${qCount}</span>
+        </div>
+      </div>
+      <div class="cv-quiz-container" id="quizLobby">
+        <h3 style="margin-bottom:.75rem;color:var(--white);">Exam Instructions</h3>
+        <p style="color:var(--muted);margin-bottom:1.5rem;line-height:1.7;">
+          ${session.instructions || `You have <strong>${durationMins} minutes</strong> to complete this exam. Once you click <strong>Start Exam</strong>, the timer will begin and your answers will automatically submit when time runs out.`}
+        </p>
+        <button class="cv-btn-primary" onclick="window.startQuizAttempt('${sessionId}')">Start Exam →</button>
+      </div>
+      <div class="cv-quiz-container" id="quizForm" style="display:none;"></div>`;
+    return;
+  }
+
+  // 🔴 ASSIGNMENT RENDERING LOGIC
+  if (session.type === 'assignment') {
+    const subSnap = await getDoc(doc(db, 'session_submissions', `${_user.uid}_${sessionId}`));
+    const isSubmitted = subSnap.exists();
+    
+    let submissionHtml = '';
+    if (isSubmitted) {
+      const subData = subSnap.data();
+      const statusColor = subData.passed ? 'var(--green)' : 'var(--orange)';
+      // FIXED: Use raw RGBA for the background transparency instead of appending "20" to a CSS variable
+      const statusBg = subData.passed ? 'rgba(0,200,100,.15)' : 'rgba(255,138,0,.15)';
+      const statusText = subData.passed ? '✓ Graded & Passed' : '⏳ Pending Review';
+      submissionHtml = `
+        <div style="display:inline-block; background:${statusBg}; color:${statusColor}; padding:.3rem .8rem; border-radius:6px; font-weight:700; margin-bottom:1rem;">${statusText}</div>
+        <div style="font-size:.85rem; color:var(--muted); margin-bottom:1rem;">Your Submission: <a href="${subData.submission_url || '#'}" target="_blank" style="color:var(--blue);">View Link</a></div>
+      `;
+    } else {
+      const placeholder = session.submission_type === 'link' ? 'https://docs.google.com/...' : 'Type your answer here...';
+      submissionHtml = `
+        <div style="color:var(--muted); margin-bottom: 1rem; line-height:1.7;">${session.instructions || 'Follow the instructions and submit your work below.'}</div>
+        ${session.resource_link ? `<a href="${session.resource_link}" target="_blank" style="display:inline-block; margin-bottom:1rem; color:var(--orange); font-size:.85rem; font-weight:600;">📎 View Assignment Resource</a>` : ''}
+        <input type="text" id="assignmentSubmissionInput" class="cv-project-input" placeholder="${placeholder}">
+        <button class="cv-btn-primary" onclick="window.submitAssignment('${sessionId}', '${moduleId}')" style="width:100%;">Submit Assignment</button>
+      `;
+    }
+
+    main.innerHTML = `
+      <div class="cv-session-header">
+        <h1 class="cv-session-h1">📁 ${session.title}</h1>
+        <div class="cv-session-meta">
+          <span>Max Score: ${session.max_score || 100} pts</span>
+          ${session.due_date ? `<span>Due: ${session.due_date}</span>` : ''}
+        </div>
+      </div>
+      <div class="cv-project-card">
+        ${submissionHtml}
+      </div>`;
+    return;
+  }
+
+  // 🔴 VIDEO / LIVE RENDERING 
+  const isDone = !!_progress[sessionId]?.completed;
+  
+  let videoHtml = '';
+  const rawUrl = session.video_link || session.recording_link;
+  
+  if (rawUrl) {
+    const isYouTube = rawUrl.includes('youtube.com') || rawUrl.includes('youtu.be');
+    
+    if (isYouTube) {
+      const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=|live\/)([^#&?]*).*/;
+      const match = rawUrl.match(regExp);
+      const videoId = (match && match[2].length === 11) ? match[2] : null;
+
+      if (videoId) {
+        videoHtml = `
+          <div class="cv-video-thumb">
+            <iframe src="https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1" 
+                    style="position:absolute; top:0; left:0; width:100%; height:100%; border:none;" 
+                    allowfullscreen>
+            </iframe>
+          </div>`;
+      }
+    } else {
+      videoHtml = `
+        <div class="cv-video-thumb" style="cursor:pointer;" onclick="window.open('${rawUrl}', '_blank')">
+          <div class="cv-video-thumb-placeholder">🎬</div>
+          <button class="cv-play-btn">▶</button>
+        </div>
+        <div style="font-size:.75rem; color:var(--muted); margin-bottom:1.5rem;">Click to open recording in a new tab.</div>`;
+    }
+  }
+
+  main.innerHTML = `
+    <div class="cv-session-header">
+      <h1 class="cv-session-h1">${session.title || 'Session'}</h1>
+      <div class="cv-session-meta">${session.duration_minutes ? `⏱ ${session.duration_minutes} min` : ''}</div>
+    </div>
+    ${videoHtml}
+    <div class="cv-text-content">${session.description || ''}</div>
+    <div style="margin-top:2rem;">
+      ${isDone ? `<span style="color:var(--green);font-weight:700;">✓ Completed</span>` : `<button class="cv-btn-primary" onclick="window.markDone('${sessionId}', '${moduleId}')">Mark as Complete</button>`}
+    </div>`;
+};
+
+window.startQuizAttempt = function(sessionId) {
+  const session = (_sessions[_activeModuleId] || []).find(s => s.id === sessionId);
+  if (!session) return;
+
+  const lobby = document.getElementById('quizLobby');
+  const form = document.getElementById('quizForm');
+  if (lobby) lobby.style.display = 'none';
+  if (!form) return;
+
+  const qCount = (session.questions || []).length;
+  const durationMins = Number(session.duration_minutes) || 30;
+  let remainingSeconds = durationMins * 60;
+
+  const qHtml = (session.questions || []).map((q, i) => `
+    <div class="cv-question">
+      <div class="cv-q-text">${i + 1}. ${q.text}</div>
+      ${(q.options || []).map((opt, oi) => `
+        <label class="cv-q-option">
+          <input type="radio" name="q${i}" value="${oi}">
+          <span>${opt}</span>
+        </label>
+      `).join('')}
+    </div>
+  `).join('');
+
+  form.style.display = 'block';
+  form.innerHTML = `
+    <div class="cv-quiz-header" style="position:sticky;top:64px;background:var(--deep);padding:.75rem 1rem;border-bottom:1px solid var(--border);z-index:10;border-radius:8px;">
+      <span>In Progress (${qCount} Questions)</span>
+      <span id="quizTimerDisplay" style="font-family:monospace;font-size:1.1rem;font-weight:800;color:var(--orange);">⏱ ${String(durationMins).padStart(2, '0')}:00</span>
+    </div>
+    ${qHtml}
+    <button class="cv-btn-primary" id="quizSubmitBtn" onclick="window.submitQuiz('${sessionId}', ${qCount}, false)" style="width:100%;margin-top:1rem;">Submit Answers</button>
+  `;
+
+  if (_quizTimerInterval) clearInterval(_quizTimerInterval);
+  _quizTimerInterval = setInterval(() => {
+    remainingSeconds--;
+    const timerEl = document.getElementById('quizTimerDisplay');
+    if (timerEl) {
+      const m = Math.floor(Math.max(0, remainingSeconds) / 60);
+      const s = Math.max(0, remainingSeconds) % 60;
+      timerEl.textContent = `⏱ ${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+      if (remainingSeconds <= 60) timerEl.style.color = 'var(--red)';
+    }
+
+    if (remainingSeconds <= 0) {
+      clearInterval(_quizTimerInterval);
+      _quizTimerInterval = null;
+      window.showToast('⏰ Time is up! Submitting your exam automatically…', 'error');
+      window.submitQuiz(sessionId, qCount, true);
+    }
+  }, 1000);
+};
+
+window.submitQuiz = async function(sessionId, qCount, isAutoSubmit = false) {
+  const answers = [];
+  for (let i = 0; i < qCount; i++) {
+    const selected = document.querySelector(`input[name="q${i}"]:checked`);
+    if (!selected) {
+      if (!isAutoSubmit) return window.showToast('Please answer all questions before submitting', 'error');
+      answers.push(-1); // Unanswered on timeout counts as wrong
+    } else {
+      answers.push(parseInt(selected.value));
+    }
+  }
+
+  if (_quizTimerInterval) {
+    clearInterval(_quizTimerInterval);
+    _quizTimerInterval = null;
+  }
+
+  const btn = document.getElementById('quizSubmitBtn') || document.querySelector('.cv-btn-primary');
+  if (btn) { btn.textContent = 'Grading...'; btn.disabled = true; }
+
+  try {
+    const submitFn = httpsCallable(functions, 'submitQuizAnswers');
+    const res = await submitFn({ sessionId, answers });
+    
+    if (res.data.courseLocked) {
+      window.location.reload(); 
+      return;
+    }
+
+    if (res.data.passed) {
+      window.showToast(`Passed! Score: ${res.data.score}%`, 'success');
+      _progress[sessionId] = { completed: true };
+
+      const modSessions = _sessions[_activeModuleId];
+      const allDone = modSessions.every(s => _progress[s.id]?.completed);
+      if (allDone) {
+        if (!_moduleProgress[_activeModuleId]) _moduleProgress[_activeModuleId] = {};
+        _moduleProgress[_activeModuleId].completed_at = new Date();
+      }
+
+      renderSidebar();
+      window.selectSession(sessionId, _activeModuleId);
+    } else {
+      window.showToast(`Failed. Score: ${res.data.score}%. Attempts left: ${res.data.maxAttempts - res.data.attempts}`, 'error');
+      window.selectSession(sessionId, _activeModuleId);
+    }
+  } catch (err) {
+    window.showToast(err.message, 'error');
+    if (btn) { btn.textContent = 'Submit Answers'; btn.disabled = false; }
+  }
+};
+
+window.submitAssignment = async function(sessionId, moduleId) {
+  const inputEl = document.getElementById('assignmentSubmissionInput');
+  const val = inputEl.value.trim();
+  if (!val) return window.showToast('Please enter your submission link or text', 'error');
+
+  const btn = event.target;
+  btn.textContent = 'Submitting...'; btn.disabled = true;
+
+  try {
+    await setDoc(doc(db, 'session_submissions', `${_user.uid}_${sessionId}`), {
+      user_id: _user.uid,
+      session_id: sessionId,
+      type: 'assignment',
+      submission_url: val,
+      passed: false, 
+      submitted_at: serverTimestamp()
+    });
+
+    window.showToast('Assignment submitted successfully!', 'success');
+    window.selectSession(sessionId, moduleId); 
+  } catch(err) {
+    window.showToast('Error: ' + err.message, 'error');
+    btn.textContent = 'Submit Assignment'; btn.disabled = false;
+  }
+};
+
+window.markDone = async function(sessionId, moduleId) {
+  try {
+    const markFn = httpsCallable(functions, 'markSessionComplete');
+    await markFn({ sessionId, moduleId });
+    _progress[sessionId] = { completed: true };
+    
+    const modSessions = _sessions[moduleId];
+    const allDone = modSessions.every(s => _progress[s.id]?.completed);
+    if (allDone) {
+      if (!_moduleProgress[moduleId]) _moduleProgress[moduleId] = {};
+      _moduleProgress[moduleId].completed_at = new Date();
+    }
+
+    renderSidebar();
+    window.selectSession(sessionId, moduleId);
+    window.showToast('Session completed!', 'success');
+  } catch (err) {
+    window.showToast(err.message, 'error');
+  }
+};
+
+function renderRepurchaseScreen() {
+  document.getElementById('cvMain').innerHTML = `
+    <div class="cv-lock-screen">
+      <div class="cv-lock-icon">🔒</div>
+      <div class="cv-lock-title">Access Revoked</div>
+      <div class="cv-lock-desc">You have failed a module exam 3 times. To maintain the integrity of the Sofe Node credential, you must pay the retake fee to unlock this course again.</div>
+      <button class="cv-btn-repurchase" onclick="window.location.href='./payment-flow.html?course=${_courseId}&retake=true'">Pay Retake Fee (₦5,000)</button>
+    </div>`;
+  document.querySelector('.cv-sidebar').style.opacity = '0.3';
+  document.querySelector('.cv-sidebar').style.pointerEvents = 'none';
+}
+
+function autoSelectFirstSession() {
+  // 1. Try to find the first incomplete session
+  for (let mi = 0; mi < _modules.length; mi++) {
+    if (!isModuleUnlocked(mi)) continue;
+    const sessions = _sessions[_modules[mi].id] || [];
+    for (let si = 0; si < sessions.length; si++) {
+      if (isSessionUnlocked(sessions[si], si, mi) && !_progress[sessions[si].id]?.completed) {
+        window.selectSession(sessions[si].id, _modules[mi].id);
+        return;
+      }
+    }
+  }
+  
+  // 2. FALLBACK: If course is 100% completed, just open Module 1, Session 1
+  if (_modules.length > 0) {
+    const firstMod = _modules[0];
+    const firstSess = (_sessions[firstMod.id] || [])[0];
+    if (firstSess) {
+      window.selectSession(firstSess.id, firstMod.id);
+    }
+  }
+}
+
+// Sidebar Tab Switcher
+window.toggleSidebarTab = function(tab) {
+  document.getElementById('tabBtnCurr').classList.toggle('active', tab === 'curr');
+  document.getElementById('tabBtnChat').classList.toggle('active', tab === 'chat');
+  document.getElementById('sidePanelCurr').style.display = tab === 'curr' ? 'block' : 'none';
+  document.getElementById('sidePanelChat').style.display = tab === 'chat' ? 'flex' : 'none';
+};
+
+window.showToast = function(msg, type='success') {
+  const t = document.getElementById('cvToast');
+  t.textContent = msg;
+  t.style.display = 'block'; t.style.borderColor = type === 'error' ? 'var(--red)' : 'var(--blue)';
+  setTimeout(() => t.style.display = 'none', 3000);
+}
+
+// ── HELPERS ──
+function renderError(msg) {
+  const main = document.getElementById('cvMain');
+  if (main) {
+    main.innerHTML = `
+      <div style="text-align:center; padding: 4rem;">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">⚠️</div>
+        <h3 style="font-size: 1.2rem; color: var(--white); margin-bottom: .5rem;">Something went wrong</h3>
+        <p style="color: var(--muted); margin-bottom: 1.5rem;">${msg}</p>
+        <button class="cv-btn-primary" onclick="window.location.href='./dashboard.html'">← Back to Dashboard</button>
+      </div>`;
+  }
+  const headerTitle = document.getElementById('headerCourseName');
+  if (headerTitle) headerTitle.textContent = 'Error';
+}
+</script>
+</body>
+</html>
