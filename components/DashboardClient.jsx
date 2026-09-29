@@ -492,6 +492,9 @@ export default function DashboardClient() {
   const fullName = `${userData?.first_name || ''} ${userData?.last_name || ''}`.trim() || userData?.email || 'Sofian';
   const isPremium = !!userData?.is_premium || userData?.account_type === 'premium';
   const isNodeLead = !!userData?.node_lead_for || userData?.role === 'node_lead';
+  const isProtocol = userData?.account_type === 'protocol';
+  const isPartner = userData?.account_type === 'partner_org' || userData?.role === 'partner';
+  const isStaffOrAdmin = userData?.role === 'admin' || userData?.role === 'tutor' || !!userData?.admin_role || isNodeLead;
 
   const validatedRefs = referrals.filter((r) => r.foundation_complete === true).length;
   const verifiedRefs = referrals.filter((r) => r.email_verified === true || r.status === 'verified').length;
@@ -534,7 +537,7 @@ export default function DashboardClient() {
         alignItems: 'center',
         justifyContent: 'space-between'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             style={{
@@ -566,6 +569,45 @@ export default function DashboardClient() {
               letterSpacing: '0.04em'
             }}>
               💎 PREMIUM VIP
+            </span>
+          )}
+          {isProtocol && (
+            <span style={{
+              background: 'rgba(20,40,255,0.2)',
+              border: '1px solid #1428FF',
+              color: '#7096FF',
+              borderRadius: 20,
+              padding: '0.2rem 0.65rem',
+              fontSize: '0.68rem',
+              fontWeight: 700
+            }}>
+              🌐 PROTOCOL
+            </span>
+          )}
+          {isPartner && !isProtocol && (
+            <span style={{
+              background: 'rgba(0,200,100,0.15)',
+              border: '1px solid #00c864',
+              color: '#00c864',
+              borderRadius: 20,
+              padding: '0.2rem 0.65rem',
+              fontSize: '0.68rem',
+              fontWeight: 700
+            }}>
+              🤝 PARTNER
+            </span>
+          )}
+          {isNodeLead && (
+            <span style={{
+              background: 'rgba(255,138,0,0.15)',
+              border: '1px solid #FF8A00',
+              color: '#FF8A00',
+              borderRadius: 20,
+              padding: '0.2rem 0.65rem',
+              fontSize: '0.68rem',
+              fontWeight: 700
+            }}>
+              🏫 NODE LEAD
             </span>
           )}
         </div>
@@ -753,6 +795,53 @@ export default function DashboardClient() {
                 </button>
               );
             })}
+
+            <Link
+              href="/bounties"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.8rem',
+                padding: '0.65rem 0.8rem',
+                borderRadius: 8,
+                color: '#FFB800',
+                fontWeight: 600,
+                fontSize: '0.8rem',
+                textDecoration: 'none',
+                width: '100%',
+                overflow: 'hidden',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              <span style={{ fontSize: '1.1rem' }}>🎯</span>
+              {sidebarOpen && <span>Bounties Board</span>}
+            </Link>
+
+            {isStaffOrAdmin && (
+              <Link
+                href="/admin-dashboard"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.8rem',
+                  padding: '0.65rem 0.8rem',
+                  borderRadius: 8,
+                  background: 'rgba(20,40,255,0.15)',
+                  border: '1px solid rgba(20,40,255,0.3)',
+                  color: '#7096FF',
+                  fontWeight: 700,
+                  fontSize: '0.8rem',
+                  textDecoration: 'none',
+                  width: '100%',
+                  overflow: 'hidden',
+                  whiteSpace: 'nowrap',
+                  marginTop: '0.2rem'
+                }}
+              >
+                <span style={{ fontSize: '1.1rem' }}>⚡</span>
+                {sidebarOpen && <span>Admin Console</span>}
+              </Link>
+            )}
           </div>
 
           <div style={{ borderTop: '1px solid rgba(200,215,240,0.1)', paddingTop: '0.8rem' }}>

@@ -191,6 +191,7 @@ export default function AdminDashboardClient() {
       account_type: u.account_type || 'sofian',
       is_premium: !!u.is_premium,
       bypass_foundation: !!u.bypass_foundation,
+      foundation_complete: !!u.foundation_complete,
       can_post_bounties: !!u.can_post_bounties,
       node_lead_for: u.node_lead_for || ''
     });
@@ -208,6 +209,7 @@ export default function AdminDashboardClient() {
         account_type: userRoleForm.account_type,
         is_premium: userRoleForm.is_premium,
         bypass_foundation: userRoleForm.bypass_foundation,
+        foundation_complete: userRoleForm.foundation_complete,
         can_post_bounties: userRoleForm.can_post_bounties,
         node_lead_for: userRoleForm.node_lead_for || null,
         updated_at: serverTimestamp()
@@ -907,6 +909,15 @@ export default function AdminDashboardClient() {
                     onChange={(e) => setUserRoleForm({ ...userRoleForm, bypass_foundation: e.target.checked })}
                   />
                   <span>★ Bypass Foundation Prerequisite (Direct Access)</span>
+                </label>
+
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.76rem', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={userRoleForm.foundation_complete}
+                    onChange={(e) => setUserRoleForm({ ...userRoleForm, foundation_complete: e.target.checked })}
+                  />
+                  <span>🎓 Foundation Completed (Commission Payouts Activated)</span>
                 </label>
               </div>
 
