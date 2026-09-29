@@ -74,6 +74,7 @@ export default function PartnersClient() {
         <h1>Your Gateway to the<br /><em>African Web3 Market.</em></h1>
         <p className="sub">We don&rsquo;t just offer &ldquo;brand awareness.&rdquo; We deliver active users, on-chain volume, and deep market penetration through our university node network across Africa.</p>
         <div className="header-btns">
+          <Link href="/signup?type=protocol" className="btn-primary" style={{ background: 'var(--blue)' }}>Sign Up as Ecosystem →</Link>
           <Link href="#cta-strip" className="btn-primary orange">Download Partnership Deck →</Link>
           <Link href="#services" className="btn-outline">View All Services ↓</Link>
         </div>
@@ -206,6 +207,7 @@ export default function PartnersClient() {
             <p>Join the protocols already winning in Africa. 800+ users, $12M+ volume — one campaign.</p>
           </div>
           <div className="cta-strip-btns">
+            <Link href="/signup?type=protocol" className="btn-primary" style={{ background: 'var(--blue)' }}>Sign Up as Ecosystem →</Link>
             <Link href="/contact" className="btn-primary orange">Book a Discovery Call →</Link>
             <Link href="/contact#deck" className="btn-outline">Download Partnership Deck</Link>
           </div>

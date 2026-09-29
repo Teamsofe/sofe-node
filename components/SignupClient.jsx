@@ -19,12 +19,76 @@ import {
   serverTimestamp
 } from '@/lib/firebase';
 
+/* ── Account-type configuration ───────────────────────────────────── */
+const ACCOUNT_TYPES = [
+  {
+    key: 'sofian',
+    label: 'User / Student',
+    icon: '🎓',
+    desc: 'Learn Web3, earn commissions, and build your career.',
+    role: 'student',
+  },
+  {
+    key: 'partner_org',
+    label: 'Partner',
+    icon: '🤝',
+    desc: 'Partner with Sofe Node to distribute services or collaborate.',
+    role: 'partner',
+  },
+  {
+    key: 'protocol',
+    label: 'Web3 Brand / Protocol',
+    icon: '🌐',
+    desc: 'Access our African node network for distribution and user acquisition.',
+    role: 'partner',
+  },
+];
+
+/* ── Left-panel content per account type ──────────────────────────── */
+const BRAND_CONTENT = {
+  sofian: {
+    tag: 'Free to Join',
+    heading: <>Learn, Earn &amp;<br />Build Your <em>Web3 Career.</em></>,
+    subtitle: 'Join 5,000+ Africans who\u2019ve used Sofe Node to break into blockchain \u2014 for free. Your journey starts with one click.',
+    benefits: [
+      { icon: '📚', color: 'blue', title: 'Free Foundation Course', desc: 'Start with the Blockchain & Crypto Bootcamp \u2014 fully subsidised by our global partners.' },
+      { icon: '💰', color: 'orange', title: 'Earn While You Learn', desc: 'Unlock your referral link on graduation. Earn 10% direct & 5% indirect commission.' },
+      { icon: '🏆', color: 'green', title: 'Verified Certificates', desc: 'Download and share on-chain certificates to LinkedIn and your portfolio.' },
+    ],
+  },
+  partner_org: {
+    tag: 'Partner With Us',
+    heading: <>Collaborate &amp;<br />Grow <em>Together.</em></>,
+    subtitle: 'Become an official Sofe Node partner. Co-deliver services, share referral revenue, and expand your reach across African campuses.',
+    benefits: [
+      { icon: '🤝', color: 'blue', title: 'Revenue Sharing', desc: 'Earn commissions through our 2-tier referral system as you bring users to the ecosystem.' },
+      { icon: '📡', color: 'orange', title: 'Node Network Access', desc: 'Plug into our university campus chapters across Nigeria for direct market reach.' },
+      { icon: '📊', color: 'green', title: 'Dashboard & Analytics', desc: 'Track your referrals, commissions, and partner metrics from a dedicated dashboard.' },
+    ],
+  },
+  protocol: {
+    tag: 'For Ecosystems',
+    heading: <>Distribute in<br />the <em>African Market.</em></>,
+    subtitle: 'Get active users, on-chain volume, and deep market penetration through our university node network. We deliver outcomes, not impressions.',
+    benefits: [
+      { icon: '🚀', color: 'blue', title: 'User Acquisition', desc: 'We activate verified student ambassadors who become your first power users across campuses.' },
+      { icon: '🎯', color: 'orange', title: 'Bounty Programmes', desc: 'Deploy bounties across our XP system and engage 5,000+ active Sofians.' },
+      { icon: '📈', color: 'green', title: 'Measurable Outcomes', desc: 'Every engagement is measured in active wallets, trading volume, and user retention.' },
+    ],
+  },
+};
+
 export default function SignupClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const refCodeFromUrl = searchParams.get('ref') || '';
   const nodeFromUrl = searchParams.get('node') || '';
+  const typeFromUrl = searchParams.get('type') || '';
 
+  // Resolve the initial account type from URL param (default: sofian)
+  const initialType = ACCOUNT_TYPES.find(t => t.key === typeFromUrl) ? typeFromUrl : 'sofian';
+
+  const [accountType, setAccountType] = useState(initialType);
   const [form, setForm] = useState({
     firstName: '',
     lastName: '',
@@ -33,6 +97,7 @@ export default function SignupClient() {
     password: '',
     referralCode: refCodeFromUrl,
     campusNode: nodeFromUrl || 'online',
+    orgName: '',
   });
 
   const [nodes, setNodes] = useState([]);
@@ -40,6 +105,10 @@ export default function SignupClient() {
   const [errorMsg, setErrorMsg] = useState('');
   const [createdUser, setCreatedUser] = useState(null);
   const [nodeWhatsappLink, setNodeWhatsappLink] = useState('');
+
+  const activeType = ACCOUNT_TYPES.find(t => t.key === accountType) || ACCOUNT_TYPES[0];
+  const brandContent = BRAND_CONTENT[accountType] || BRAND_CONTENT.sofian;
+  const isOrgAccount = accountType === 'partner_org' || accountType === 'protocol';
 
   // Load campus nodes / chapters
   useEffect(() => {
@@ -60,6 +129,10 @@ export default function SignupClient() {
     e.preventDefault();
     if (!form.firstName || !form.lastName || !form.email || !form.password) {
       setErrorMsg('Please fill in all required fields.');
+      return;
+    }
+    if (isOrgAccount && !form.orgName.trim()) {
+      setErrorMsg('Please enter your organisation / protocol name.');
       return;
     }
     if (form.password.length < 6) {
@@ -103,14 +176,18 @@ export default function SignupClient() {
         last_name: form.lastName.trim(),
         email: form.email.trim().toLowerCase(),
         phone: form.phone.trim(),
-        role: 'student',
+        role: activeType.role,
+        account_type: accountType,
         xp_total: 0,
         xp_tier: 'Genesis',
         wallet_balance: 0,
         referral_code: myRefCode,
         referred_by_code: form.referralCode.trim() || null,
-        chapter_id: form.campusNode,
-        node_label: selectedChapter?.name || 'Online / Global Node',
+        chapter_id: isOrgAccount ? null : form.campusNode,
+        node_label: isOrgAccount ? null : (selectedChapter?.name || 'Online / Global Node'),
+        org_name: isOrgAccount ? form.orgName.trim() : null,
+        is_premium: false,
+        bypass_foundation: false,
         email_verified: false,
         created_at: serverTimestamp(),
         updated_at: serverTimestamp(),
@@ -155,8 +232,14 @@ export default function SignupClient() {
     }
   }
 
-  // If successfully created, show welcome / WhatsApp group screen
+  /* ── Success screen ─────────────────────────────────────────────── */
   if (createdUser) {
+    const successLabel = accountType === 'sofian'
+      ? 'Sofian'
+      : accountType === 'partner_org'
+        ? 'Partner'
+        : 'Ecosystem';
+
     return (
       <>
         <link rel="stylesheet" href="/css/signup.css" />
@@ -165,10 +248,10 @@ export default function SignupClient() {
             <div style={{ fontSize: '3.5rem', marginBottom: '1rem' }}>🎉</div>
             <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--white)', marginBottom: '.5rem' }}>Welcome to Sofe Group!</h2>
             <p style={{ color: 'var(--muted)', fontSize: '.9rem', lineHeight: 1.6, marginBottom: '2rem' }}>
-              Your Sofian account has been successfully created. We&apos;ve sent a verification link to <strong style={{ color: 'var(--white)' }}>{createdUser.email}</strong>.
+              Your {successLabel} account has been successfully created. We&apos;ve sent a verification link to <strong style={{ color: 'var(--white)' }}>{createdUser.email}</strong>.
             </p>
 
-            {nodeWhatsappLink ? (
+            {nodeWhatsappLink && accountType === 'sofian' ? (
               <div style={{ marginBottom: '2rem' }}>
                 <a
                   href={nodeWhatsappLink}
@@ -185,7 +268,7 @@ export default function SignupClient() {
               href="/dashboard"
               style={{ display: 'block', padding: '.85rem', background: 'var(--blue)', color: '#fff', borderRadius: '8px', fontWeight: 700, textDecoration: 'none', fontSize: '.95rem' }}
             >
-              Continue to Sofian Dashboard →
+              Continue to Dashboard →
             </Link>
           </div>
         </div>
@@ -193,42 +276,34 @@ export default function SignupClient() {
     );
   }
 
+  /* ── Shared input styles ────────────────────────────────────────── */
+  const inputStyle = { width: '100%', padding: '.75rem 1rem', background: 'var(--deep)', border: '1px solid var(--border)', borderRadius: '8px', color: '#fff', fontSize: '.88rem' };
+  const labelStyle = { display: 'block', fontSize: '.75rem', fontWeight: 600, color: 'var(--muted)', marginBottom: '.35rem' };
+
   return (
     <>
       <link rel="stylesheet" href="/css/signup.css" />
 
       <div className="auth-page">
-        {/* LEFT panel */}
+        {/* LEFT panel — adapts based on account type */}
         <div className="auth-brand">
           <Link href="/" className="auth-brand-logo">
             <img src="/images/Nodes/SofeLogoHome.png" alt="Sofe Node" />
           </Link>
           <div className="auth-brand-body">
-            <div className="auth-brand-tag">Free to Join</div>
-            <h1>Learn, Earn &amp;<br />Build Your <em>Web3 Career.</em></h1>
-            <p>Join 5,000+ Africans who&apos;ve used Sofe Node to break into blockchain — for free. Your journey starts with one click.</p>
+            <div className="auth-brand-tag">{brandContent.tag}</div>
+            <h1>{brandContent.heading}</h1>
+            <p>{brandContent.subtitle}</p>
             <div className="benefit-list">
-              <div className="benefit-item">
-                <div className="benefit-icon blue">📚</div>
-                <div>
-                  <div className="benefit-title">Free Foundation Course</div>
-                  <div className="benefit-desc">Start with the Blockchain &amp; Crypto Bootcamp — fully subsidised by our global partners.</div>
+              {brandContent.benefits.map(b => (
+                <div className="benefit-item" key={b.title}>
+                  <div className={`benefit-icon ${b.color}`}>{b.icon}</div>
+                  <div>
+                    <div className="benefit-title">{b.title}</div>
+                    <div className="benefit-desc">{b.desc}</div>
+                  </div>
                 </div>
-              </div>
-              <div className="benefit-item">
-                <div className="benefit-icon orange">💰</div>
-                <div>
-                  <div className="benefit-title">Earn While You Learn</div>
-                  <div className="benefit-desc">Unlock your referral link on graduation. Earn 10% direct &amp; 5% indirect commission.</div>
-                </div>
-              </div>
-              <div className="benefit-item">
-                <div className="benefit-icon green">🏆</div>
-                <div>
-                  <div className="benefit-title">Verified Certificates</div>
-                  <div className="benefit-desc">Download and share on-chain certificates to LinkedIn and your portfolio.</div>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
         </div>
@@ -239,6 +314,43 @@ export default function SignupClient() {
             <h2 className="auth-form-title">Create your account 🚀</h2>
             <p className="auth-form-sub">Already have an account? <Link href="/login">Log in here</Link></p>
 
+            {/* ── Account Type Selector ────────────────────────────── */}
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={labelStyle}>I am signing up as…</label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '.6rem' }}>
+                {ACCOUNT_TYPES.map(t => {
+                  const isActive = accountType === t.key;
+                  return (
+                    <button
+                      key={t.key}
+                      type="button"
+                      onClick={() => setAccountType(t.key)}
+                      style={{
+                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '.3rem',
+                        padding: '.75rem .5rem',
+                        background: isActive ? 'rgba(59,130,246,.15)' : 'var(--deep)',
+                        border: `2px solid ${isActive ? 'var(--blue)' : 'var(--border)'}`,
+                        borderRadius: '10px',
+                        color: isActive ? '#fff' : 'var(--muted)',
+                        cursor: 'pointer',
+                        transition: 'all .2s',
+                        fontSize: '.78rem',
+                        fontWeight: isActive ? 700 : 500,
+                        textAlign: 'center',
+                        lineHeight: 1.3,
+                      }}
+                    >
+                      <span style={{ fontSize: '1.4rem' }}>{t.icon}</span>
+                      <span>{t.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <p style={{ fontSize: '.72rem', color: 'var(--muted)', marginTop: '.4rem', lineHeight: 1.4 }}>
+                {activeType.desc}
+              </p>
+            </div>
+
             {errorMsg && (
               <div style={{ background: 'rgba(239,68,68,.12)', border: '1px solid rgba(239,68,68,.3)', borderRadius: '8px', padding: '.8rem 1rem', color: '#f87171', fontSize: '.85rem', marginBottom: '1.2rem', display: 'flex', alignItems: 'center', gap: '.6rem' }}>
                 <span>⚠️</span> <span>{errorMsg}</span>
@@ -246,88 +358,107 @@ export default function SignupClient() {
             )}
 
             <form onSubmit={handleSignup} noValidate>
+              {/* Org name — only for partner / protocol */}
+              {isOrgAccount && (
+                <div style={{ marginBottom: '1rem' }}>
+                  <label style={labelStyle}>{accountType === 'protocol' ? 'Protocol / Brand Name' : 'Organisation Name'}</label>
+                  <input
+                    type="text"
+                    required
+                    value={form.orgName}
+                    onChange={e => setForm({ ...form, orgName: e.target.value })}
+                    placeholder={accountType === 'protocol' ? 'e.g. Lido Finance' : 'e.g. Web3Bridge'}
+                    style={inputStyle}
+                  />
+                </div>
+              )}
+
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '.75rem', fontWeight: 600, color: 'var(--muted)', marginBottom: '.35rem' }}>First Name</label>
+                  <label style={labelStyle}>{isOrgAccount ? 'Contact First Name' : 'First Name'}</label>
                   <input
                     type="text"
                     required
                     value={form.firstName}
                     onChange={e => setForm({ ...form, firstName: e.target.value })}
                     placeholder="Chukwuemeka"
-                    style={{ width: '100%', padding: '.75rem 1rem', background: 'var(--deep)', border: '1px solid var(--border)', borderRadius: '8px', color: '#fff', fontSize: '.88rem' }}
+                    style={inputStyle}
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '.75rem', fontWeight: 600, color: 'var(--muted)', marginBottom: '.35rem' }}>Last Name</label>
+                  <label style={labelStyle}>{isOrgAccount ? 'Contact Last Name' : 'Last Name'}</label>
                   <input
                     type="text"
                     required
                     value={form.lastName}
                     onChange={e => setForm({ ...form, lastName: e.target.value })}
                     placeholder="Obi"
-                    style={{ width: '100%', padding: '.75rem 1rem', background: 'var(--deep)', border: '1px solid var(--border)', borderRadius: '8px', color: '#fff', fontSize: '.88rem' }}
+                    style={inputStyle}
                   />
                 </div>
               </div>
 
               <div style={{ marginBottom: '1rem' }}>
-                <label style={{ display: 'block', fontSize: '.75rem', fontWeight: 600, color: 'var(--muted)', marginBottom: '.35rem' }}>Email Address</label>
+                <label style={labelStyle}>Email Address</label>
                 <input
                   type="email"
                   required
                   value={form.email}
                   onChange={e => setForm({ ...form, email: e.target.value })}
-                  placeholder="emeka@email.com"
-                  style={{ width: '100%', padding: '.75rem 1rem', background: 'var(--deep)', border: '1px solid var(--border)', borderRadius: '8px', color: '#fff', fontSize: '.88rem' }}
+                  placeholder={isOrgAccount ? 'partnerships@company.com' : 'emeka@email.com'}
+                  style={inputStyle}
                 />
               </div>
 
               <div style={{ marginBottom: '1rem' }}>
-                <label style={{ display: 'block', fontSize: '.75rem', fontWeight: 600, color: 'var(--muted)', marginBottom: '.35rem' }}>Phone / WhatsApp Number</label>
+                <label style={labelStyle}>Phone / WhatsApp Number</label>
                 <input
                   type="tel"
                   value={form.phone}
                   onChange={e => setForm({ ...form, phone: e.target.value })}
                   placeholder="+234 800 000 0000"
-                  style={{ width: '100%', padding: '.75rem 1rem', background: 'var(--deep)', border: '1px solid var(--border)', borderRadius: '8px', color: '#fff', fontSize: '.88rem' }}
+                  style={inputStyle}
                 />
               </div>
 
               <div style={{ marginBottom: '1rem' }}>
-                <label style={{ display: 'block', fontSize: '.75rem', fontWeight: 600, color: 'var(--muted)', marginBottom: '.35rem' }}>Password (min. 6 characters)</label>
+                <label style={labelStyle}>Password (min. 6 characters)</label>
                 <input
                   type="password"
                   required
                   value={form.password}
                   onChange={e => setForm({ ...form, password: e.target.value })}
                   placeholder="••••••••"
-                  style={{ width: '100%', padding: '.75rem 1rem', background: 'var(--deep)', border: '1px solid var(--border)', borderRadius: '8px', color: '#fff', fontSize: '.88rem' }}
+                  style={inputStyle}
                 />
               </div>
 
-              <div style={{ marginBottom: '1rem' }}>
-                <label style={{ display: 'block', fontSize: '.75rem', fontWeight: 600, color: 'var(--muted)', marginBottom: '.35rem' }}>Select Your Campus Node / Region</label>
-                <select
-                  value={form.campusNode}
-                  onChange={e => setForm({ ...form, campusNode: e.target.value })}
-                  style={{ width: '100%', padding: '.75rem 1rem', background: 'var(--deep)', border: '1px solid var(--border)', borderRadius: '8px', color: '#fff', fontSize: '.88rem' }}
-                >
-                  <option value="online">Online / Global Node (Virtual)</option>
-                  {nodes.map(n => (
-                    <option key={n.id} value={n.id}>{n.name || n.id}</option>
-                  ))}
-                </select>
-              </div>
+              {/* Campus node — only for student/sofian */}
+              {!isOrgAccount && (
+                <div style={{ marginBottom: '1rem' }}>
+                  <label style={labelStyle}>Select Your Campus Node / Region</label>
+                  <select
+                    value={form.campusNode}
+                    onChange={e => setForm({ ...form, campusNode: e.target.value })}
+                    style={inputStyle}
+                  >
+                    <option value="online">Online / Global Node (Virtual)</option>
+                    {nodes.map(n => (
+                      <option key={n.id} value={n.id}>{n.name || n.id}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
+              {/* Referral code — always visible */}
               <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{ display: 'block', fontSize: '.75rem', fontWeight: 600, color: 'var(--muted)', marginBottom: '.35rem' }}>Referral Code (Optional)</label>
+                <label style={labelStyle}>Referral Code (Optional)</label>
                 <input
                   type="text"
                   value={form.referralCode}
                   onChange={e => setForm({ ...form, referralCode: e.target.value })}
                   placeholder="e.g. shed1234"
-                  style={{ width: '100%', padding: '.75rem 1rem', background: 'var(--deep)', border: '1px solid var(--border)', borderRadius: '8px', color: '#fff', fontSize: '.88rem' }}
+                  style={inputStyle}
                 />
               </div>
 
@@ -336,7 +467,12 @@ export default function SignupClient() {
                 disabled={loading}
                 style={{ width: '100%', padding: '.85rem', background: 'var(--blue)', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer', fontSize: '.95rem' }}
               >
-                {loading ? 'Creating Account…' : 'Create Free Account →'}
+                {loading
+                  ? 'Creating Account…'
+                  : isOrgAccount
+                    ? `Register as ${activeType.label} →`
+                    : 'Create Free Account →'
+                }
               </button>
             </form>
           </div>
