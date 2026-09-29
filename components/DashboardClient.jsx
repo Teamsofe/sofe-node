@@ -46,6 +46,54 @@ export default function DashboardClient() {
   const [activeTab, setActiveTab] = useState('classroom');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // ── WORKSPACE CONTEXT SWITCHER ──
+  const [activeWorkspace, setActiveWorkspace] = useState('learner');
+  const loadedWorkspacesRef = React.useRef(new Set(['learner']));
+
+  // ── PROTOCOL CONSOLE STATE ──
+  const [protocolBounties, setProtocolBounties] = useState([]);
+  const [protocolApplicants, setProtocolApplicants] = useState([]);
+  const [protocolLoading, setProtocolLoading] = useState(false);
+  const [showCreateBountyModal, setShowCreateBountyModal] = useState(false);
+  const [createBountyForm, setCreateBountyForm] = useState({
+    title: '',
+    category: 'dev',
+    reward_usd: '',
+    deadline: '',
+    description: '',
+    requirements: ''
+  });
+  const [createBountySubmitting, setCreateBountySubmitting] = useState(false);
+
+  // ── NODE COMMAND STATE ──
+  const [nodeStudents, setNodeStudents] = useState([]);
+  const [nodeDisbursements, setNodeDisbursements] = useState([]);
+  const [nodeTreasuryBalance, setNodeTreasuryBalance] = useState(150000);
+  const [nodeLoading, setNodeLoading] = useState(false);
+  const [showNodeDisbModal, setShowNodeDisbModal] = useState(false);
+  const [nodeDisbForm, setNodeDisbForm] = useState({
+    amount: '',
+    purpose: '',
+    bankName: '',
+    accountNumber: '',
+    accountName: ''
+  });
+  const [nodeDisbSubmitting, setNodeDisbSubmitting] = useState(false);
+
+  // ── PARTNER PORTAL STATE ──
+  const [partnerStudents, setPartnerStudents] = useState([]);
+  const [partnerLoading, setPartnerLoading] = useState(false);
+
+  // ── TUTOR DESK STATE ──
+  const [tutorSubmissions, setTutorSubmissions] = useState([]);
+  const [tutorLoading, setTutorLoading] = useState(false);
+  const [selectedSubForGrading, setSelectedSubForGrading] = useState(null);
+  const [showGradingModal, setShowGradingModal] = useState(false);
+  const [gradeScore, setGradeScore] = useState(100);
+  const [gradePassed, setGradePassed] = useState(true);
+  const [gradeFeedback, setGradeFeedback] = useState('');
+  const [gradingSubmitting, setGradingSubmitting] = useState(false);
+
   // Stats & Progress
   const [enrolments, setEnrolments] = useState([]);
   const [coursesData, setCoursesData] = useState({});
@@ -192,6 +240,29 @@ export default function DashboardClient() {
 
       // Load Chapters for dropdown
       loadAllChapters();
+
+      // Workspace context restore & initial data load
+      const availableWorkspaces = computeWorkspaces(u);
+      const savedWs = typeof window !== 'undefined' ? localStorage.getItem('sofe_active_workspace') : null;
+      let targetWs = 'learner';
+      if (savedWs && availableWorkspaces.some((w) => w.id === savedWs)) {
+        targetWs = savedWs;
+      } else if (u.account_type === 'protocol') {
+        targetWs = 'protocol';
+      } else if (u.account_type === 'partner_org' || u.role === 'partner') {
+        targetWs = 'partner';
+      } else if (u.node_lead_for || u.role === 'node_lead') {
+        targetWs = 'node_lead';
+      }
+
+      if (targetWs !== 'learner') {
+        setActiveWorkspace(targetWs);
+        const wsObj = availableWorkspaces.find((w) => w.id === targetWs);
+        if (wsObj) {
+          setActiveTab(wsObj.defaultTab);
+        }
+      }
+      loadWorkspaceData(targetWs, user.uid, u);
     } catch (err) {
       console.error('Error loading user profile:', err);
     }
@@ -491,6 +562,301 @@ export default function DashboardClient() {
     }
   };
 
+  // ── WORKSPACE LOGIC & LAZY LOADERS ──
+  const computeWorkspaces = (u) => {
+    const list = [
+      { id: 'learner', label: 'Learner Hub', icon: '🎓', defaultTab: 'classroom' }
+    ];
+    if (u?.account_type === 'protocol') {
+      list.push({ id: 'protocol', label: 'Protocol Console', icon: '⚡', defaultTab: 'protocol-bounties' });
+    }
+    if (u?.account_type === 'partner_org' || u?.role === 'partner') {
+      list.push({ id: 'partner', label: 'Partner Portal', icon: '🤝', defaultTab: 'partner-analytics' });
+    }
+    if (u?.node_lead_for || u?.role === 'node_lead' || u?.is_node_lead) {
+      list.push({ id: 'node_lead', label: 'Node Command', icon: '🌐', defaultTab: 'node-metrics' });
+    }
+    if (u?.role === 'tutor' || u?.role === 'admin' || u?.admin_role === 'tutor') {
+      list.push({ id: 'tutor', label: 'Tutor Desk', icon: '✍️', defaultTab: 'tutor-queue' });
+    }
+    return list;
+  };
+
+  const handleSwitchWorkspace = (wsId) => {
+    setActiveWorkspace(wsId);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('sofe_active_workspace', wsId);
+    }
+    const targetWs = computeWorkspaces(userData).find((w) => w.id === wsId);
+    if (targetWs) {
+      setActiveTab(targetWs.defaultTab);
+    }
+    loadWorkspaceData(wsId);
+  };
+
+  const loadWorkspaceData = async (wsId, uid = currentUser?.uid, u = userData) => {
+    if (!uid) return;
+    if (loadedWorkspacesRef.current.has(wsId)) return;
+    loadedWorkspacesRef.current.add(wsId);
+
+    if (wsId === 'protocol') {
+      await loadProtocolConsoleData(uid);
+    } else if (wsId === 'node_lead') {
+      await loadNodeCommandData(uid, u);
+    } else if (wsId === 'partner') {
+      await loadPartnerPortalData(uid, u);
+    } else if (wsId === 'tutor') {
+      await loadTutorDeskData();
+    }
+  };
+
+  const loadProtocolConsoleData = async (uid) => {
+    setProtocolLoading(true);
+    try {
+      let q = query(collection(db, 'bounties'), where('created_by', '==', uid));
+      let snap = await getDocs(q);
+      let bounties = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+      if (bounties.length === 0) {
+        const allBountiesSnap = await getDocs(query(collection(db, 'bounties'), limit(15)));
+        bounties = allBountiesSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      }
+      setProtocolBounties(bounties);
+
+      const appsSnap = await getDocs(collection(db, 'bounty_applications'));
+      const allApps = appsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      const bountyIds = new Set(bounties.map((b) => b.id));
+      const relevantApps = allApps.filter((a) => bountyIds.has(a.bounty_id) || bounties.length === 0);
+      setProtocolApplicants(relevantApps.length > 0 ? relevantApps : allApps.slice(0, 15));
+    } catch (e) {
+      console.error('Error loading protocol data:', e);
+    } finally {
+      setProtocolLoading(false);
+    }
+  };
+
+  const handleCreateProtocolBounty = async (e) => {
+    e.preventDefault();
+    if (!createBountyForm.title || !createBountyForm.reward_usd) {
+      alert('Please fill in title and reward amount.');
+      return;
+    }
+    setCreateBountySubmitting(true);
+    try {
+      const rewardNum = Number(createBountyForm.reward_usd);
+      const docRef = await addDoc(collection(db, 'bounties'), {
+        title: createBountyForm.title,
+        category: createBountyForm.category || 'dev',
+        reward_usd: rewardNum,
+        reward: `$${rewardNum.toLocaleString()}`,
+        deadline: createBountyForm.deadline || '',
+        description: createBountyForm.description || '',
+        requirements: createBountyForm.requirements || '',
+        created_by: currentUser.uid,
+        created_by_name: userData?.company_name || userData?.organization_name || `${userData?.first_name || ''} ${userData?.last_name || ''}`.trim() || 'Protocol Partner',
+        status: 'open',
+        applicants_count: 0,
+        created_at: serverTimestamp()
+      });
+
+      const newBounty = {
+        id: docRef.id,
+        title: createBountyForm.title,
+        category: createBountyForm.category,
+        reward_usd: rewardNum,
+        reward: `$${rewardNum.toLocaleString()}`,
+        deadline: createBountyForm.deadline,
+        description: createBountyForm.description,
+        requirements: createBountyForm.requirements,
+        created_by: currentUser.uid,
+        status: 'open',
+        applicants_count: 0
+      };
+
+      setProtocolBounties((prev) => [newBounty, ...prev]);
+      setShowCreateBountyModal(false);
+      setCreateBountyForm({ title: '', category: 'dev', reward_usd: '', deadline: '', description: '', requirements: '' });
+      setPayoutToast('🎯 Bounty successfully published to Sofe Talent Pool!');
+      setTimeout(() => setPayoutToast(null), 5000);
+    } catch (e) {
+      alert('Failed to create bounty: ' + e.message);
+    } finally {
+      setCreateBountySubmitting(false);
+    }
+  };
+
+  const loadNodeCommandData = async (uid, u) => {
+    setNodeLoading(true);
+    try {
+      const chapterId = u?.chapter_id || u?.node_lead_for;
+      let students = [];
+      if (chapterId) {
+        const qStudents = query(collection(db, 'users'), where('chapter_id', '==', chapterId), limit(30));
+        const snap = await getDocs(qStudents);
+        students = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      }
+      if (students.length === 0) {
+        const snap = await getDocs(query(collection(db, 'users'), limit(20)));
+        students = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      }
+      setNodeStudents(students);
+
+      const qDisb = query(collection(db, 'disbursement_requests'), where('type', '==', 'node_treasury'), limit(25));
+      const disbSnap = await getDocs(qDisb);
+      setNodeDisbursements(disbSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    } catch (e) {
+      console.error('Error loading node data:', e);
+    } finally {
+      setNodeLoading(false);
+    }
+  };
+
+  const handleNodeDisbSubmit = async (e) => {
+    e.preventDefault();
+    const amountNum = Number(nodeDisbForm.amount);
+    if (!amountNum || amountNum <= 0) {
+      alert('Please enter a valid disbursement amount.');
+      return;
+    }
+    if (amountNum > nodeTreasuryBalance) {
+      alert('Requested amount exceeds chapter treasury balance.');
+      return;
+    }
+    setNodeDisbSubmitting(true);
+    try {
+      await addDoc(collection(db, 'disbursement_requests'), {
+        requester_uid: currentUser.uid,
+        requester_name: `${userData?.first_name || ''} ${userData?.last_name || ''}`.trim() || 'Node Lead',
+        chapter_id: userData?.chapter_id || userData?.node_lead_for || '',
+        chapter_name: myChapter?.name || userData?.node_label || 'Campus Node',
+        amount: amountNum,
+        purpose: nodeDisbForm.purpose,
+        bank_name: nodeDisbForm.bankName,
+        account_number: nodeDisbForm.accountNumber,
+        account_name: nodeDisbForm.accountName,
+        type: 'node_treasury',
+        status: 'pending',
+        created_at: serverTimestamp()
+      });
+
+      setShowNodeDisbModal(false);
+      setNodeDisbForm({ amount: '', purpose: '', bankName: '', accountNumber: '', accountName: '' });
+      setPayoutToast('✓ Chapter grant disbursement submitted to Core Council!');
+      setTimeout(() => setPayoutToast(null), 5000);
+      loadNodeCommandData(currentUser.uid, userData);
+    } catch (e) {
+      alert('Could not submit disbursement: ' + e.message);
+    } finally {
+      setNodeDisbSubmitting(false);
+    }
+  };
+
+  const loadPartnerPortalData = async (uid, u) => {
+    setPartnerLoading(true);
+    try {
+      let students = [];
+      if (u?.referral_code) {
+        const q = query(collection(db, 'users'), where('referred_by_code', '==', u.referral_code));
+        const snap = await getDocs(q);
+        students = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      }
+      if (students.length === 0) {
+        const snap = await getDocs(query(collection(db, 'users'), limit(20)));
+        students = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      }
+      setPartnerStudents(students);
+    } catch (e) {
+      console.error('Error loading partner data:', e);
+    } finally {
+      setPartnerLoading(false);
+    }
+  };
+
+  const loadTutorDeskData = async () => {
+    setTutorLoading(true);
+    try {
+      const snap = await getDocs(query(collection(db, 'submissions'), limit(30)));
+      setTutorSubmissions(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    } catch (e) {
+      console.error('Error loading tutor data:', e);
+    } finally {
+      setTutorLoading(false);
+    }
+  };
+
+  const handleGradeSubmission = async (e) => {
+    e.preventDefault();
+    if (!selectedSubForGrading) return;
+    setGradingSubmitting(true);
+    try {
+      await updateDoc(doc(db, 'submissions', selectedSubForGrading.id), {
+        status: gradePassed ? 'approved' : 'rejected',
+        score: Number(gradeScore),
+        feedback: gradeFeedback,
+        graded_by: currentUser.uid,
+        graded_at: serverTimestamp()
+      });
+
+      setTutorSubmissions((prev) =>
+        prev.map((s) =>
+          s.id === selectedSubForGrading.id
+            ? { ...s, status: gradePassed ? 'approved' : 'rejected', score: Number(gradeScore), feedback: gradeFeedback }
+            : s
+        )
+      );
+
+      setShowGradingModal(false);
+      setSelectedSubForGrading(null);
+      setPayoutToast(`✓ Submission graded: ${gradePassed ? 'Approved' : 'Needs Revision'}`);
+      setTimeout(() => setPayoutToast(null), 4000);
+    } catch (e) {
+      alert('Grading failed: ' + e.message);
+    } finally {
+      setGradingSubmitting(false);
+    }
+  };
+
+  const getDockItems = () => {
+    if (activeWorkspace === 'protocol') {
+      return [
+        { id: 'protocol-bounties', icon: '🎯', label: 'Bounties' },
+        { id: 'protocol-review', icon: '👥', label: 'Review' },
+        { id: 'protocol-analytics', icon: '📊', label: 'Stats' },
+        { id: 'settings', icon: '⚙️', label: 'Settings' }
+      ];
+    }
+    if (activeWorkspace === 'node_lead') {
+      return [
+        { id: 'node-metrics', icon: '📊', label: 'Metrics' },
+        { id: 'node-roster', icon: '👥', label: 'Roster' },
+        { id: 'node-treasury', icon: '💰', label: 'Treasury' },
+        { id: 'settings', icon: '⚙️', label: 'Settings' }
+      ];
+    }
+    if (activeWorkspace === 'partner') {
+      return [
+        { id: 'partner-analytics', icon: '📈', label: 'Analytics' },
+        { id: 'partner-roster', icon: '👥', label: 'Students' },
+        { id: 'partner-payouts', icon: '💳', label: 'Payouts' },
+        { id: 'settings', icon: '⚙️', label: 'Settings' }
+      ];
+    }
+    if (activeWorkspace === 'tutor') {
+      return [
+        { id: 'tutor-queue', icon: '✍️', label: 'Queue' },
+        { id: 'tutor-sessions', icon: '📅', label: 'Sessions' },
+        { id: 'settings', icon: '⚙️', label: 'Settings' }
+      ];
+    }
+    return [
+      { id: 'classroom', icon: '📚', label: 'Courses' },
+      { id: 'business', icon: '💼', label: 'Business' },
+      { id: 'wallet', icon: '💰', label: 'Wallet' },
+      { id: 'certificates', icon: '🎓', label: 'Certs' },
+      { id: 'settings', icon: '⚙️', label: 'Settings' }
+    ];
+  };
+
   // Logout
   const handleLogout = async () => {
     await signOut(auth);
@@ -516,6 +882,8 @@ export default function DashboardClient() {
   const isProtocol = userData?.account_type === 'protocol';
   const isPartner = userData?.account_type === 'partner_org' || userData?.role === 'partner';
   const isStaffOrAdmin = userData?.role === 'admin' || userData?.role === 'tutor' || !!userData?.admin_role || isNodeLead;
+
+  const availableWorkspaces = computeWorkspaces(userData);
 
   const validatedRefs = referrals.filter((r) => r.foundation_complete === true).length;
   const verifiedRefs = referrals.filter((r) => r.email_verified === true || r.status === 'verified').length;
@@ -581,9 +949,45 @@ export default function DashboardClient() {
           >
             <span>☰</span>
           </button>
-          <Link href="/" style={{ textDecoration: 'none', color: '#fff', fontWeight: 800, fontSize: '1.15rem' }}>
-            SOFE <span style={{ color: '#1428FF' }}>NODE</span>
+          <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }} aria-label="Sofe Node Home">
+            <img
+              src="/images/Nodes/SofeLogoHome.png"
+              alt="Sofe Node"
+              style={{ height: '32px', width: 'auto', objectFit: 'contain' }}
+            />
           </Link>
+          {availableWorkspaces.length > 1 && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              background: 'rgba(20,40,255,0.18)',
+              border: '1px solid rgba(20,40,255,0.4)',
+              borderRadius: 20,
+              padding: '0.15rem 0.6rem 0.15rem 0.75rem'
+            }}>
+              <span style={{ fontSize: '0.66rem', color: 'rgba(200,215,240,0.6)', fontWeight: 600 }}>Workspace:</span>
+              <select
+                value={activeWorkspace}
+                onChange={(e) => handleSwitchWorkspace(e.target.value)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#FFB800',
+                  fontSize: '0.74rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  outline: 'none'
+                }}
+              >
+                {availableWorkspaces.map((w) => (
+                  <option key={w.id} value={w.id} style={{ background: '#080E1A', color: '#fff' }}>
+                    {w.icon} {w.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           {isPremium && (
             <span style={{
               background: 'linear-gradient(135deg, rgba(255,138,0,0.2), rgba(255,215,0,0.25))',
@@ -798,14 +1202,94 @@ export default function DashboardClient() {
           transition: 'width 0.25s ease'
         }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-            {[
+            {/* WORKSPACE CONTEXT SWITCHER */}
+            {availableWorkspaces.length > 1 && (
+              <div style={{
+                marginBottom: '0.6rem',
+                paddingBottom: '0.6rem',
+                borderBottom: '1px solid rgba(20,40,255,0.2)'
+              }}>
+                {sidebarOpen ? (
+                  <div>
+                    <div style={{ fontSize: '0.62rem', textTransform: 'uppercase', color: 'rgba(200,215,240,0.5)', fontWeight: 700, marginBottom: '0.35rem', letterSpacing: '0.05em' }}>
+                      Workspace
+                    </div>
+                    <select
+                      value={activeWorkspace}
+                      onChange={(e) => handleSwitchWorkspace(e.target.value)}
+                      style={{
+                        width: '100%',
+                        background: '#0D1526',
+                        border: '1px solid rgba(20,40,255,0.4)',
+                        color: '#FFB800',
+                        fontWeight: 700,
+                        fontSize: '0.74rem',
+                        borderRadius: 6,
+                        padding: '0.4rem 0.5rem',
+                        outline: 'none',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {availableWorkspaces.map((w) => (
+                        <option key={w.id} value={w.id} style={{ background: '#080E1A', color: '#fff' }}>
+                          {w.icon} {w.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  <button
+                    title={`Switch Workspace (Current: ${availableWorkspaces.find((w) => w.id === activeWorkspace)?.label})`}
+                    onClick={() => {
+                      const nextIdx = (availableWorkspaces.findIndex((w) => w.id === activeWorkspace) + 1) % availableWorkspaces.length;
+                      handleSwitchWorkspace(availableWorkspaces[nextIdx].id);
+                    }}
+                    style={{
+                      width: '100%',
+                      background: 'rgba(20,40,255,0.18)',
+                      border: '1px solid rgba(20,40,255,0.35)',
+                      color: '#FFB800',
+                      borderRadius: 6,
+                      padding: '0.4rem 0',
+                      fontSize: '1.05rem',
+                      cursor: 'pointer',
+                      textAlign: 'center'
+                    }}
+                  >
+                    {availableWorkspaces.find((w) => w.id === activeWorkspace)?.icon || '💼'}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* DYNAMIC WORKSPACE NAV ITEMS */}
+            {(activeWorkspace === 'protocol' ? [
+              { id: 'protocol-bounties', icon: '🎯', label: 'Active Bounties' },
+              { id: 'protocol-review', icon: '👥', label: 'Review Talent' },
+              { id: 'protocol-analytics', icon: '📊', label: 'Ecosystem Reach' },
+              { id: 'settings', icon: '⚙️', label: 'Settings' }
+            ] : activeWorkspace === 'node_lead' ? [
+              { id: 'node-metrics', icon: '📊', label: 'Chapter Overview' },
+              { id: 'node-roster', icon: '👥', label: 'Student Roster' },
+              { id: 'node-treasury', icon: '🏛️', label: 'Treasury & Grants' },
+              { id: 'settings', icon: '⚙️', label: 'Settings' }
+            ] : activeWorkspace === 'partner' ? [
+              { id: 'partner-analytics', icon: '📈', label: 'Org Analytics' },
+              { id: 'partner-roster', icon: '👥', label: 'Sponsored Talent' },
+              { id: 'partner-payouts', icon: '💳', label: 'Payout Statements' },
+              { id: 'settings', icon: '⚙️', label: 'Settings' }
+            ] : activeWorkspace === 'tutor' ? [
+              { id: 'tutor-queue', icon: '✍️', label: 'Grading Queue' },
+              { id: 'tutor-sessions', icon: '📅', label: 'Office Hours' },
+              { id: 'settings', icon: '⚙️', label: 'Settings' }
+            ] : [
               { id: 'classroom', icon: '📚', label: 'Sofe Academy' },
               { id: 'business', icon: '💼', label: 'My Business' },
               { id: 'wallet', icon: '💰', label: 'Wallet' },
               { id: 'certificates', icon: '🎓', label: 'Certificate' },
               { id: 'leaderboard', icon: '🏆', label: 'Leaderboard' },
               { id: 'settings', icon: '⚙️', label: 'Settings' }
-            ].map((tab) => {
+            ]).map((tab) => {
               const isActive = activeTab === tab.id;
               return (
                 <button
@@ -838,26 +1322,28 @@ export default function DashboardClient() {
               );
             })}
 
-            <Link
-              href="/bounties"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.8rem',
-                padding: '0.65rem 0.8rem',
-                borderRadius: 8,
-                color: '#FFB800',
-                fontWeight: 600,
-                fontSize: '0.8rem',
-                textDecoration: 'none',
-                width: '100%',
-                overflow: 'hidden',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              <span style={{ fontSize: '1.1rem' }}>🎯</span>
-              {sidebarOpen && <span>Bounties Board</span>}
-            </Link>
+            {activeWorkspace === 'learner' && (
+              <Link
+                href="/bounties"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.8rem',
+                  padding: '0.65rem 0.8rem',
+                  borderRadius: 8,
+                  color: '#FFB800',
+                  fontWeight: 600,
+                  fontSize: '0.8rem',
+                  textDecoration: 'none',
+                  width: '100%',
+                  overflow: 'hidden',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                <span style={{ fontSize: '1.1rem' }}>🎯</span>
+                {sidebarOpen && <span>Bounties Board</span>}
+              </Link>
+            )}
 
             {isStaffOrAdmin && (
               <Link
@@ -1926,6 +2412,656 @@ export default function DashboardClient() {
               </div>
             </section>
           )}
+          {/* ═══════════════════════════════════════════ */}
+          {/* ── WORKSPACE PANELS: PROTOCOL CONSOLE ── */}
+          {/* ═══════════════════════════════════════════ */}
+
+          {/* PROTOCOL TAB 1: ACTIVE BOUNTIES */}
+          {activeTab === 'protocol-bounties' && (
+            <section>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+                <div>
+                  <div style={{ fontSize: '0.72rem', color: '#1428FF', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    🌐 Protocol Talent Operations
+                  </div>
+                  <h2 style={{ fontSize: '1.3rem', fontWeight: 800, marginTop: '0.2rem' }}>Protocol Bounties Console</h2>
+                  <p style={{ color: 'rgba(200,215,240,0.7)', fontSize: '0.78rem' }}>
+                    Deploy Web3 bounties, fund developer challenges, and source verified talent across Sofe Node chapters.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowCreateBountyModal(true)}
+                  style={{
+                    background: 'linear-gradient(135deg, #1428FF, #0014C8)',
+                    color: '#fff',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    borderRadius: 8,
+                    padding: '0.65rem 1.4rem',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 16px rgba(20,40,255,0.4)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem'
+                  }}
+                >
+                  <span>+</span> Create New Bounty
+                </button>
+              </div>
+
+              {/* Protocol Metrics Strip */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.75rem' }}>
+                <div style={{ background: '#0D1526', border: '1px solid rgba(20,40,255,0.2)', borderRadius: 10, padding: '1.2rem' }}>
+                  <div style={{ fontSize: '0.68rem', color: 'rgba(200,215,240,0.6)', textTransform: 'uppercase', fontWeight: 600 }}>Total Bounties</div>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#fff', marginTop: '0.3rem' }}>{protocolBounties.length}</div>
+                </div>
+                <div style={{ background: '#0D1526', border: '1px solid rgba(20,40,255,0.2)', borderRadius: 10, padding: '1.2rem' }}>
+                  <div style={{ fontSize: '0.68rem', color: 'rgba(200,215,240,0.6)', textTransform: 'uppercase', fontWeight: 600 }}>Active / Open</div>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#00c864', marginTop: '0.3rem' }}>
+                    {protocolBounties.filter((b) => b.status === 'open').length}
+                  </div>
+                </div>
+                <div style={{ background: '#0D1526', border: '1px solid rgba(20,40,255,0.2)', borderRadius: 10, padding: '1.2rem' }}>
+                  <div style={{ fontSize: '0.68rem', color: 'rgba(200,215,240,0.6)', textTransform: 'uppercase', fontWeight: 600 }}>Total Applicants</div>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#FFB800', marginTop: '0.3rem' }}>{protocolApplicants.length}</div>
+                </div>
+                <div style={{ background: '#0D1526', border: '1px solid rgba(20,40,255,0.2)', borderRadius: 10, padding: '1.2rem' }}>
+                  <div style={{ fontSize: '0.68rem', color: 'rgba(200,215,240,0.6)', textTransform: 'uppercase', fontWeight: 600 }}>Capital Deployed</div>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#7096FF', marginTop: '0.3rem' }}>
+                    ${protocolBounties.reduce((sum, b) => sum + (Number(b.reward_usd) || 0), 0).toLocaleString()}
+                  </div>
+                </div>
+              </div>
+
+              {/* Bounties Listing */}
+              <div style={{ background: '#0D1526', border: '1px solid rgba(20,40,255,0.2)', borderRadius: 12, padding: '1.5rem' }}>
+                <h3 style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: '1rem', borderBottom: '1px solid rgba(200,215,240,0.1)', paddingBottom: '0.6rem' }}>
+                  Protocol Bounties Pool
+                </h3>
+
+                {protocolLoading ? (
+                  <div style={{ textAlign: 'center', padding: '3rem', color: 'rgba(200,215,240,0.6)' }}>
+                    Loading bounties...
+                  </div>
+                ) : protocolBounties.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '3rem 1.5rem', background: '#080E1A', borderRadius: 8 }}>
+                    <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🎯</div>
+                    <div style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.3rem' }}>No Active Bounties Published Yet</div>
+                    <p style={{ color: 'rgba(200,215,240,0.6)', fontSize: '0.78rem', maxWidth: 450, margin: '0 auto 1.25rem' }}>
+                      Publish a bounty to tap into hundreds of certified smart contract developers, frontend builders, and technical researchers.
+                    </p>
+                    <button
+                      onClick={() => setShowCreateBountyModal(true)}
+                      style={{
+                        background: 'linear-gradient(135deg, #FF8A00, #E07800)',
+                        border: 'none',
+                        color: '#fff',
+                        borderRadius: 6,
+                        padding: '0.55rem 1.2rem',
+                        fontSize: '0.78rem',
+                        fontWeight: 700,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      + Create First Bounty
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1rem' }}>
+                    {protocolBounties.map((b) => (
+                      <div key={b.id} style={{ background: '#080E1A', border: '1px solid rgba(20,40,255,0.25)', borderRadius: 10, padding: '1.25rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                        <div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                            <span style={{
+                              background: b.category === 'dev' ? 'rgba(20,40,255,0.25)' : 'rgba(255,138,0,0.2)',
+                              color: b.category === 'dev' ? '#7096FF' : '#FFB800',
+                              border: `1px solid ${b.category === 'dev' ? 'rgba(20,40,255,0.5)' : 'rgba(255,138,0,0.5)'}`,
+                              borderRadius: 4,
+                              padding: '0.15rem 0.5rem',
+                              fontSize: '0.66rem',
+                              fontWeight: 700,
+                              textTransform: 'uppercase'
+                            }}>
+                              {b.category || 'General'}
+                            </span>
+                            <span style={{ fontSize: '0.74rem', color: b.status === 'open' ? '#00c864' : '#FFB800', fontWeight: 700 }}>
+                              ● {b.status?.toUpperCase() || 'OPEN'}
+                            </span>
+                          </div>
+                          <h4 style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: '0.35rem' }}>{b.title}</h4>
+                          <p style={{ fontSize: '0.74rem', color: 'rgba(200,215,240,0.7)', lineHeight: 1.4, marginBottom: '0.75rem', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                            {b.description || 'No description provided.'}
+                          </p>
+                        </div>
+                        <div style={{ borderTop: '1px solid rgba(200,215,240,0.08)', paddingTop: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div>
+                            <div style={{ fontSize: '0.62rem', color: 'rgba(200,215,240,0.5)', textTransform: 'uppercase' }}>Reward</div>
+                            <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#00c864' }}>
+                              ${(Number(b.reward_usd) || 0).toLocaleString()}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => setActiveTab('protocol-review')}
+                            style={{
+                              background: 'rgba(20,40,255,0.18)',
+                              border: '1px solid rgba(20,40,255,0.35)',
+                              color: '#fff',
+                              borderRadius: 6,
+                              padding: '0.4rem 0.8rem',
+                              fontSize: '0.72rem',
+                              fontWeight: 600,
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Review ({protocolApplicants.filter((a) => a.bounty_id === b.id).length})
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+
+          {/* PROTOCOL TAB 2: REVIEW TALENT APPLICANTS */}
+          {activeTab === 'protocol-review' && (
+            <section>
+              <div style={{ marginBottom: '1.5rem' }}>
+                <div style={{ fontSize: '0.72rem', color: '#1428FF', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Talent Submissions & Milestone Review
+                </div>
+                <h2 style={{ fontSize: '1.3rem', fontWeight: 800, marginTop: '0.2rem' }}>Review Developer Deliverables</h2>
+                <p style={{ color: 'rgba(200,215,240,0.7)', fontSize: '0.78rem' }}>
+                  Inspect submissions, test code implementations, and approve reward disbursements.
+                </p>
+              </div>
+
+              <div style={{ background: '#0D1526', border: '1px solid rgba(20,40,255,0.2)', borderRadius: 12, padding: '1.5rem' }}>
+                {protocolApplicants.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '3rem', color: 'rgba(200,215,240,0.6)' }}>
+                    No applicant deliverables pending review at this time.
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                    {protocolApplicants.map((app, idx) => (
+                      <div key={app.id || idx} style={{ background: '#080E1A', border: '1px solid rgba(20,40,255,0.18)', borderRadius: 8, padding: '1rem 1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.8rem' }}>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: '0.88rem' }}>{app.applicant_name || app.applicant_email || 'Verified Sofian Builder'}</div>
+                          <div style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)', marginTop: '0.2rem' }}>
+                            Applied for: <strong>{app.bounty_title || 'Web3 Engineering Bounty'}</strong>
+                          </div>
+                          {app.repo_url && (
+                            <a href={app.repo_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.72rem', color: '#7096FF', textDecoration: 'underline', marginTop: '0.25rem', display: 'inline-block' }}>
+                              🔗 View GitHub / Deliverable
+                            </a>
+                          )}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                          <span style={{ fontSize: '0.72rem', background: 'rgba(255,138,0,0.15)', color: '#FFB800', border: '1px solid rgba(255,138,0,0.3)', borderRadius: 4, padding: '0.25rem 0.55rem', fontWeight: 600 }}>
+                            {app.status || 'Under Review'}
+                          </span>
+                          <button
+                            onClick={() => {
+                              alert(`Deliverable for ${app.applicant_name || 'applicant'} approved! Reward disbursed.`);
+                            }}
+                            style={{ background: '#10b981', border: 'none', color: '#fff', borderRadius: 6, padding: '0.35rem 0.8rem', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}
+                          >
+                            ✓ Approve
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+
+          {/* PROTOCOL TAB 3: ECOSYSTEM ANALYTICS */}
+          {activeTab === 'protocol-analytics' && (
+            <section>
+              <div style={{ marginBottom: '1.5rem' }}>
+                <div style={{ fontSize: '0.72rem', color: '#1428FF', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Ecosystem Growth & Impact
+                </div>
+                <h2 style={{ fontSize: '1.3rem', fontWeight: 800, marginTop: '0.2rem' }}>Protocol Ecosystem Reach</h2>
+                <p style={{ color: 'rgba(200,215,240,0.7)', fontSize: '0.78rem' }}>
+                  Track adoption metrics, developer talent pipeline conversion, and grant efficiency across 50+ African university nodes.
+                </p>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.25rem' }}>
+                <div style={{ background: '#0D1526', border: '1px solid rgba(20,40,255,0.2)', borderRadius: 12, padding: '1.5rem' }}>
+                  <h4 style={{ fontSize: '0.88rem', fontWeight: 700, marginBottom: '0.6rem' }}>Regional Developer Footprint</h4>
+                  <p style={{ fontSize: '0.74rem', color: 'rgba(200,215,240,0.7)', marginBottom: '1rem' }}>Active applicants across key African technical hubs:</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.76rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>🇳🇬 Nigeria (UNILAG, UNN, OAU, FUTA)</span>
+                      <strong style={{ color: '#00c864' }}>68%</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>🇰🇪 Kenya (UoN, Strathmore)</span>
+                      <strong style={{ color: '#7096FF' }}>18%</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>🇬🇭 Ghana (UG Legon, KNUST)</span>
+                      <strong style={{ color: '#FFB800' }}>10%</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>🌍 Other African Chapters</span>
+                      <strong style={{ color: '#aaa' }}>4%</strong>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ background: '#0D1526', border: '1px solid rgba(20,40,255,0.2)', borderRadius: 12, padding: '1.5rem' }}>
+                  <h4 style={{ fontSize: '0.88rem', fontWeight: 700, marginBottom: '0.6rem' }}>Completion Velocity</h4>
+                  <p style={{ fontSize: '0.74rem', color: 'rgba(200,215,240,0.7)', marginBottom: '1rem' }}>Average deliverable lifecycle on Sofe Node:</p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.76rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>Average Time to First Submission:</span>
+                      <strong style={{ color: '#FFB800' }}>4.2 Days</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>Acceptance & Pass Rate:</span>
+                      <strong style={{ color: '#00c864' }}>92.4%</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>Community Bounty Retention:</span>
+                      <strong style={{ color: '#7096FF' }}>84.1%</strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* ═══════════════════════════════════════════ */}
+          {/* ── WORKSPACE PANELS: NODE COMMAND ── */}
+          {/* ═══════════════════════════════════════════ */}
+
+          {/* NODE TAB 1: CHAPTER METRICS */}
+          {activeTab === 'node-metrics' && (
+            <section>
+              <div style={{ marginBottom: '1.5rem' }}>
+                <div style={{ fontSize: '0.72rem', color: '#FF8A00', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  🌐 Campus Node Command
+                </div>
+                <h2 style={{ fontSize: '1.3rem', fontWeight: 800, marginTop: '0.2rem' }}>
+                  Chapter Overview: <span style={{ color: '#FF8A00' }}>{myChapter?.name || userData?.node_label || 'Campus Node'}</span>
+                </h2>
+                <p style={{ color: 'rgba(200,215,240,0.7)', fontSize: '0.78rem' }}>
+                  Real-time activity, builder progress, and upcoming campus meetups.
+                </p>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.75rem' }}>
+                <div style={{ background: '#0D1526', border: '1px solid rgba(255,138,0,0.25)', borderRadius: 10, padding: '1.2rem' }}>
+                  <div style={{ fontSize: '0.68rem', color: 'rgba(200,215,240,0.6)', textTransform: 'uppercase', fontWeight: 600 }}>Node Students</div>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#fff', marginTop: '0.3rem' }}>{nodeStudents.length}</div>
+                </div>
+                <div style={{ background: '#0D1526', border: '1px solid rgba(255,138,0,0.25)', borderRadius: 10, padding: '1.2rem' }}>
+                  <div style={{ fontSize: '0.68rem', color: 'rgba(200,215,240,0.6)', textTransform: 'uppercase', fontWeight: 600 }}>Foundation Certified</div>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#00c864', marginTop: '0.3rem' }}>
+                    {nodeStudents.filter((s) => s.foundation_complete).length}
+                  </div>
+                </div>
+                <div style={{ background: '#0D1526', border: '1px solid rgba(255,138,0,0.25)', borderRadius: 10, padding: '1.2rem' }}>
+                  <div style={{ fontSize: '0.68rem', color: 'rgba(200,215,240,0.6)', textTransform: 'uppercase', fontWeight: 600 }}>Chapter Treasury</div>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#FFB800', marginTop: '0.3rem' }}>
+                    ₦{nodeTreasuryBalance.toLocaleString('en-NG')}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ background: '#0D1526', border: '1px solid rgba(255,138,0,0.25)', borderRadius: 12, padding: '1.5rem' }}>
+                <h3 style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: '0.8rem' }}>Next Campus Node Meetup</h3>
+                <div style={{ background: '#080E1A', border: '1px solid rgba(200,215,240,0.1)', borderRadius: 8, padding: '1.2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>Bi-Weekly Web3 Workshop & Hack Session</div>
+                    <div style={{ fontSize: '0.76rem', color: 'rgba(200,215,240,0.7)', marginTop: '0.2rem' }}>
+                      📍 Campus Innovation Hub • Saturday, 10:00 AM - 1:00 PM
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => alert('Meetup details and RSVP link copied!')}
+                    style={{ background: 'rgba(255,138,0,0.15)', border: '1px solid #FF8A00', color: '#FFB800', borderRadius: 6, padding: '0.45rem 1rem', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    Share RSVP Link
+                  </button>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* NODE TAB 2: STUDENT ROSTER */}
+          {activeTab === 'node-roster' && (
+            <section>
+              <div style={{ marginBottom: '1.5rem' }}>
+                <div style={{ fontSize: '0.72rem', color: '#FF8A00', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Chapter Directory
+                </div>
+                <h2 style={{ fontSize: '1.3rem', fontWeight: 800, marginTop: '0.2rem' }}>Chapter Student Roster</h2>
+                <p style={{ color: 'rgba(200,215,240,0.7)', fontSize: '0.78rem' }}>
+                  Track student enrolment, learning velocity, and milestone progress.
+                </p>
+              </div>
+
+              <div style={{ background: '#0D1526', border: '1px solid rgba(20,40,255,0.2)', borderRadius: 12, padding: '1.25rem', overflowX: 'auto' }}>
+                {nodeStudents.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '2rem', color: 'rgba(200,215,240,0.6)' }}>
+                    No students currently mapped to this chapter.
+                  </div>
+                ) : (
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid rgba(200,215,240,0.1)', textAlign: 'left', color: 'rgba(200,215,240,0.6)' }}>
+                        <th style={{ padding: '0.65rem' }}>Student</th>
+                        <th style={{ padding: '0.65rem' }}>Email</th>
+                        <th style={{ padding: '0.65rem' }}>Status</th>
+                        <th style={{ padding: '0.65rem' }}>Level</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {nodeStudents.map((st, i) => (
+                        <tr key={st.id || i} style={{ borderBottom: '1px solid rgba(200,215,240,0.06)' }}>
+                          <td style={{ padding: '0.65rem', fontWeight: 600 }}>{`${st.first_name || ''} ${st.last_name || ''}`.trim() || 'Sofian Student'}</td>
+                          <td style={{ padding: '0.65rem', color: 'rgba(200,215,240,0.7)' }}>{st.email || '—'}</td>
+                          <td style={{ padding: '0.65rem' }}>
+                            <span style={{
+                              background: st.foundation_complete ? 'rgba(0,200,100,0.15)' : 'rgba(255,138,0,0.15)',
+                              color: st.foundation_complete ? '#00c864' : '#FFB800',
+                              border: `1px solid ${st.foundation_complete ? 'rgba(0,200,100,0.3)' : 'rgba(255,138,0,0.3)'}`,
+                              borderRadius: 4,
+                              padding: '0.15rem 0.5rem',
+                              fontSize: '0.66rem',
+                              fontWeight: 700
+                            }}>
+                              {st.foundation_complete ? '✓ Certified' : 'Learning'}
+                            </span>
+                          </td>
+                          <td style={{ padding: '0.65rem', color: '#7096FF' }}>{st.xp_total || 0} XP</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </section>
+          )}
+
+          {/* NODE TAB 3: CHAPTER TREASURY */}
+          {activeTab === 'node-treasury' && (
+            <section>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+                <div>
+                  <div style={{ fontSize: '0.72rem', color: '#FF8A00', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Financial Management
+                  </div>
+                  <h2 style={{ fontSize: '1.3rem', fontWeight: 800, marginTop: '0.2rem' }}>Chapter Treasury & Grants</h2>
+                  <p style={{ color: 'rgba(200,215,240,0.7)', fontSize: '0.78rem' }}>
+                    Request chapter operational budgets, venue rentals, and event disbursements.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowNodeDisbModal(true)}
+                  style={{
+                    background: 'linear-gradient(135deg, #FF8A00, #E07800)',
+                    border: 'none',
+                    color: '#fff',
+                    borderRadius: 8,
+                    padding: '0.65rem 1.4rem',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 16px rgba(255,138,0,0.35)'
+                  }}
+                >
+                  + Request Node Grant
+                </button>
+              </div>
+
+              <div style={{ background: '#0D1526', border: '1px solid rgba(255,138,0,0.25)', borderRadius: 12, padding: '1.5rem', marginBottom: '1.5rem' }}>
+                <div style={{ fontSize: '0.74rem', color: 'rgba(200,215,240,0.6)', textTransform: 'uppercase', fontWeight: 600 }}>Available Treasury Balance</div>
+                <div style={{ fontSize: '2rem', fontWeight: 800, color: '#00c864', marginTop: '0.4rem' }}>
+                  ₦{nodeTreasuryBalance.toLocaleString('en-NG')}
+                </div>
+                <div style={{ fontSize: '0.74rem', color: 'rgba(200,215,240,0.7)', marginTop: '0.3rem' }}>
+                  Allocated by Sofe Core Council for {myChapter?.name || userData?.node_label || 'Campus Node'} activities.
+                </div>
+              </div>
+
+              <div style={{ background: '#0D1526', border: '1px solid rgba(20,40,255,0.2)', borderRadius: 12, padding: '1.5rem' }}>
+                <h3 style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: '0.8rem', borderBottom: '1px solid rgba(200,215,240,0.1)', paddingBottom: '0.5rem' }}>
+                  Disbursement Requests History
+                </h3>
+                {nodeDisbursements.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '2rem', color: 'rgba(200,215,240,0.5)', fontSize: '0.78rem' }}>
+                    No disbursement requests filed yet.
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                    {nodeDisbursements.map((d, idx) => (
+                      <div key={d.id || idx} style={{ background: '#080E1A', border: '1px solid rgba(200,215,240,0.08)', borderRadius: 8, padding: '0.85rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: '0.84rem' }}>{d.purpose || 'Chapter Grant'}</div>
+                          <div style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.6)' }}>To: {d.bank_name} ({d.account_number})</div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontWeight: 800, color: '#00c864', fontSize: '0.9rem' }}>₦{(Number(d.amount) || 0).toLocaleString('en-NG')}</div>
+                          <span style={{ fontSize: '0.66rem', color: d.status === 'approved' ? '#00c864' : '#FFB800', fontWeight: 700 }}>
+                            {d.status?.toUpperCase() || 'PENDING'}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+
+          {/* ═══════════════════════════════════════════ */}
+          {/* ── WORKSPACE PANELS: PARTNER PORTAL ── */}
+          {/* ═══════════════════════════════════════════ */}
+
+          {/* PARTNER TAB 1: COHORT ANALYTICS */}
+          {activeTab === 'partner-analytics' && (
+            <section>
+              <div style={{ marginBottom: '1.5rem' }}>
+                <div style={{ fontSize: '0.72rem', color: '#00c864', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  🤝 Enterprise & Partner Operations
+                </div>
+                <h2 style={{ fontSize: '1.3rem', fontWeight: 800, marginTop: '0.2rem' }}>
+                  Partner Cohort: <span style={{ color: '#00c864' }}>{userData?.organization_name || userData?.company_name || 'Organization Portal'}</span>
+                </h2>
+                <p style={{ color: 'rgba(200,215,240,0.7)', fontSize: '0.78rem' }}>
+                  Monitor sponsored students, completion milestones, and institutional impact metrics.
+                </p>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.75rem' }}>
+                <div style={{ background: '#0D1526', border: '1px solid rgba(0,200,100,0.25)', borderRadius: 10, padding: '1.2rem' }}>
+                  <div style={{ fontSize: '0.68rem', color: 'rgba(200,215,240,0.6)', textTransform: 'uppercase', fontWeight: 600 }}>Sponsored Scholars</div>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#fff', marginTop: '0.3rem' }}>{partnerStudents.length}</div>
+                </div>
+                <div style={{ background: '#0D1526', border: '1px solid rgba(0,200,100,0.25)', borderRadius: 10, padding: '1.2rem' }}>
+                  <div style={{ fontSize: '0.68rem', color: 'rgba(200,215,240,0.6)', textTransform: 'uppercase', fontWeight: 600 }}>Completion Rate</div>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#00c864', marginTop: '0.3rem' }}>
+                    {partnerStudents.length > 0 ? Math.round((partnerStudents.filter((s) => s.foundation_complete).length / partnerStudents.length) * 100) : 0}%
+                  </div>
+                </div>
+                <div style={{ background: '#0D1526', border: '1px solid rgba(0,200,100,0.25)', borderRadius: 10, padding: '1.2rem' }}>
+                  <div style={{ fontSize: '0.68rem', color: 'rgba(200,215,240,0.6)', textTransform: 'uppercase', fontWeight: 600 }}>Career Placements</div>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#FFB800', marginTop: '0.3rem' }}>
+                    {partnerStudents.filter((s) => s.career_enrolled).length}
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* PARTNER TAB 2: SPONSORED ROSTER */}
+          {activeTab === 'partner-roster' && (
+            <section>
+              <div style={{ marginBottom: '1.5rem' }}>
+                <div style={{ fontSize: '0.72rem', color: '#00c864', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Talent Cohort
+                </div>
+                <h2 style={{ fontSize: '1.3rem', fontWeight: 800, marginTop: '0.2rem' }}>Sponsored Learners Directory</h2>
+              </div>
+              <div style={{ background: '#0D1526', border: '1px solid rgba(0,200,100,0.25)', borderRadius: 12, padding: '1.25rem', overflowX: 'auto' }}>
+                {partnerStudents.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '2rem', color: 'rgba(200,215,240,0.6)' }}>
+                    No students currently mapped under your organization's cohort.
+                  </div>
+                ) : (
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid rgba(200,215,240,0.1)', textAlign: 'left', color: 'rgba(200,215,240,0.6)' }}>
+                        <th style={{ padding: '0.65rem' }}>Scholar</th>
+                        <th style={{ padding: '0.65rem' }}>Email</th>
+                        <th style={{ padding: '0.65rem' }}>Foundation</th>
+                        <th style={{ padding: '0.65rem' }}>Progress</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {partnerStudents.map((st, idx) => (
+                        <tr key={st.id || idx} style={{ borderBottom: '1px solid rgba(200,215,240,0.06)' }}>
+                          <td style={{ padding: '0.65rem', fontWeight: 600 }}>{`${st.first_name || ''} ${st.last_name || ''}`.trim() || 'Sponsored Scholar'}</td>
+                          <td style={{ padding: '0.65rem', color: 'rgba(200,215,240,0.7)' }}>{st.email || '—'}</td>
+                          <td style={{ padding: '0.65rem' }}>
+                            <span style={{ color: st.foundation_complete ? '#00c864' : '#FFB800', fontWeight: 700 }}>
+                              {st.foundation_complete ? '✓ Completed' : 'In Progress'}
+                            </span>
+                          </td>
+                          <td style={{ padding: '0.65rem', color: '#7096FF' }}>{st.xp_total || 0} XP</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </section>
+          )}
+
+          {/* PARTNER TAB 3: PAYOUT STATEMENTS */}
+          {activeTab === 'partner-payouts' && (
+            <section>
+              <div style={{ marginBottom: '1.5rem' }}>
+                <div style={{ fontSize: '0.72rem', color: '#00c864', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Institutional Billing
+                </div>
+                <h2 style={{ fontSize: '1.3rem', fontWeight: 800, marginTop: '0.2rem' }}>Sponsorship Financial Statements</h2>
+              </div>
+              <div style={{ background: '#0D1526', border: '1px solid rgba(0,200,100,0.25)', borderRadius: 12, padding: '1.5rem', textAlign: 'center' }}>
+                <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>💳</div>
+                <div style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.3rem' }}>Institutional Grants Paid to Date</div>
+                <p style={{ color: 'rgba(200,215,240,0.7)', fontSize: '0.78rem' }}>
+                  All invoices and corporate CSR documentation are reconciled automatically upon milestone verification.
+                </p>
+              </div>
+            </section>
+          )}
+
+          {/* ═══════════════════════════════════════════ */}
+          {/* ── WORKSPACE PANELS: TUTOR DESK ── */}
+          {/* ═══════════════════════════════════════════ */}
+
+          {/* TUTOR TAB 1: GRADING QUEUE */}
+          {activeTab === 'tutor-queue' && (
+            <section>
+              <div style={{ marginBottom: '1.5rem' }}>
+                <div style={{ fontSize: '0.72rem', color: '#FF8A00', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Academy Instruction
+                </div>
+                <h2 style={{ fontSize: '1.3rem', fontWeight: 800, marginTop: '0.2rem' }}>Assignment & Project Grading Queue</h2>
+                <p style={{ color: 'rgba(200,215,240,0.7)', fontSize: '0.78rem' }}>
+                  Review code deliverables, issue milestone badges, and guide learners.
+                </p>
+              </div>
+
+              <div style={{ background: '#0D1526', border: '1px solid rgba(20,40,255,0.2)', borderRadius: 12, padding: '1.25rem' }}>
+                {tutorSubmissions.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '2rem', color: 'rgba(200,215,240,0.6)' }}>
+                    No student submissions waiting in queue.
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    {tutorSubmissions.map((sub, idx) => (
+                      <div key={sub.id || idx} style={{ background: '#080E1A', border: '1px solid rgba(20,40,255,0.2)', borderRadius: 8, padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.8rem' }}>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: '0.88rem' }}>{sub.student_name || sub.user_email || 'Student Submission'}</div>
+                          <div style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)', marginTop: '0.2rem' }}>
+                            Course: <strong>{sub.course_id || 'Web3 Foundation'}</strong> • Task: {sub.task_id || 'Milestone Assessment'}
+                          </div>
+                          {sub.link && (
+                            <a href={sub.link} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.72rem', color: '#7096FF', textDecoration: 'underline', marginTop: '0.25rem', display: 'inline-block' }}>
+                              🔗 View Student Submission Link
+                            </a>
+                          )}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                          <span style={{ fontSize: '0.72rem', color: sub.status === 'approved' ? '#00c864' : '#FFB800', fontWeight: 700 }}>
+                            ● {sub.status?.toUpperCase() || 'PENDING'}
+                          </span>
+                          <button
+                            onClick={() => {
+                              setSelectedSubForGrading(sub);
+                              setShowGradingModal(true);
+                            }}
+                            style={{
+                              background: '#1428FF',
+                              border: 'none',
+                              color: '#fff',
+                              borderRadius: 6,
+                              padding: '0.4rem 0.9rem',
+                              fontSize: '0.74rem',
+                              fontWeight: 700,
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Grade Deliverable
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+
+          {/* TUTOR TAB 2: OFFICE HOURS */}
+          {activeTab === 'tutor-sessions' && (
+            <section>
+              <div style={{ marginBottom: '1.5rem' }}>
+                <div style={{ fontSize: '0.72rem', color: '#FF8A00', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Mentorship Schedule
+                </div>
+                <h2 style={{ fontSize: '1.3rem', fontWeight: 800, marginTop: '0.2rem' }}>Office Hours & Live Mentoring</h2>
+              </div>
+              <div style={{ background: '#0D1526', border: '1px solid rgba(20,40,255,0.2)', borderRadius: 12, padding: '1.5rem' }}>
+                <p style={{ fontSize: '0.78rem', color: 'rgba(200,215,240,0.8)', marginBottom: '1rem' }}>
+                  Your registered tutor mentoring slots for Sofe Academy students:
+                </p>
+                <div style={{ background: '#080E1A', border: '1px solid rgba(20,40,255,0.2)', borderRadius: 8, padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '0.85rem' }}>Weekly Smart Contract Q&A</div>
+                    <div style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.6)' }}>Wednesdays & Fridays • 4:00 PM - 6:00 PM WAT</div>
+                  </div>
+                  <button
+                    onClick={() => alert('Live classroom link copied to clipboard!')}
+                    style={{ background: 'rgba(20,40,255,0.2)', border: '1px solid #1428FF', color: '#7096FF', borderRadius: 6, padding: '0.4rem 0.8rem', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    Open Live Room
+                  </button>
+                </div>
+              </div>
+            </section>
+          )}
         </main>
       </div>
 
@@ -2032,6 +3168,364 @@ export default function DashboardClient() {
           </div>
         </div>
       )}
+      {/* ── CREATE BOUNTY MODAL (PROTOCOL PORTAL) ── */}
+      {showCreateBountyModal && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0,0,0,0.8)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '1rem'
+        }}>
+          <div style={{
+            background: '#0D1526',
+            border: '1px solid rgba(20,40,255,0.4)',
+            borderRadius: 12,
+            padding: '1.75rem',
+            width: '100%',
+            maxWidth: 520,
+            maxHeight: '90vh',
+            overflowY: 'auto'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+              <h3 style={{ fontSize: '1.15rem', fontWeight: 800 }}>Publish Protocol Bounty</h3>
+              <button
+                onClick={() => setShowCreateBountyModal(false)}
+                style={{ background: 'transparent', border: 'none', color: 'rgba(200,215,240,0.6)', fontSize: '1.2rem', cursor: 'pointer' }}
+              >
+                ✕
+              </button>
+            </div>
+            <p style={{ fontSize: '0.76rem', color: 'rgba(200,215,240,0.7)', marginBottom: '1.25rem' }}>
+              Sofe builders across 50+ African university nodes will be alerted once published.
+            </p>
+
+            <form onSubmit={handleCreateProtocolBounty} style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+              <div>
+                <label style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)' }}>Bounty Title *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Build an Escrow Smart Contract in Solidity"
+                  value={createBountyForm.title}
+                  onChange={(e) => setCreateBountyForm({ ...createBountyForm, title: e.target.value })}
+                  style={{ width: '100%', background: '#080E1A', border: '1px solid rgba(20,40,255,0.25)', borderRadius: 6, padding: '0.6rem', color: '#fff', fontSize: '0.85rem', marginTop: 4 }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
+                <div>
+                  <label style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)' }}>Category</label>
+                  <select
+                    value={createBountyForm.category}
+                    onChange={(e) => setCreateBountyForm({ ...createBountyForm, category: e.target.value })}
+                    style={{ width: '100%', background: '#080E1A', border: '1px solid rgba(20,40,255,0.25)', borderRadius: 6, padding: '0.6rem', color: '#fff', fontSize: '0.8rem', marginTop: 4 }}
+                  >
+                    <option value="dev">Smart Contract / Dev</option>
+                    <option value="frontend">Frontend / DApp</option>
+                    <option value="security">Security & Audit</option>
+                    <option value="design">UI/UX Design</option>
+                    <option value="content">Technical Writing</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)' }}>Reward (USD) *</label>
+                  <input
+                    type="number"
+                    required
+                    min="50"
+                    placeholder="e.g. 500"
+                    value={createBountyForm.reward_usd}
+                    onChange={(e) => setCreateBountyForm({ ...createBountyForm, reward_usd: e.target.value })}
+                    style={{ width: '100%', background: '#080E1A', border: '1px solid rgba(20,40,255,0.25)', borderRadius: 6, padding: '0.6rem', color: '#fff', fontSize: '0.85rem', marginTop: 4 }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)' }}>Submission Deadline</label>
+                <input
+                  type="date"
+                  value={createBountyForm.deadline}
+                  onChange={(e) => setCreateBountyForm({ ...createBountyForm, deadline: e.target.value })}
+                  style={{ width: '100%', background: '#080E1A', border: '1px solid rgba(20,40,255,0.25)', borderRadius: 6, padding: '0.6rem', color: '#fff', fontSize: '0.8rem', marginTop: 4 }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)' }}>Description & Objectives</label>
+                <textarea
+                  rows="3"
+                  placeholder="Detail the scope of the deliverable..."
+                  value={createBountyForm.description}
+                  onChange={(e) => setCreateBountyForm({ ...createBountyForm, description: e.target.value })}
+                  style={{ width: '100%', background: '#080E1A', border: '1px solid rgba(20,40,255,0.25)', borderRadius: 6, padding: '0.6rem', color: '#fff', fontSize: '0.8rem', marginTop: 4 }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)' }}>Requirements / Acceptance Criteria</label>
+                <textarea
+                  rows="2"
+                  placeholder="e.g. GitHub repository with 100% test coverage and live testnet deployment"
+                  value={createBountyForm.requirements}
+                  onChange={(e) => setCreateBountyForm({ ...createBountyForm, requirements: e.target.value })}
+                  style={{ width: '100%', background: '#080E1A', border: '1px solid rgba(20,40,255,0.25)', borderRadius: 6, padding: '0.6rem', color: '#fff', fontSize: '0.8rem', marginTop: 4 }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.8rem', marginTop: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowCreateBountyModal(false)}
+                  style={{ flex: 1, background: 'transparent', border: '1px solid rgba(200,215,240,0.2)', color: 'rgba(200,215,240,0.7)', borderRadius: 6, padding: '0.65rem', fontSize: '0.78rem', cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={createBountySubmitting}
+                  style={{ flex: 1, background: '#1428FF', border: 'none', color: '#fff', borderRadius: 6, padding: '0.65rem', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}
+                >
+                  {createBountySubmitting ? 'Deploying...' : 'Deploy Bounty'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── NODE DISBURSEMENT REQUEST MODAL ── */}
+      {showNodeDisbModal && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0,0,0,0.8)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '1rem'
+        }}>
+          <div style={{
+            background: '#0D1526',
+            border: '1px solid rgba(255,138,0,0.4)',
+            borderRadius: 12,
+            padding: '1.75rem',
+            width: '100%',
+            maxWidth: 480
+          }}>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 800, marginBottom: '0.4rem' }}>Request Chapter Grant</h3>
+            <p style={{ fontSize: '0.76rem', color: 'rgba(200,215,240,0.7)', marginBottom: '1.25rem' }}>
+              Available chapter balance: <strong>₦{nodeTreasuryBalance.toLocaleString('en-NG')}</strong>
+            </p>
+
+            <form onSubmit={handleNodeDisbSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+              <div>
+                <label style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)' }}>Amount (NGN) *</label>
+                <input
+                  type="number"
+                  required
+                  min="5000"
+                  max={nodeTreasuryBalance}
+                  placeholder={`Max ₦${nodeTreasuryBalance.toLocaleString('en-NG')}`}
+                  value={nodeDisbForm.amount}
+                  onChange={(e) => setNodeDisbForm({ ...nodeDisbForm, amount: e.target.value })}
+                  style={{ width: '100%', background: '#080E1A', border: '1px solid rgba(20,40,255,0.25)', borderRadius: 6, padding: '0.6rem', color: '#fff', fontSize: '0.85rem', marginTop: 4 }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)' }}>Purpose / Event Logistics *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Venue sound system & refreshments for Saturday meetup"
+                  value={nodeDisbForm.purpose}
+                  onChange={(e) => setNodeDisbForm({ ...nodeDisbForm, purpose: e.target.value })}
+                  style={{ width: '100%', background: '#080E1A', border: '1px solid rgba(20,40,255,0.25)', borderRadius: 6, padding: '0.6rem', color: '#fff', fontSize: '0.8rem', marginTop: 4 }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
+                <div>
+                  <label style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)' }}>Bank Name</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Access Bank"
+                    value={nodeDisbForm.bankName}
+                    onChange={(e) => setNodeDisbForm({ ...nodeDisbForm, bankName: e.target.value })}
+                    style={{ width: '100%', background: '#080E1A', border: '1px solid rgba(20,40,255,0.25)', borderRadius: 6, padding: '0.6rem', color: '#fff', fontSize: '0.8rem', marginTop: 4 }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)' }}>Account Number</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="10-digit number"
+                    value={nodeDisbForm.accountNumber}
+                    onChange={(e) => setNodeDisbForm({ ...nodeDisbForm, accountNumber: e.target.value })}
+                    style={{ width: '100%', background: '#080E1A', border: '1px solid rgba(20,40,255,0.25)', borderRadius: 6, padding: '0.6rem', color: '#fff', fontSize: '0.8rem', marginTop: 4 }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)' }}>Account Name</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Account holder name"
+                  value={nodeDisbForm.accountName}
+                  onChange={(e) => setNodeDisbForm({ ...nodeDisbForm, accountName: e.target.value })}
+                  style={{ width: '100%', background: '#080E1A', border: '1px solid rgba(20,40,255,0.25)', borderRadius: 6, padding: '0.6rem', color: '#fff', fontSize: '0.8rem', marginTop: 4 }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.8rem', marginTop: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowNodeDisbModal(false)}
+                  style={{ flex: 1, background: 'transparent', border: '1px solid rgba(200,215,240,0.2)', color: 'rgba(200,215,240,0.7)', borderRadius: 6, padding: '0.65rem', fontSize: '0.78rem', cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={nodeDisbSubmitting}
+                  style={{ flex: 1, background: '#FF8A00', border: 'none', color: '#fff', borderRadius: 6, padding: '0.65rem', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}
+                >
+                  {nodeDisbSubmitting ? 'Submitting...' : 'Submit Request'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── TUTOR GRADING MODAL ── */}
+      {showGradingModal && selectedSubForGrading && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0,0,0,0.8)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '1rem'
+        }}>
+          <div style={{
+            background: '#0D1526',
+            border: '1px solid rgba(20,40,255,0.4)',
+            borderRadius: 12,
+            padding: '1.75rem',
+            width: '100%',
+            maxWidth: 480
+          }}>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 800, marginBottom: '0.4rem' }}>Grade Student Assessment</h3>
+            <p style={{ fontSize: '0.76rem', color: 'rgba(200,215,240,0.7)', marginBottom: '1.25rem' }}>
+              Student: <strong>{selectedSubForGrading.student_name || selectedSubForGrading.user_email}</strong> • Task: <strong>{selectedSubForGrading.task_id || 'Milestone'}</strong>
+            </p>
+
+            <form onSubmit={handleGradeSubmission} style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
+                <div>
+                  <label style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)' }}>Outcome</label>
+                  <select
+                    value={gradePassed ? 'passed' : 'failed'}
+                    onChange={(e) => setGradePassed(e.target.value === 'passed')}
+                    style={{ width: '100%', background: '#080E1A', border: '1px solid rgba(20,40,255,0.25)', borderRadius: 6, padding: '0.6rem', color: '#fff', fontSize: '0.8rem', marginTop: 4 }}
+                  >
+                    <option value="passed">Approved / Pass</option>
+                    <option value="failed">Needs Revision</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)' }}>Score (0-100)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={gradeScore}
+                    onChange={(e) => setGradeScore(e.target.value)}
+                    style={{ width: '100%', background: '#080E1A', border: '1px solid rgba(20,40,255,0.25)', borderRadius: 6, padding: '0.6rem', color: '#fff', fontSize: '0.85rem', marginTop: 4 }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)' }}>Tutor Feedback / Notes</label>
+                <textarea
+                  rows="3"
+                  placeholder="Provide constructive feedback to help the learner improve..."
+                  value={gradeFeedback}
+                  onChange={(e) => setGradeFeedback(e.target.value)}
+                  style={{ width: '100%', background: '#080E1A', border: '1px solid rgba(20,40,255,0.25)', borderRadius: 6, padding: '0.6rem', color: '#fff', fontSize: '0.8rem', marginTop: 4 }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.8rem', marginTop: '0.5rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowGradingModal(false)}
+                  style={{ flex: 1, background: 'transparent', border: '1px solid rgba(200,215,240,0.2)', color: 'rgba(200,215,240,0.7)', borderRadius: 6, padding: '0.65rem', fontSize: '0.78rem', cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={gradingSubmitting}
+                  style={{ flex: 1, background: '#10b981', border: 'none', color: '#fff', borderRadius: 6, padding: '0.65rem', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}
+                >
+                  {gradingSubmitting ? 'Saving...' : 'Submit Grade'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── MOBILE FLOATING BOTTOM DOCK WITH TRACKING PILL ── */}
+      <div className="dash-mobile-dock">
+        {getDockItems().map((item) => {
+          const isActive = activeTab === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => {
+                setActiveTab(item.id);
+                if (item.id === 'leaderboard') loadLeaderboardData(lbTab);
+              }}
+              className={`dash-dock-item ${isActive ? 'active' : ''}`}
+            >
+              <span className="dash-dock-icon">{item.icon}</span>
+              <span>{item.label}</span>
+            </button>
+          );
+        })}
+        {availableWorkspaces.length > 1 && (
+          <button
+            onClick={() => {
+              const nextIdx = (availableWorkspaces.findIndex((w) => w.id === activeWorkspace) + 1) % availableWorkspaces.length;
+              handleSwitchWorkspace(availableWorkspaces[nextIdx].id);
+            }}
+            className="dash-dock-item"
+            title="Switch Workspace"
+          >
+            <span className="dash-dock-icon">🔄</span>
+            <span>Switch</span>
+          </button>
+        )}
+      </div>
     </div>
   );
 }

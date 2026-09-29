@@ -16,7 +16,13 @@ export default function Nav() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  if (pathname?.startsWith('/admin') || pathname?.startsWith('/dashboard') || pathname?.startsWith('/course-view')) {
+  if (
+    pathname?.startsWith('/admin') ||
+    pathname?.startsWith('/dashboard') ||
+    pathname?.startsWith('/course-view') ||
+    pathname === '/login' ||
+    pathname === '/signup'
+  ) {
     return null;
   }
 
@@ -33,22 +39,38 @@ export default function Nav() {
     setMobServOpen(false);
   }
 
+  const isLinkActive = (href) => {
+    if (href === '/') return pathname === '/';
+    return pathname?.startsWith(href);
+  };
+
   return (
     <>
-      <nav
-        id="nav"
-        style={scrolled ? { background: 'rgba(4,8,16,0.97)' } : undefined}
-      >
-        <Link href="/" className="nav-logo">
-          <img src="/images/Nodes/SofeLogoHome.png" className="logo-img" alt="Sofe Node Logo" />
-          <span>SOFE <span className="logo-word-node">NODE</span></span>
+      <nav id="nav">
+        <Link href="/" className="nav-logo" aria-label="Sofe Node">
+          <img
+            src="/images/Nodes/SofeLogoHome.png"
+            className="logo-img"
+            alt="Sofe Node"
+            style={{ height: '38px', width: 'auto', objectFit: 'contain' }}
+          />
         </Link>
 
         <ul className="nav-links">
-          <li><Link href="/">Home</Link></li>
-          <li><Link href="/about">About Us</Link></li>
+          <li>
+            <Link href="/" className={isLinkActive('/') && pathname === '/' ? 'active-pill' : ''}>
+              Home
+            </Link>
+          </li>
+          <li>
+            <Link href="/about" className={isLinkActive('/about') ? 'active-pill' : ''}>
+              About Us
+            </Link>
+          </li>
           <li className="nav-dropdown">
-            <Link href="/services">Services</Link>
+            <Link href="/services" className={isLinkActive('/services') ? 'active-pill' : ''}>
+              Services
+            </Link>
             <div className="nav-dropdown-menu">
               <div className="nav-dropdown-panel">
                 <Link href="/services/talent">
@@ -63,10 +85,26 @@ export default function Nav() {
               </div>
             </div>
           </li>
-          <li><Link href="/academy">Academy</Link></li>
-          <li><Link href="/bce">BCE</Link></li>
-          <li><Link href="/bounties">Bounties</Link></li>
-          <li><Link href="/dashboard">Dashboard</Link></li>
+          <li>
+            <Link href="/academy" className={isLinkActive('/academy') ? 'active-pill' : ''}>
+              Academy
+            </Link>
+          </li>
+          <li>
+            <Link href="/bce" className={isLinkActive('/bce') ? 'active-pill' : ''}>
+              BCE
+            </Link>
+          </li>
+          <li>
+            <Link href="/bounties" className={isLinkActive('/bounties') ? 'active-pill' : ''}>
+              Bounties
+            </Link>
+          </li>
+          <li>
+            <Link href="/dashboard" className={isLinkActive('/dashboard') ? 'active-pill' : ''}>
+              Dashboard
+            </Link>
+          </li>
         </ul>
 
         <div className="nav-right">

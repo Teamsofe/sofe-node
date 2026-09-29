@@ -122,8 +122,9 @@
   @media(max-width:768px) {
     .auth-page { grid-template-columns: 1fr; }
     .auth-brand { display: none; }
-    .auth-form-panel { padding: 2rem 1.5rem; }
+    .auth-form-panel { padding: 2.5rem 1.5rem; }
     .form-row-2 { grid-template-columns: 1fr; }
+    .auth-mobile-logo { display: block !important; }
   }
   body.light { --black:#F0F4FF; --deep:#E4EAFF; --panel:#FFFFFF; --border:rgba(20,40,255,0.14); --white:#0A0F24; --muted:rgba(20,30,70,0.55); }
   body.light #hexCanvas { opacity: .12; }

@@ -82,20 +82,20 @@ export default function AcademyClient() {
   };
 
   return (
-    <div style={{ background: '#040810', color: '#c8d7f0', minHeight: '100vh', fontFamily: 'Poppins, sans-serif' }}>
+    <div style={{ background: 'var(--black)', color: 'var(--white)', minHeight: '100vh', fontFamily: 'Poppins, sans-serif', transition: 'background .3s, color .3s' }}>
       {/* HERO SECTION */}
       <section style={{
-        padding: '5rem 1.5rem 3rem',
+        padding: '7rem 1.5rem 3rem',
         textAlign: 'center',
         background: 'radial-gradient(circle at 20% 20%, rgba(20,40,255,.12), transparent 50%), radial-gradient(circle at 80% 30%, rgba(255,138,0,.08), transparent 50%)'
       }}>
-        <div style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#FF8A00', marginBottom: '0.8rem' }}>
+        <div style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'var(--orange)', marginBottom: '0.8rem' }}>
           📚 Sofe Academy
         </div>
-        <h1 style={{ fontSize: 'clamp(2rem, 5vw, 3.2rem)', fontWeight: 800, lineHeight: 1.15, marginBottom: '1rem', color: '#fff' }}>
-          Master Web3. Build Your <span style={{ color: '#FF8A00' }}>Career.</span>
+        <h1 style={{ fontSize: 'clamp(2rem, 5vw, 3.2rem)', fontWeight: 800, lineHeight: 1.15, marginBottom: '1rem', color: 'var(--white)' }}>
+          Master Web3. Build Your <span style={{ color: 'var(--orange)' }}>Career.</span>
         </h1>
-        <p style={{ fontSize: '0.95rem', color: 'rgba(200,215,240,0.65)', maxWidth: 620, margin: '0 auto 2.5rem', lineHeight: 1.6 }}>
+        <p style={{ fontSize: '0.95rem', color: 'var(--muted)', maxWidth: 620, margin: '0 auto 2.5rem', lineHeight: 1.6 }}>
           From blockchain fundamentals to industry-grade certifications — courses designed for the African market, recognised globally.
         </p>
 
@@ -108,15 +108,16 @@ export default function AcademyClient() {
                 key={f.id}
                 onClick={() => handleFilter(f.id)}
                 style={{
-                  background: isActive ? '#1428FF' : '#0a1628',
-                  border: '1px solid rgba(200,215,240,0.15)',
-                  color: isActive ? '#fff' : 'rgba(200,215,240,0.65)',
+                  background: isActive ? 'var(--blue)' : 'var(--panel)',
+                  border: '1px solid var(--border)',
+                  color: isActive ? '#fff' : 'var(--muted)',
                   padding: '0.45rem 1rem',
                   borderRadius: 50,
                   fontSize: '0.74rem',
                   fontWeight: 600,
                   cursor: 'pointer',
-                  transition: 'all 0.2s'
+                  transition: 'all 0.2s',
+                  boxShadow: isActive ? '0 2px 10px rgba(20,40,255,0.3)' : 'none'
                 }}
               >
                 {f.label}
@@ -129,14 +130,14 @@ export default function AcademyClient() {
       {/* COURSES GRID */}
       <section style={{ maxWidth: 1240, margin: '0 auto', padding: '2rem 1.5rem 5rem' }}>
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '4rem', color: 'rgba(200,215,240,0.5)' }}>
+          <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--muted)' }}>
             <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>⏳</div>
             Loading courses catalogue...
           </div>
         ) : filteredCourses.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '4rem', color: 'rgba(200,215,240,0.5)', background: '#0a1628', borderRadius: 12, border: '1px solid rgba(200,215,240,0.1)' }}>
+          <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--muted)', background: 'var(--panel)', borderRadius: 12, border: '1px solid var(--border)' }}>
             <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>📭</div>
-            <h3 style={{ color: '#fff', fontSize: '1.1rem', marginBottom: '0.4rem' }}>No courses in this category yet</h3>
+            <h3 style={{ color: 'var(--white)', fontSize: '1.1rem', marginBottom: '0.4rem' }}>No courses in this category yet</h3>
             <p style={{ fontSize: '0.82rem' }}>We&apos;re preparing the curriculum for this track. Please check back soon or join our community.</p>
           </div>
         ) : (
@@ -154,21 +155,23 @@ export default function AcademyClient() {
                 <article
                   key={c.id}
                   style={{
-                    background: '#0a1628',
-                    border: '1px solid rgba(200,215,240,0.12)',
+                    background: 'var(--panel)',
+                    border: '1px solid var(--border)',
                     borderRadius: 12,
                     padding: '1.5rem',
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'space-between',
-                    transition: 'transform 0.2s, border-color 0.2s'
+                    transition: 'transform 0.2s, border-color 0.2s, box-shadow 0.2s',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.05)'
                   }}
                 >
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
                       <span style={{
-                        background: 'rgba(20,40,255,0.15)',
-                        color: '#6b8cff',
+                        background: 'rgba(20,40,255,0.12)',
+                        color: 'var(--blue)',
+                        border: '1px solid rgba(20,40,255,0.25)',
                         padding: '0.25rem 0.6rem',
                         borderRadius: 4,
                         fontSize: '0.68rem',
@@ -179,25 +182,25 @@ export default function AcademyClient() {
                       {isEnrolled && <span style={{ color: '#00c864', fontSize: '0.72rem', fontWeight: 700 }}>✓ Enrolled</span>}
                     </div>
 
-                    <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#fff', marginBottom: '0.5rem' }}>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--white)', marginBottom: '0.5rem' }}>
                       {c.title || 'Untitled Course'}
                     </h3>
 
-                    <p style={{ fontSize: '0.78rem', color: 'rgba(200,215,240,0.65)', lineHeight: 1.6, marginBottom: '1.25rem' }}>
+                    <p style={{ fontSize: '0.78rem', color: 'var(--muted)', lineHeight: 1.6, marginBottom: '1.25rem' }}>
                       {c.description ? c.description.slice(0, 120) + (c.description.length > 120 ? '...' : '') : ''}
                     </p>
 
-                    <div style={{ display: 'flex', gap: '0.8rem', fontSize: '0.72rem', color: 'rgba(200,215,240,0.5)', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
+                    <div style={{ display: 'flex', gap: '0.8rem', fontSize: '0.72rem', color: 'var(--muted)', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
                       {c.duration_weeks && <span>📅 {c.duration_weeks} weeks</span>}
                       {c.module_count && <span>📚 {c.module_count} modules</span>}
                       <span>{c.cohort_based ? '👥 Cohort-based' : '⏱ Self-paced'}</span>
                     </div>
                   </div>
 
-                  <div style={{ borderTop: '1px solid rgba(200,215,240,0.08)', paddingTop: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                      <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#FF8A00' }}>{priceMain}</div>
-                      <div style={{ fontSize: '0.66rem', color: 'rgba(200,215,240,0.45)' }}>
+                      <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--orange)' }}>{priceMain}</div>
+                      <div style={{ fontSize: '0.66rem', color: 'var(--muted)' }}>
                         {isFree ? 'self-paced access' : 'one-time payment'}
                       </div>
                     </div>
@@ -205,7 +208,7 @@ export default function AcademyClient() {
                     <Link
                       href={href}
                       style={{
-                        background: isEnrolled ? 'rgba(0,200,100,0.15)' : '#1428FF',
+                        background: isEnrolled ? 'rgba(0,200,100,0.15)' : 'var(--blue)',
                         border: isEnrolled ? '1px solid rgba(0,200,100,0.3)' : 'none',
                         color: isEnrolled ? '#00c864' : '#fff',
                         padding: '0.55rem 1.1rem',

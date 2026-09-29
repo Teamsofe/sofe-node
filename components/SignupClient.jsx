@@ -311,13 +311,18 @@ export default function SignupClient() {
         {/* RIGHT form panel */}
         <div className="auth-form-panel">
           <div className="auth-form-box">
+            <div className="auth-mobile-logo" style={{ textAlign: 'center', marginBottom: '1.5rem', display: 'none' }}>
+              <Link href="/">
+                <img src="/images/Nodes/SofeLogoHome.png" alt="Sofe Node" style={{ height: '38px', width: 'auto' }} />
+              </Link>
+            </div>
             <h2 className="auth-form-title">Create your account 🚀</h2>
             <p className="auth-form-sub">Already have an account? <Link href="/login">Log in here</Link></p>
 
             {/* ── Account Type Selector ────────────────────────────── */}
             <div style={{ marginBottom: '1.5rem' }}>
               <label style={labelStyle}>I am signing up as…</label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '.6rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(105px, 1fr))', gap: '.6rem' }}>
                 {ACCOUNT_TYPES.map(t => {
                   const isActive = accountType === t.key;
                   return (

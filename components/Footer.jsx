@@ -5,16 +5,21 @@ import { usePathname } from 'next/navigation';
 export default function Footer() {
   const pathname = usePathname();
 
-  if (pathname?.startsWith('/admin') || pathname?.startsWith('/dashboard') || pathname?.startsWith('/course-view')) {
+  if (
+    pathname?.startsWith('/admin') ||
+    pathname?.startsWith('/dashboard') ||
+    pathname?.startsWith('/course-view') ||
+    pathname === '/login' ||
+    pathname === '/signup'
+  ) {
     return null;
   }
   return (
     <footer>
       <div className="footer-grid">
         <div className="footer-brand">
-          <Link href="/" className="nav-logo" style={{ marginBottom: '.6rem' }}>
-            <img src="/images/Nodes/SofeLogoHome.png" className="logo-img" alt="Sofe Node Logo" />
-            Sofe <span className="logo-word-node">Node</span>
+          <Link href="/" className="nav-logo" style={{ marginBottom: '.6rem' }} aria-label="Sofe Node">
+            <img src="/images/Nodes/SofeLogoHome.png" className="logo-img" alt="Sofe Node" style={{ height: '36px', width: 'auto' }} />
           </Link>
           <p>A Sofe Group company. Empowering the next generation to lead Africa&apos;s tech revolution.</p>
           <div className="social-row">

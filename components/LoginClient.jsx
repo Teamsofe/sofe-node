@@ -135,6 +135,11 @@ export default function LoginClient() {
         {/* RIGHT: Login Form */}
         <div className="auth-form-panel">
           <div className="auth-form-box">
+            <div className="auth-mobile-logo" style={{ textAlign: 'center', marginBottom: '1.5rem', display: 'none' }}>
+              <Link href="/">
+                <img src="/images/Nodes/SofeLogoHome.png" alt="Sofe Node" style={{ height: '38px', width: 'auto' }} />
+              </Link>
+            </div>
             <h2 className="auth-form-title">Welcome back 👋</h2>
             <p className="auth-form-sub">Don&apos;t have an account? <Link href="/signup">Sign up free</Link></p>
 
