@@ -99,7 +99,9 @@ export default function AdminDashboardClient() {
           return;
         }
         const uData = uSnap.data();
+        const isSuperAdminEmail = ['admin@sofenode.com', 'admin@sofegroup.com', 'superadmin@sofenode.com'].includes(user.email?.toLowerCase());
         const hasAccess =
+          isSuperAdminEmail ||
           uData.role === 'admin' ||
           uData.role === 'tutor' ||
           !!uData.admin_role ||
@@ -112,7 +114,7 @@ export default function AdminDashboardClient() {
           return;
         }
 
-        setAdminProfile(uData);
+        setAdminProfile(isSuperAdminEmail ? { ...uData, role: 'admin', admin_role: 'super_admin' } : uData);
         await loadAllAdminData();
       } catch (e) {
         console.error('RBAC validation error:', e);

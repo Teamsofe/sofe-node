@@ -567,16 +567,18 @@ export default function DashboardClient() {
     const list = [
       { id: 'learner', label: 'Learner Hub', icon: '🎓', defaultTab: 'classroom' }
     ];
-    if (u?.account_type === 'protocol') {
+    const isSuperAdminUser = ['admin@sofenode.com', 'admin@sofegroup.com', 'superadmin@sofenode.com'].includes(u?.email?.toLowerCase()) || u?.role === 'admin' || u?.admin_role === 'super_admin';
+
+    if (isSuperAdminUser || u?.account_type === 'protocol') {
       list.push({ id: 'protocol', label: 'Protocol Console', icon: '⚡', defaultTab: 'protocol-bounties' });
     }
-    if (u?.account_type === 'partner_org' || u?.role === 'partner') {
+    if (isSuperAdminUser || u?.account_type === 'partner_org' || u?.role === 'partner') {
       list.push({ id: 'partner', label: 'Partner Portal', icon: '🤝', defaultTab: 'partner-analytics' });
     }
-    if (u?.node_lead_for || u?.role === 'node_lead' || u?.is_node_lead) {
+    if (isSuperAdminUser || u?.node_lead_for || u?.role === 'node_lead' || u?.is_node_lead) {
       list.push({ id: 'node_lead', label: 'Node Command', icon: '🌐', defaultTab: 'node-metrics' });
     }
-    if (u?.role === 'tutor' || u?.role === 'admin' || u?.admin_role === 'tutor') {
+    if (isSuperAdminUser || u?.role === 'tutor' || u?.role === 'admin' || u?.admin_role === 'tutor') {
       list.push({ id: 'tutor', label: 'Tutor Desk', icon: '✍️', defaultTab: 'tutor-queue' });
     }
     return list;
@@ -881,7 +883,8 @@ export default function DashboardClient() {
   const isNodeLead = !!userData?.node_lead_for || userData?.role === 'node_lead';
   const isProtocol = userData?.account_type === 'protocol';
   const isPartner = userData?.account_type === 'partner_org' || userData?.role === 'partner';
-  const isStaffOrAdmin = userData?.role === 'admin' || userData?.role === 'tutor' || !!userData?.admin_role || isNodeLead;
+  const isSuperAdminEmail = ['admin@sofenode.com', 'admin@sofegroup.com', 'superadmin@sofenode.com'].includes(userData?.email?.toLowerCase());
+  const isStaffOrAdmin = isSuperAdminEmail || userData?.role === 'admin' || userData?.role === 'tutor' || !!userData?.admin_role || isNodeLead;
 
   const availableWorkspaces = computeWorkspaces(userData);
 

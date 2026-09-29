@@ -43,16 +43,17 @@ export default function AdminLoginClient() {
       }
 
       const uData = userSnap.data();
-      const role = uData.admin_role || (uData.role === 'admin' ? 'admin' : (uData.role === 'tutor' ? 'tutor' : (uData.role === 'node_lead' ? 'node_lead' : null)));
+      const isSuperAdminEmail = ['admin@sofenode.com', 'admin@sofegroup.com', 'superadmin@sofenode.com'].includes(user.email?.toLowerCase());
+      const role = isSuperAdminEmail ? 'super_admin' : (uData.admin_role || (uData.role === 'admin' ? 'admin' : (uData.role === 'tutor' ? 'tutor' : (uData.role === 'node_lead' ? 'node_lead' : null))));
 
-      if (!role && uData.role !== 'admin' && uData.role !== 'tutor' && uData.role !== 'node_lead') {
+      if (!role && !isSuperAdminEmail && uData.role !== 'admin' && uData.role !== 'tutor' && uData.role !== 'node_lead') {
         await signOut(auth);
         setErrorMsg('Access denied. This console is restricted to administrators, tutors, and node leads.');
         setLoading(false);
         return;
       }
 
-      const finalRole = uData.admin_role || (uData.role === 'tutor' ? 'tutor' : (uData.role === 'node_lead' ? 'node_lead' : 'super_admin'));
+      const finalRole = isSuperAdminEmail ? 'super_admin' : (uData.admin_role || (uData.role === 'tutor' ? 'tutor' : (uData.role === 'node_lead' ? 'node_lead' : 'super_admin')));
       if (typeof window !== 'undefined') {
         sessionStorage.setItem('admin_role', finalRole);
         sessionStorage.setItem('admin_uid', user.uid);
