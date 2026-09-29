@@ -213,12 +213,10 @@ export default function DashboardClient() {
       const isDone = !!fe?.completed_at;
       const pct = fe?.progress_pct || 0;
       setFoundationDone(isDone);
-      setFoundationPct(pct);
-
-      const hasCbie = allEnrols.some((e) => e.course_id === 'cbie' || e.tier === 'executive');
+      const hasAnyEnrolment = allEnrols.length > 0;
       const hasFoundation = allEnrols.some((e) => e.course_id === 'foundation' || !e.course_id);
 
-      if (hasCbie && !hasFoundation) {
+      if (hasAnyEnrolment && !hasFoundation) {
         allEnrols = [
           {
             id: '__foundation_synthetic__',
@@ -253,7 +251,30 @@ export default function DashboardClient() {
     try {
       if (refCode) {
         const refsSnap = await getDocs(query(collection(db, 'referrals'), where('referrer_code', '==', refCode)));
-        setReferrals(refsSnap.docs.map((d) => d.data()));
+        const rawRefs = refsSnap.docs.map((d) => d.data());
+
+        // Enrich with referee's live status
+        const enriched = await Promise.all(
+          rawRefs.map(async (r) => {
+            const refUserId = r.referred_user_id || r.referee_id;
+            if (refUserId) {
+              try {
+                const uDoc = await getDoc(doc(db, 'users', refUserId));
+                if (uDoc.exists()) {
+                  const uD = uDoc.data();
+                  return {
+                    ...r,
+                    foundation_complete: r.foundation_complete || uD.foundation_complete || false,
+                    career_enrolled: r.career_enrolled || uD.career_enrolled || false,
+                    email_verified: r.email_verified || uD.email_verified || false
+                  };
+                }
+              } catch (e) {}
+            }
+            return r;
+          })
+        );
+        setReferrals(enriched);
       }
 
       let earned = 0;
@@ -499,6 +520,12 @@ export default function DashboardClient() {
   const validatedRefs = referrals.filter((r) => r.foundation_complete === true).length;
   const verifiedRefs = referrals.filter((r) => r.email_verified === true || r.status === 'verified').length;
   const totalSignups = referrals.length;
+  const qualifiedCount = referrals.filter((r) => r.foundation_complete === true && (r.career_enrolled === true || r.has_paid === true)).length;
+
+  // Determine active affiliate tier
+  const isAmbassador = userData?.affiliate_tier === 'ambassador' || userData?.role === 'ambassador' || isNodeLead || userData?.role === 'admin';
+  const isAffiliate = isAmbassador || qualifiedCount >= 10 || userData?.affiliate_tier === 'affiliate';
+  const activeAffiliateLevel = isAmbassador ? 'ambassador' : (isAffiliate ? 'affiliate' : 'newbie');
 
   return (
     <div style={{ background: '#04080F', color: '#EEF4FF', minHeight: '100vh', fontFamily: 'Poppins, sans-serif' }}>
@@ -605,9 +632,24 @@ export default function DashboardClient() {
               borderRadius: 20,
               padding: '0.2rem 0.65rem',
               fontSize: '0.68rem',
-              fontWeight: 700
+              fontWeight: 700,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.35rem'
             }}>
-              🏫 NODE LEAD
+              {/* Blockchain Node Network Symbol */}
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: '-1px' }}>
+                <circle cx="12" cy="12" r="3.5" fill="currentColor" />
+                <circle cx="4" cy="5" r="2" />
+                <circle cx="20" cy="5" r="2" />
+                <circle cx="4" cy="19" r="2" />
+                <circle cx="20" cy="19" r="2" />
+                <line x1="6" y1="6.5" x2="9.5" y2="10" />
+                <line x1="18" y1="6.5" x2="14.5" y2="10" />
+                <line x1="6" y1="17.5" x2="9.5" y2="14" />
+                <line x1="18" y1="17.5" x2="14.5" y2="14" />
+              </svg>
+              NODE LEAD
             </span>
           )}
         </div>
@@ -1218,20 +1260,171 @@ export default function DashboardClient() {
                 </div>
               </div>
 
+              {/* ── AFFILIATE LEVELS (from design) ── */}
+              <div style={{ marginBottom: '2rem' }}>
+                <h3 style={{
+                  fontSize: '0.85rem',
+                  fontWeight: 800,
+                  marginBottom: '1rem',
+                  color: '#fff',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em'
+                }}>
+                  Affiliate Levels
+                </h3>
+
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                  gap: '1.25rem'
+                }}>
+                  {/* Level 1: Newbie */}
+                  <div style={{
+                    background: activeAffiliateLevel === 'newbie'
+                      ? 'linear-gradient(135deg, rgba(255,138,0,0.08), rgba(20,40,255,0.05))'
+                      : '#0D1526',
+                    border: activeAffiliateLevel === 'newbie'
+                      ? '2px solid #FF8A00'
+                      : '1px solid rgba(200,215,240,0.15)',
+                    borderRadius: 12,
+                    padding: '1.5rem',
+                    position: 'relative',
+                    boxShadow: activeAffiliateLevel === 'newbie' ? '0 4px 20px rgba(255,138,0,0.15)' : 'none'
+                  }}>
+                    {activeAffiliateLevel === 'newbie' && (
+                      <span style={{
+                        position: 'absolute',
+                        top: '1rem',
+                        right: '1rem',
+                        background: 'rgba(0,200,100,0.15)',
+                        border: '1px solid rgba(0,200,100,0.3)',
+                        color: '#00c864',
+                        padding: '0.2rem 0.6rem',
+                        borderRadius: 4,
+                        fontSize: '0.65rem',
+                        fontWeight: 700,
+                        letterSpacing: '0.04em'
+                      }}>
+                        ✓ Active
+                      </span>
+                    )}
+                    <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#fff', marginBottom: '0.6rem' }}>
+                      ⭐ Level 1 — Newbie
+                    </div>
+                    <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#FF8A00', lineHeight: 1 }}>
+                      5%
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)', marginTop: '0.25rem', marginBottom: '1rem' }}>
+                      Direct referral
+                    </div>
+                    <p style={{ fontSize: '0.76rem', color: 'rgba(200,215,240,0.8)', lineHeight: 1.6 }}>
+                      Everyone starts here. You earn 5% commission on every successful referral — but you must <strong style={{ color: '#FF8A00' }}>complete the Foundation Course</strong> to receive payouts.
+                    </p>
+                  </div>
+
+                  {/* Level 2: Affiliate */}
+                  <div style={{
+                    background: activeAffiliateLevel === 'affiliate'
+                      ? 'linear-gradient(135deg, rgba(255,138,0,0.08), rgba(20,40,255,0.05))'
+                      : '#0D1526',
+                    border: activeAffiliateLevel === 'affiliate'
+                      ? '2px solid #FF8A00'
+                      : '1px solid rgba(200,215,240,0.15)',
+                    borderRadius: 12,
+                    padding: '1.5rem',
+                    position: 'relative',
+                    boxShadow: activeAffiliateLevel === 'affiliate' ? '0 4px 20px rgba(255,138,0,0.15)' : 'none'
+                  }}>
+                    {activeAffiliateLevel === 'affiliate' && (
+                      <span style={{
+                        position: 'absolute',
+                        top: '1rem',
+                        right: '1rem',
+                        background: 'rgba(0,200,100,0.15)',
+                        border: '1px solid rgba(0,200,100,0.3)',
+                        color: '#00c864',
+                        padding: '0.2rem 0.6rem',
+                        borderRadius: 4,
+                        fontSize: '0.65rem',
+                        fontWeight: 700,
+                        letterSpacing: '0.04em'
+                      }}>
+                        ✓ Active
+                      </span>
+                    )}
+                    <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#fff', marginBottom: '0.6rem' }}>
+                      🎯 Level 2 — Affiliate
+                    </div>
+                    <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#FF8A00', lineHeight: 1 }}>
+                      10%
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)', marginTop: '0.25rem', marginBottom: '1rem' }}>
+                      Direct referral
+                    </div>
+                    <p style={{ fontSize: '0.76rem', color: 'rgba(200,215,240,0.8)', lineHeight: 1.6 }}>
+                      Refer <strong>10 people</strong> who complete the Foundation Course <strong>and</strong> enrol in at least one Career Track course. Commission rate doubles automatically once the milestone is reached. <strong style={{ color: '#FF8A00' }}>({qualifiedCount}/10 qualified)</strong>
+                    </p>
+                  </div>
+
+                  {/* Level 3: Ambassador */}
+                  <div style={{
+                    background: activeAffiliateLevel === 'ambassador'
+                      ? 'linear-gradient(135deg, rgba(255,138,0,0.08), rgba(20,40,255,0.05))'
+                      : '#0D1526',
+                    border: activeAffiliateLevel === 'ambassador'
+                      ? '2px solid #FF8A00'
+                      : '1px solid rgba(200,215,240,0.15)',
+                    borderRadius: 12,
+                    padding: '1.5rem',
+                    position: 'relative',
+                    opacity: activeAffiliateLevel === 'ambassador' ? 1 : 0.65,
+                    boxShadow: activeAffiliateLevel === 'ambassador' ? '0 4px 20px rgba(255,138,0,0.15)' : 'none'
+                  }}>
+                    <span style={{
+                      position: 'absolute',
+                      top: '1rem',
+                      right: '1rem',
+                      background: activeAffiliateLevel === 'ambassador' ? 'rgba(0,200,100,0.15)' : 'rgba(200,215,240,0.08)',
+                      border: activeAffiliateLevel === 'ambassador' ? '1px solid rgba(0,200,100,0.3)' : '1px solid rgba(200,215,240,0.15)',
+                      color: activeAffiliateLevel === 'ambassador' ? '#00c864' : 'rgba(200,215,240,0.6)',
+                      padding: '0.2rem 0.6rem',
+                      borderRadius: 4,
+                      fontSize: '0.65rem',
+                      fontWeight: 700,
+                      letterSpacing: '0.04em'
+                    }}>
+                      {activeAffiliateLevel === 'ambassador' ? '✓ Active' : '🔒 Locked'}
+                    </span>
+                    <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#fff', marginBottom: '0.6rem' }}>
+                      🏆 Level 3 — Ambassador
+                    </div>
+                    <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#FF8A00', lineHeight: 1 }}>
+                      10% + 5%
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)', marginTop: '0.25rem', marginBottom: '1rem' }}>
+                      Direct + indirect
+                    </div>
+                    <p style={{ fontSize: '0.76rem', color: 'rgba(200,215,240,0.8)', lineHeight: 1.6 }}>
+                      For exceptional Sofians, Node Heads, and long-term contributors. <strong>By invitation only</strong> — activated by the Sofe Node team. Earn 10% on direct referrals and 5% on indirect (your referrals&apos; referrals).
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               {/* Commission Structure Explanation */}
               <div style={{ background: '#0D1526', border: '1px solid rgba(20,40,255,0.18)', borderRadius: 10, padding: '1.25rem' }}>
                 <h3 style={{ fontSize: '0.92rem', fontWeight: 700, marginBottom: '0.8rem' }}>How 2-Tier Commissions Work</h3>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem', fontSize: '0.76rem', color: 'rgba(200,215,240,0.8)' }}>
                   <div style={{ padding: '0.8rem', background: 'rgba(20,40,255,0.06)', borderRadius: 6, border: '1px solid rgba(20,40,255,0.15)' }}>
-                    <strong style={{ color: '#fff' }}>Tier 1: 10% Direct Commission</strong>
+                    <strong style={{ color: '#fff' }}>Direct Commissions</strong>
                     <p style={{ marginTop: '0.3rem' }}>
-                      Earn 10% on the net amount paid by anyone who signs up directly using your link when they purchase a paid track or CBIE certification.
+                      Earn 5% (Newbie) or 10% (Affiliate / Ambassador) on the net amount paid by anyone who signs up directly using your referral link.
                     </p>
                   </div>
                   <div style={{ padding: '0.8rem', background: 'rgba(255,138,0,0.06)', borderRadius: 6, border: '1px solid rgba(255,138,0,0.15)' }}>
-                    <strong style={{ color: '#fff' }}>Tier 2: 5% Indirect Network Override</strong>
+                    <strong style={{ color: '#fff' }}>Indirect Network Override (Ambassadors)</strong>
                     <p style={{ marginTop: '0.3rem' }}>
-                      When people you referred refer others who enroll, you earn a 5% override on their net paid fees.
+                      Ambassadors and Node Leads earn a 5% override on the net paid fees when their referrals refer other paying students.
                     </p>
                   </div>
                 </div>

@@ -189,6 +189,7 @@ export default function AdminDashboardClient() {
       role: u.role || 'student',
       admin_role: u.admin_role || '',
       account_type: u.account_type || 'sofian',
+      affiliate_tier: u.affiliate_tier || 'newbie',
       is_premium: !!u.is_premium,
       bypass_foundation: !!u.bypass_foundation,
       foundation_complete: !!u.foundation_complete,
@@ -207,6 +208,7 @@ export default function AdminDashboardClient() {
         role: userRoleForm.role,
         admin_role: userRoleForm.admin_role || null,
         account_type: userRoleForm.account_type,
+        affiliate_tier: userRoleForm.affiliate_tier,
         is_premium: userRoleForm.is_premium,
         bypass_foundation: userRoleForm.bypass_foundation,
         foundation_complete: userRoleForm.foundation_complete,
@@ -858,7 +860,8 @@ export default function AdminDashboardClient() {
                   <option value="student">Student / Sofian</option>
                   <option value="tutor">Tutor / Instructor</option>
                   <option value="admin">Platform Administrator</option>
-                  <option value="node_lead">Campus Node Lead</option>
+                  <option value="node_lead">⬡ Campus Node Lead</option>
+                  <option value="ambassador">Ambassador / Node Head</option>
                   <option value="partner">Partner Org</option>
                 </select>
               </div>
@@ -889,6 +892,19 @@ export default function AdminDashboardClient() {
                   <option value="sofian">Sofian (Individual)</option>
                   <option value="protocol">Protocol Partner (Can post bounties)</option>
                   <option value="partner_org">Corporate / Partner Org</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)' }}>Affiliate Program Level</label>
+                <select
+                  value={userRoleForm.affiliate_tier || 'newbie'}
+                  onChange={(e) => setUserRoleForm({ ...userRoleForm, affiliate_tier: e.target.value })}
+                  style={{ width: '100%', background: '#080E1A', border: '1px solid rgba(20,40,255,0.25)', borderRadius: 6, padding: '0.55rem', color: '#fff', fontSize: '0.8rem', marginTop: 4 }}
+                >
+                  <option value="newbie">Level 1 — Newbie (5% Direct)</option>
+                  <option value="affiliate">Level 2 — Affiliate (10% Direct)</option>
+                  <option value="ambassador">Level 3 — Ambassador (10% Direct + 5% Indirect)</option>
                 </select>
               </div>
 

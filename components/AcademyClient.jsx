@@ -31,7 +31,11 @@ export default function AcademyClient() {
       if (user) {
         try {
           const snap = await getDocs(query(collection(db, 'enrolments'), where('user_id', '==', user.uid)));
-          setUserEnrolments(snap.docs.map((d) => d.data().course_id));
+          const ids = snap.docs.map((d) => d.data().course_id);
+          if (ids.length > 0 && !ids.includes('foundation')) {
+            ids.push('foundation');
+          }
+          setUserEnrolments(ids);
         } catch (e) {}
       }
       fetchCourses();

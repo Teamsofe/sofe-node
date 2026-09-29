@@ -156,15 +156,36 @@ export default function PaymentFlowClient() {
       const enrolId = `${currentUser.uid}_${course.id}`;
       await setDoc(doc(db, 'enrolments', enrolId), {
         user_id: currentUser.uid,
+        user_email: currentUser.email,
         course_id: course.id,
+        course_title: course.title || course.id,
         status: 'active',
         progress_pct: 0,
         enrolled_at: serverTimestamp()
-      });
+      }, { merge: true });
+
+      // Automatically enroll in foundational course as well
+      if (course.id !== 'foundation') {
+        const foundationEnrolId = `${currentUser.uid}_foundation`;
+        await setDoc(doc(db, 'enrolments', foundationEnrolId), {
+          user_id: currentUser.uid,
+          user_email: currentUser.email,
+          course_id: 'foundation',
+          course_title: 'Blockchain & Cryptocurrency Foundation',
+          status: 'active',
+          progress_pct: 0,
+          enrolled_at: serverTimestamp()
+        }, { merge: true });
+
+        await updateDoc(doc(db, 'users', currentUser.uid), {
+          career_enrolled: true,
+          updated_at: serverTimestamp()
+        });
+      }
 
       setSuccessData({
         title: 'Enrolment Activated!',
-        message: 'You now have full access to your learning curriculum.'
+        message: 'You now have full access to your learning curriculum and the foundational course.'
       });
     } catch (err) {
       alert('Error activating free course: ' + err.message);
@@ -201,7 +222,7 @@ export default function PaymentFlowClient() {
 
       const reference = `PAY-${isPremiumCheckout ? 'VIP' : course.id.toUpperCase()}-${Date.now()}`;
 
-      // Create Payment Record
+      // 1. Create Payment Record
       await setDoc(doc(db, 'payments', reference), {
         user_id: currentUser.uid,
         user_email: currentUser.email,
@@ -217,65 +238,105 @@ export default function PaymentFlowClient() {
         created_at: serverTimestamp()
       });
 
-      // Credit 2-tier commission waterfall based on NET PAID amount
+      // 2. Automatically Enrol in the purchased course
+      if (course?.id) {
+        const enrolId = `${currentUser.uid}_${course.id}`;
+        await setDoc(doc(db, 'enrolments', enrolId), {
+          user_id: currentUser.uid,
+          user_email: currentUser.email,
+          course_id: course.id,
+          course_title: course.title || course.id,
+          status: 'active',
+          progress_pct: 0,
+          payment_ref: reference,
+          enrolled_at: serverTimestamp()
+        }, { merge: true });
+
+        // 3. ALSO enrol in the foundational course so it reflects as enrolled
+        if (course.id !== 'foundation') {
+          const foundationEnrolId = `${currentUser.uid}_foundation`;
+          await setDoc(doc(db, 'enrolments', foundationEnrolId), {
+            user_id: currentUser.uid,
+            user_email: currentUser.email,
+            course_id: 'foundation',
+            course_title: 'Blockchain & Cryptocurrency Foundation',
+            status: 'active',
+            progress_pct: 0,
+            enrolled_at: serverTimestamp()
+          }, { merge: true });
+        }
+      }
+
+      // 4. Update user document with career_enrolled & is_premium
+      await updateDoc(doc(db, 'users', currentUser.uid), {
+        ...(course?.id !== 'foundation' ? { career_enrolled: true } : {}),
+        ...(isPremiumCheckout ? { is_premium: true } : {}),
+        updated_at: serverTimestamp()
+      });
+
+      // 5. Credit affiliate commission based on NET PAID amount and Referrer's Affiliate Level
       if (userProfile?.referred_by && netPaid > 0) {
         try {
-          const directAmt = Math.round(netPaid * 0.10); // 10% direct
-          const indirectAmt = Math.round(netPaid * 0.05); // 5% indirect
-
-          // Direct Referrer
-          await addDoc(collection(db, 'commissions'), {
-            user_id: userProfile.referred_by,
-            payer_uid: currentUser.uid,
-            payer_email: currentUser.email,
-            course_id: course.id,
-            net_paid: netPaid,
-            rate: 0.10,
-            amount: directAmt,
-            tier: 'direct_10',
-            description: `10% Direct commission from ${currentUser.email} on ${course.title}`,
-            status: 'pending',
-            created_at: serverTimestamp()
-          });
-
-          // Check if direct referrer has an indirect parent referrer
           const refSnap = await getDoc(doc(db, 'users', userProfile.referred_by));
-          if (refSnap.exists() && refSnap.data().referred_by) {
+          if (refSnap.exists()) {
+            const refData = refSnap.data();
+
+            // Check referrer's affiliate tier:
+            // Level 3 (Ambassador / Node Lead): 10% direct + 5% indirect
+            // Level 2 (Affiliate): 10% direct
+            // Level 1 (Newbie): 5% direct
+            const isAmbassadorRef = refData.affiliate_tier === 'ambassador' || refData.role === 'ambassador' || refData.role === 'node_lead' || refData.role === 'admin';
+            const isAffiliateRef = isAmbassadorRef || refData.affiliate_tier === 'affiliate' || ((refData.qualified_refs_count || 0) >= 10);
+
+            const directRate = (isAmbassadorRef || isAffiliateRef) ? 0.10 : 0.05;
+            const directAmt = Math.round(netPaid * directRate);
+
+            // Direct Referrer Commission
             await addDoc(collection(db, 'commissions'), {
-              user_id: refSnap.data().referred_by,
+              user_id: userProfile.referred_by,
               payer_uid: currentUser.uid,
               payer_email: currentUser.email,
               course_id: course.id,
               net_paid: netPaid,
-              rate: 0.05,
-              amount: indirectAmt,
-              tier: 'indirect_5',
-              description: `5% Indirect network commission from ${currentUser.email} on ${course.title}`,
+              rate: directRate,
+              amount: directAmt,
+              tier: isAmbassadorRef ? 'ambassador_10' : (isAffiliateRef ? 'affiliate_10' : 'newbie_5'),
+              description: `${Math.round(directRate * 100)}% Direct commission from ${currentUser.email} on ${course.title}`,
               status: 'pending',
               created_at: serverTimestamp()
             });
+
+            // Indirect Commission: Only Ambassadors / Node Heads earn the 5% indirect override!
+            if (isAmbassadorRef && refData.referred_by) {
+              const indirectAmt = Math.round(netPaid * 0.05);
+              await addDoc(collection(db, 'commissions'), {
+                user_id: refData.referred_by,
+                payer_uid: currentUser.uid,
+                payer_email: currentUser.email,
+                course_id: course.id,
+                net_paid: netPaid,
+                rate: 0.05,
+                amount: indirectAmt,
+                tier: 'indirect_5',
+                description: `5% Indirect network commission from ${currentUser.email} on ${course.title}`,
+                status: 'pending',
+                created_at: serverTimestamp()
+              });
+            }
           }
         } catch (commErr) {
           console.warn('Commission recording note:', commErr);
         }
       }
 
-      // If Premium Membership, immediately mark is_premium on user doc
-      if (isPremiumCheckout) {
-        await updateDoc(doc(db, 'users', currentUser.uid), {
-          is_premium: true,
-          updated_at: serverTimestamp()
-        });
-      }
-
       setSuccessData({
-        title: isPremiumCheckout ? '💎 Premium Membership Activated!' : 'Payment Received — Awaiting Verification',
+        title: isPremiumCheckout ? '💎 Premium Membership Activated!' : 'Payment Received — Enrolled Successfully!',
         isPremium: isPremiumCheckout,
         message: isPremiumCheckout
           ? 'Your $100 VIP payment has been recorded. Connect with our VIP admin on WhatsApp to join the private mastermind group.'
           : selectedMethod === 'bank'
-          ? "We've received your transfer proof. Admin verification usually takes 1-3 hours."
-          : 'Your payment was successful and your course has been unlocked.'
+          ? "We've received your transfer proof. You have been enrolled in your course and the foundational course."
+          : 'Your payment was successful! Your course and the foundational course are now active in your dashboard.'
       });
     } catch (err) {
       console.error('Payment submission failed:', err);

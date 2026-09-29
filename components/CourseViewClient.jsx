@@ -109,7 +109,20 @@ export default function CourseViewClient() {
         setLoading(false);
         return;
       }
-      if (!enrolSnap.empty) {
+      if (enrolSnap.empty && (courseParam === 'foundation' || cid === 'foundation')) {
+        try {
+          await setDoc(doc(db, 'enrolments', `${user.uid}_foundation`), {
+            user_id: user.uid,
+            user_email: user.email,
+            course_id: 'foundation',
+            course_title: cData?.title || 'Blockchain & Cryptocurrency Foundation',
+            status: 'active',
+            progress_pct: 0,
+            enrolled_at: serverTimestamp()
+          }, { merge: true });
+          setEnrolmentStatus('active');
+        } catch (e) {}
+      } else if (!enrolSnap.empty) {
         setEnrolmentStatus(enrolSnap.docs[0].data().status);
       }
 
