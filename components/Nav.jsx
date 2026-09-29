@@ -1,7 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 
 export default function Nav() {
@@ -41,15 +40,15 @@ export default function Nav() {
         style={scrolled ? { background: 'rgba(4,8,16,0.97)' } : undefined}
       >
         <Link href="/" className="nav-logo">
-          <img src="/logo.png" className="logo-img" alt="Sofe Node Logo" />
-          Sofe <span className="logo-word-node">Node</span>
+          <img src="/images/Nodes/SofeLogoHome.png" className="logo-img" alt="Sofe Node Logo" />
+          <span>SOFE <span className="logo-word-node">NODE</span></span>
         </Link>
 
         <ul className="nav-links">
           <li><Link href="/">Home</Link></li>
           <li><Link href="/about">About Us</Link></li>
           <li className="nav-dropdown">
-            <a href="/services">Services</a>
+            <Link href="/services">Services</Link>
             <div className="nav-dropdown-menu">
               <div className="nav-dropdown-panel">
                 <Link href="/services/talent">
@@ -64,7 +63,9 @@ export default function Nav() {
               </div>
             </div>
           </li>
+          <li><Link href="/academy">Academy</Link></li>
           <li><Link href="/bce">BCE</Link></li>
+          <li><Link href="/bounties">Bounties</Link></li>
           <li><Link href="/dashboard">Dashboard</Link></li>
         </ul>
 
@@ -117,7 +118,9 @@ export default function Nav() {
               </ul>
             )}
           </li>
+          <li><Link href="/academy" onClick={closeMenu}>Academy</Link></li>
           <li><Link href="/bce" onClick={closeMenu}>BCE</Link></li>
+          <li><Link href="/bounties" onClick={closeMenu}>Bounties</Link></li>
           <li><Link href="/dashboard" onClick={closeMenu}>Dashboard</Link></li>
         </ul>
         <div className="mob-bottom">

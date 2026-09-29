@@ -13,16 +13,16 @@ export default function Footer() {
       <div className="footer-grid">
         <div className="footer-brand">
           <Link href="/" className="nav-logo" style={{ marginBottom: '.6rem' }}>
-            <img src="/logo.png" className="logo-img" alt="Sofe Node Logo" />
+            <img src="/images/Nodes/SofeLogoHome.png" className="logo-img" alt="Sofe Node Logo" />
             Sofe <span className="logo-word-node">Node</span>
           </Link>
           <p>A Sofe Group company. Empowering the next generation to lead Africa&apos;s tech revolution.</p>
           <div className="social-row">
-            <a className="social-btn" href="https://twitter.com" target="_blank" rel="noopener noreferrer" title="X/Twitter">&#x1D54F;</a>
-            <a className="social-btn" href="https://linkedin.com" target="_blank" rel="noopener noreferrer" title="LinkedIn">in</a>
+            <a className="social-btn" href="https://twitter.com/sofenode" target="_blank" rel="noopener noreferrer" title="X/Twitter">&#x1D54F;</a>
+            <a className="social-btn" href="https://linkedin.com/company/sofe-group" target="_blank" rel="noopener noreferrer" title="LinkedIn">in</a>
+            <a className="social-btn" href="https://youtube.com/@sofegroupofficial" target="_blank" rel="noopener noreferrer" title="YouTube">&#9654;</a>
             <a className="social-btn" href="https://facebook.com" target="_blank" rel="noopener noreferrer" title="Facebook">f</a>
-            <a className="social-btn" href="https://instagram.com" target="_blank" rel="noopener noreferrer" title="Instagram">&#9737;</a>
-            <a className="social-btn" href="https://tiktok.com" target="_blank" rel="noopener noreferrer" title="TikTok">&#9835;</a>
+            <a className="social-btn" href="https://t.me/sofegroupofficial" target="_blank" rel="noopener noreferrer" title="Telegram">&#9992;</a>
           </div>
         </div>
 
@@ -31,19 +31,19 @@ export default function Footer() {
           <ul>
             <li><Link href="/about">About Us</Link></li>
             <li><Link href="/services">Services</Link></li>
-            <li><Link href="/bce">BCE</Link></li>
+            <li><Link href="/academy">Academy</Link></li>
+            <li><Link href="/bce">BCE Tour</Link></li>
             <li><Link href="/dashboard">Dashboard</Link></li>
-            <li><Link href="/verify">Verify Certificate</Link></li>
           </ul>
         </div>
 
         <div className="footer-col">
-          <h4>Legal</h4>
+          <h4>Legal & Policies</h4>
           <ul>
-            <li><Link href="/privacy">Privacy Policy</Link></li>
-            <li><Link href="/terms">Terms of Service</Link></li>
-            <li><Link href="/affiliate-terms">Affiliate Terms</Link></li>
-            <li><Link href="/cookies">Cookie Policy</Link></li>
+            <li><Link href="/about#legal">Privacy Policy</Link></li>
+            <li><Link href="/about#legal">Terms of Service</Link></li>
+            <li><Link href="/about#legal">Affiliate Terms</Link></li>
+            <li><Link href="/about#legal">Cookie Policy</Link></li>
           </ul>
         </div>
 
@@ -54,7 +54,7 @@ export default function Footer() {
           </p>
           <div className="newsletter-row">
             <input type="email" className="newsletter-input" placeholder="your@email.com" />
-            <button className="newsletter-btn">Join</button>
+            <button className="newsletter-btn" type="button" onClick={() => alert('Thank you for subscribing to Web3 opportunities!')}>Join</button>
           </div>
         </div>
       </div>
