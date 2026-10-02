@@ -8,7 +8,58 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="./css/admin-dashboard-v2.css"/>
-</head>
+<style>
+/* --- INJECTED MOBILE RESPONSIVENESS --- */
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed !important;
+    bottom: 0 !important;
+    top: auto !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: auto !important;
+    flex-direction: row !important;
+    overflow-x: auto !important;
+    border-right: none !important;
+    border-top: 1px solid var(--border) !important;
+    padding: 0.5rem !important;
+    z-index: 9999 !important;
+    background: #080E1A !important;
+  }
+  .sb-toggle, .sb-logo, .role-pill, .sb-bottom { display: none !important; }
+  .sb-nav {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 1rem !important;
+    padding: 0 0.5rem !important;
+    overflow-y: hidden !important;
+    overflow-x: auto !important;
+  }
+  .sb-item {
+    display: flex !important;
+    flex-direction: column !important;
+    padding: 0.5rem !important;
+    min-width: 65px !important;
+    border-radius: 8px !important;
+    justify-content: center !important;
+    background: rgba(255,255,255,0.05) !important;
+    border: none !important;
+  }
+  .sb-item.active {
+    background: var(--blue) !important;
+  }
+  .sb-icon { font-size: 1.4rem !important; margin: 0 !important; }
+  .sb-label { display: none !important; }
+  .main { margin-left: 0 !important; padding: 0.5rem !important; padding-bottom: 90px !important; }
+  .topbar { border-radius: 12px !important; padding: 0.8rem 1rem !important; margin-bottom: 1rem !important; }
+  .stats-grid, .demo-grid, .analytics-grid { grid-template-columns: 1fr !important; }
+  .table-wrap { padding: 0.5rem !important; border-radius: 12px !important; overflow-x: auto !important; }
+  table th, table td { padding: 0.6rem !important; font-size: 0.75rem !important; }
+  .modal { width: 95% !important; max-width: 95% !important; margin: 1rem !important; max-height: 90vh !important; }
+  .section-header { flex-direction: column !important; align-items: flex-start !important; gap: 1rem !important; }
+}
+</style></head>
 <body>
 
 <!-- SIDEBAR -->
@@ -31,6 +82,9 @@
   </nav>
 
   <div class="sb-bottom">
+    <button class="sb-item" onclick="window.location.href='/dashboard'" style="margin-bottom: 0.5rem; color: #FF8A00;">
+      <span class="sb-icon">🏠</span><span class="sb-label">Learner Hub</span>
+    </button>
     <button class="sb-item" onclick="handleLogout()">
       <span class="sb-icon">↩</span><span class="sb-label">Logout</span>
     </button>
@@ -5532,18 +5586,21 @@ window.writeBatch = writeBatch;
 onAuthStateChanged(auth, async (user) => {
   if (!user) {
     // No active session — send to login
-    window.location.href = './admin-login.html';
+    window.location.href = '/login';
     return;
   }
 
   try {
     const snap = await getDoc(doc(db, 'users', user.uid));
-    if (!snap.exists() || snap.data().role !== 'admin') {
-      window.location.href = './dashboard.html';
+    const data = snap.data();
+    
+    const superEmails = ['admin@sofenode.com', 'admin@sofegroup.com', 'superadmin@sofenode.com'];
+    // Allow if role is 'admin', or if they have an explicit admin_role, or if email matches super admin
+    if (!snap.exists() || (data.role !== 'admin' && !data.admin_role && !superEmails.includes(user.email))) {
+      window.location.href = '/dashboard';
       return;
     }
 
-    const data = snap.data();
     const initials = (data.first_name?.[0] || '') + (data.last_name?.[0] || '');
     const avatarEl = document.getElementById('adminAvatar');
     if (avatarEl) avatarEl.textContent = initials.toUpperCase() || 'A';
@@ -5551,7 +5608,7 @@ onAuthStateChanged(auth, async (user) => {
 
     // Re-init dashboard with verified role from Firestore
     // (may update from the sessionStorage role if they differ)
-    const verifiedRole = data.admin_role || 'social_media_manager';
+    const verifiedRole = superEmails.includes(user.email) ? 'super_admin' : (data.admin_role || 'social_media_manager');
     if (verifiedRole !== sessionStorage.getItem('admin_role')) {
       sessionStorage.setItem('admin_role', verifiedRole);
       initDashboard(verifiedRole);

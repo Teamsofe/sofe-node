@@ -294,3 +294,19 @@ tr:hover td{background:rgba(255,255,255,.02);}
   .stats-grid{grid-template-columns:1fr 1fr;}
   .badge-grid{grid-template-columns:1fr 1fr;}
 }
+/* --- MOBILE RESPONSIVENESS --- */
+@media (max-width: 768px) {
+  .sidebar { position: fixed; bottom: 0; top: auto; width: 100% !important; height: auto !important; flex-direction: row; overflow-x: auto; border-right: none; border-top: 1px solid var(--border); padding: 0.5rem; z-index: 1000; }
+  .sb-toggle, .sb-logo, .role-pill, .sb-bottom { display: none !important; }
+  .sb-nav { display: flex; flex-direction: row; align-items: center; gap: 0.5rem; padding: 0; overflow-y: hidden; }
+  .sb-item { flex-direction: column; padding: 0.5rem; min-width: 60px; border-radius: 8px; justify-content: center; }
+  .sb-icon { font-size: 1.2rem; margin: 0; }
+  .sb-label { display: none; }
+  .main { margin-left: 0 !important; padding: 0.5rem; padding-bottom: 80px; }
+  .topbar { border-radius: 12px; padding: 0.8rem 1rem; margin-bottom: 1rem; }
+  .stats-grid, .demo-grid, .analytics-grid { grid-template-columns: 1fr; }
+  .table-wrap { padding: 0.5rem; border-radius: 12px; overflow-x: auto; }
+  table th, table td { padding: 0.6rem; font-size: 0.75rem; }
+  .modal { width: 95% !important; max-width: 95% !important; margin: 1rem; max-height: 90vh; }
+  .section-header { flex-direction: column; align-items: flex-start; gap: 1rem; }
+}

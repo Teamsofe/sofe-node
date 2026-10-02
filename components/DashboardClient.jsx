@@ -243,7 +243,12 @@ export default function DashboardClient() {
 
       // Workspace context restore & initial data load
       const availableWorkspaces = computeWorkspaces(u);
-      const savedWs = typeof window !== 'undefined' ? localStorage.getItem('sofe_active_workspace') : null;
+      let savedWs = typeof window !== 'undefined' ? localStorage.getItem('sofe_active_workspace') : null;
+      if (savedWs === 'admin') {
+        localStorage.removeItem('sofe_active_workspace');
+        savedWs = null;
+      }
+      
       let targetWs = 'learner';
       if (savedWs && availableWorkspaces.some((w) => w.id === savedWs)) {
         targetWs = savedWs;
@@ -564,27 +569,48 @@ export default function DashboardClient() {
 
   // ── WORKSPACE LOGIC & LAZY LOADERS ──
   const computeWorkspaces = (u) => {
-    const list = [
-      { id: 'learner', label: 'Learner Hub', icon: '🎓', defaultTab: 'classroom' }
-    ];
+    const list = [];
     const isSuperAdminUser = ['admin@sofenode.com', 'admin@sofegroup.com', 'superadmin@sofenode.com'].includes(u?.email?.toLowerCase()) || u?.role === 'admin' || u?.admin_role === 'super_admin';
+    const isProtocol = u?.account_type === 'protocol';
+    const isPartner = u?.account_type === 'partner_org' || u?.role === 'partner';
+    
+    // Check if user has ANY admin role
+    const adminRole = u?.admin_role || (u?.role === 'admin' ? 'super_admin' : null);
+    const hasAdminPanel = isSuperAdminUser || ['super_admin', 'admin', 'course_manager', 'finance_admin', 'community_manager', 'social_media_manager'].includes(adminRole);
+    const isTutor = u?.role === 'tutor' || u?.admin_role === 'tutor';
+    const isNodeLead = !!u?.node_lead_for || u?.role === 'node_lead' || u?.is_node_lead;
 
-    if (isSuperAdminUser || u?.account_type === 'protocol') {
-      list.push({ id: 'protocol', label: 'Protocol Console', icon: '⚡', defaultTab: 'protocol-bounties' });
+    // Protocol and Partner accounts only see 'Learner' if they have an assigned role (admin/tutor/node_lead)
+    const isRestrictedExclusive = (isProtocol || isPartner) && !hasAdminPanel && !isTutor && !isNodeLead;
+
+    if (!isRestrictedExclusive) {
+      list.push({ id: 'learner', label: 'Learner Hub', icon: '🎓', defaultTab: 'classroom' });
     }
-    if (isSuperAdminUser || u?.account_type === 'partner_org' || u?.role === 'partner') {
+
+    if (hasAdminPanel) {
+      list.push({ id: 'admin', label: 'Admin Console', icon: '⚡', defaultTab: 'admin-iframe' });
+    }
+    if (isProtocol) {
+      list.push({ id: 'protocol', label: 'Protocol Console', icon: '🌐', defaultTab: 'protocol-bounties' });
+    }
+    if (isPartner) {
       list.push({ id: 'partner', label: 'Partner Portal', icon: '🤝', defaultTab: 'partner-analytics' });
     }
-    if (isSuperAdminUser || u?.node_lead_for || u?.role === 'node_lead' || u?.is_node_lead) {
-      list.push({ id: 'node_lead', label: 'Node Command', icon: '🌐', defaultTab: 'node-metrics' });
+    if (isNodeLead) {
+      list.push({ id: 'node_lead', label: 'Node Command', icon: '🌍', defaultTab: 'node-metrics' });
     }
-    if (isSuperAdminUser || u?.role === 'tutor' || u?.role === 'admin' || u?.admin_role === 'tutor') {
+    if (isTutor) {
       list.push({ id: 'tutor', label: 'Tutor Desk', icon: '✍️', defaultTab: 'tutor-queue' });
     }
+    
     return list;
   };
 
   const handleSwitchWorkspace = (wsId) => {
+    if (wsId === 'admin') {
+      window.location.href = '/admin-dashboard-v2.html';
+      return;
+    }
     setActiveWorkspace(wsId);
     if (typeof window !== 'undefined') {
       localStorage.setItem('sofe_active_workspace', wsId);
@@ -850,6 +876,11 @@ export default function DashboardClient() {
         { id: 'settings', icon: '⚙️', label: 'Settings' }
       ];
     }
+    if (activeWorkspace === 'admin') {
+      return [
+        { id: 'admin-iframe', icon: '⚡', label: 'Admin' }
+      ];
+    }
     return [
       { id: 'classroom', icon: '📚', label: 'Courses' },
       { id: 'business', icon: '💼', label: 'Business' },
@@ -869,7 +900,7 @@ export default function DashboardClient() {
     return (
       <div style={{ minHeight: '100vh', background: 'var(--black)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--white)' }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: '2rem', marginBottom: '1rem', animation: 'spin 1.5s infinite linear' }}>⚡</div>
+          <img src="/images/SofeIconTransparent.png" alt="Loading..." style={{ height: '50px', marginBottom: '1rem', animation: 'spin 1.5s infinite linear' }} />
           <p style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>Loading Sofian Dashboard...</p>
         </div>
       </div>
@@ -922,291 +953,32 @@ export default function DashboardClient() {
         </div>
       )}
 
-      {/* TOP HEADER BAR */}
-      <header style={{
-        position: 'sticky',
-        top: 0,
-        zIndex: 100,
-        background: 'rgba(8,14,26,0.95)',
-        backdropFilter: 'blur(16px)',
-        borderBottom: '1px solid rgba(20,40,255,0.18)',
-        padding: '0.75rem 1.5rem',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            style={{
-              background: 'rgba(20,40,255,0.1)',
-              border: '1px solid rgba(20,40,255,0.25)',
-              color: '#fff',
-              borderRadius: 6,
-              padding: '0.4rem 0.75rem',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem'
-            }}
-          >
-            <span>☰</span>
-          </button>
-          <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }} aria-label="Sofe Node Home">
-            <img
-              src="/images/Nodes/SofeLogoHome.png"
-              alt="Sofe Node"
-              style={{ height: '32px', width: 'auto', objectFit: 'contain' }}
-            />
-          </Link>
-          {availableWorkspaces.length > 1 && (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem',
-              background: 'rgba(20,40,255,0.18)',
-              border: '1px solid rgba(20,40,255,0.4)',
-              borderRadius: 20,
-              padding: '0.15rem 0.6rem 0.15rem 0.75rem'
-            }}>
-              <span style={{ fontSize: '0.66rem', color: 'rgba(200,215,240,0.6)', fontWeight: 600 }}>Workspace:</span>
-              <select
-                value={activeWorkspace}
-                onChange={(e) => handleSwitchWorkspace(e.target.value)}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: '#FFB800',
-                  fontSize: '0.74rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  outline: 'none'
-                }}
-              >
-                {availableWorkspaces.map((w) => (
-                  <option key={w.id} value={w.id} style={{ background: '#080E1A', color: '#fff' }}>
-                    {w.icon} {w.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-          {isPremium && (
-            <span style={{
-              background: 'linear-gradient(135deg, rgba(255,138,0,0.2), rgba(255,215,0,0.25))',
-              border: '1px solid #FF8A00',
-              color: '#FFB800',
-              borderRadius: 20,
-              padding: '0.2rem 0.65rem',
-              fontSize: '0.68rem',
-              fontWeight: 700,
-              letterSpacing: '0.04em'
-            }}>
-              💎 PREMIUM VIP
-            </span>
-          )}
-          {isProtocol && (
-            <span style={{
-              background: 'rgba(20,40,255,0.2)',
-              border: '1px solid #1428FF',
-              color: '#7096FF',
-              borderRadius: 20,
-              padding: '0.2rem 0.65rem',
-              fontSize: '0.68rem',
-              fontWeight: 700
-            }}>
-              🌐 PROTOCOL
-            </span>
-          )}
-          {isPartner && !isProtocol && (
-            <span style={{
-              background: 'rgba(0,200,100,0.15)',
-              border: '1px solid #00c864',
-              color: '#00c864',
-              borderRadius: 20,
-              padding: '0.2rem 0.65rem',
-              fontSize: '0.68rem',
-              fontWeight: 700
-            }}>
-              🤝 PARTNER
-            </span>
-          )}
-          {isNodeLead && (
-            <span style={{
-              background: 'rgba(255,138,0,0.15)',
-              border: '1px solid #FF8A00',
-              color: '#FF8A00',
-              borderRadius: 20,
-              padding: '0.2rem 0.65rem',
-              fontSize: '0.68rem',
-              fontWeight: 700,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.35rem'
-            }}>
-              {/* Blockchain Node Network Symbol */}
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: '-1px' }}>
-                <circle cx="12" cy="12" r="3.5" fill="currentColor" />
-                <circle cx="4" cy="5" r="2" />
-                <circle cx="20" cy="5" r="2" />
-                <circle cx="4" cy="19" r="2" />
-                <circle cx="20" cy="19" r="2" />
-                <line x1="6" y1="6.5" x2="9.5" y2="10" />
-                <line x1="18" y1="6.5" x2="14.5" y2="10" />
-                <line x1="6" y1="17.5" x2="9.5" y2="14" />
-                <line x1="18" y1="17.5" x2="14.5" y2="14" />
-              </svg>
-              NODE LEAD
-            </span>
-          )}
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
-          {/* Daily Claim Quick Action */}
-          <button
-            onClick={handleDailyClaim}
-            disabled={claimedToday}
-            style={{
-              background: claimedToday ? 'rgba(0,200,100,0.12)' : 'linear-gradient(135deg, #FF8A00, #E07800)',
-              border: claimedToday ? '1px solid rgba(0,200,100,0.3)' : 'none',
-              color: claimedToday ? '#00c864' : '#fff',
-              borderRadius: 20,
-              padding: '0.35rem 0.9rem',
-              fontSize: '0.72rem',
-              fontWeight: 700,
-              cursor: claimedToday ? 'default' : 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.35rem'
-            }}
-          >
-            <span>{claimedToday ? '✓' : '⚡'}</span>
-            <span>{claimedToday ? `Streak: ${dailyStreak}d` : 'Claim +2 XP'}</span>
-          </button>
-
-          {/* Quick Referral Share */}
-          {userData?.referral_code && (
-            <button
-              onClick={handleCopyRef}
-              style={{
-                background: 'rgba(20,40,255,0.12)',
-                border: '1px solid rgba(20,40,255,0.3)',
-                color: '#6b8cff',
-                borderRadius: 6,
-                padding: '0.35rem 0.8rem',
-                fontSize: '0.72rem',
-                fontWeight: 600,
-                cursor: 'pointer'
-              }}
-            >
-              {copyFeedback ? '✓ Copied!' : '🔗 Copy Ref Link'}
-            </button>
-          )}
-
-          {/* Notifications Toggle */}
-          <div style={{ position: 'relative' }}>
-            <button
-              onClick={() => setShowNotifDropdown(!showNotifDropdown)}
-              style={{
-                background: 'transparent',
-                border: '1px solid rgba(200,215,240,0.2)',
-                color: '#fff',
-                borderRadius: '50%',
-                width: 36,
-                height: 36,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                position: 'relative'
-              }}
-            >
-              🔔
-              {unreadNotifsCount > 0 && (
-                <span style={{
-                  position: 'absolute',
-                  top: -3,
-                  right: -3,
-                  background: '#FF8A00',
-                  color: '#000',
-                  borderRadius: '50%',
-                  width: 16,
-                  height: 16,
-                  fontSize: '0.6rem',
-                  fontWeight: 800,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}>
-                  {unreadNotifsCount}
-                </span>
-              )}
-            </button>
-
-            {showNotifDropdown && (
-              <div style={{
-                position: 'absolute',
-                top: 45,
-                right: 0,
-                width: 320,
-                background: '#0D1526',
-                border: '1px solid rgba(20,40,255,0.3)',
-                borderRadius: 8,
-                padding: '0.8rem',
-                boxShadow: '0 12px 36px rgba(0,0,0,0.6)',
-                zIndex: 200
-              }}>
-                <div style={{ fontSize: '0.78rem', fontWeight: 700, marginBottom: '0.6rem', borderBottom: '1px solid rgba(200,215,240,0.1)', paddingBottom: '0.4rem' }}>
-                  Notifications
-                </div>
-                {notifications.length === 0 ? (
-                  <p style={{ color: 'var(--muted)', fontSize: '0.72rem', textAlign: 'center', margin: '1rem 0' }}>No notifications yet.</p>
-                ) : (
-                  <div style={{ maxHeight: 240, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    {notifications.map((n) => (
-                      <div key={n.id} style={{ fontSize: '0.72rem', padding: '0.4rem', borderBottom: '1px solid rgba(200,215,240,0.06)' }}>
-                        <strong>{n.title || 'Notification'}</strong>: {n.message}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* User Avatar */}
-          <div style={{
-            width: 36,
-            height: 36,
-            borderRadius: '50%',
-            background: 'linear-gradient(135deg, #1428FF, #FF8A00)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontWeight: 700,
-            fontSize: '0.85rem'
-          }}>
-            {fullName.slice(0, 2).toUpperCase()}
-          </div>
-        </div>
-      </header>
+      
 
       {/* DASHBOARD LAYOUT */}
-      <div style={{ display: 'flex', minHeight: 'calc(100vh - 65px)' }}>
+      <div style={{ display: 'flex', minHeight: '100vh', paddingTop: '85px', width: '100%', overflowX: 'hidden' }}>
         {/* SIDEBAR NAVIGATION */}
-        <aside style={{
+        <aside className="dash-desktop-sidebar" style={{
+          display: activeWorkspace === 'admin' ? 'none' : 'flex',
           width: sidebarOpen ? 240 : 70,
           background: '#080E1A',
           borderRight: '1px solid rgba(20,40,255,0.15)',
           padding: '1.2rem 0.6rem',
-          display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
           transition: 'width 0.25s ease'
         }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: sidebarOpen ? 'space-between' : 'center', marginBottom: '1rem' }}>
+              <button
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                style={{ background: 'rgba(20,40,255,0.1)', border: '1px solid rgba(20,40,255,0.25)', color: '#fff', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+              >
+                <span>☰</span>
+              </button>
+            </div>
             {/* WORKSPACE CONTEXT SWITCHER */}
-            {availableWorkspaces.length > 1 && (
+            {availableWorkspaces.length > 1 && sidebarOpen && (
               <div style={{
                 marginBottom: '0.6rem',
                 paddingBottom: '0.6rem',
@@ -1285,6 +1057,8 @@ export default function DashboardClient() {
               { id: 'tutor-queue', icon: '✍️', label: 'Grading Queue' },
               { id: 'tutor-sessions', icon: '📅', label: 'Office Hours' },
               { id: 'settings', icon: '⚙️', label: 'Settings' }
+            ] : activeWorkspace === 'admin' ? [
+              { id: 'admin-iframe', icon: '⚡', label: 'Admin Panels' }
             ] : [
               { id: 'classroom', icon: '📚', label: 'Sofe Academy' },
               { id: 'business', icon: '💼', label: 'My Business' },
@@ -1348,31 +1122,7 @@ export default function DashboardClient() {
               </Link>
             )}
 
-            {isStaffOrAdmin && (
-              <Link
-                href="/admin-dashboard"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.8rem',
-                  padding: '0.65rem 0.8rem',
-                  borderRadius: 8,
-                  background: 'rgba(20,40,255,0.15)',
-                  border: '1px solid rgba(20,40,255,0.3)',
-                  color: '#7096FF',
-                  fontWeight: 700,
-                  fontSize: '0.8rem',
-                  textDecoration: 'none',
-                  width: '100%',
-                  overflow: 'hidden',
-                  whiteSpace: 'nowrap',
-                  marginTop: '0.2rem'
-                }}
-              >
-                <span style={{ fontSize: '1.1rem' }}>⚡</span>
-                {sidebarOpen && <span>Admin Console</span>}
-              </Link>
-            )}
+
           </div>
 
           <div style={{ borderTop: '1px solid rgba(200,215,240,0.1)', paddingTop: '0.8rem' }}>
@@ -1400,58 +1150,108 @@ export default function DashboardClient() {
         </aside>
 
         {/* MAIN BODY AREA */}
-        <main style={{ flex: 1, padding: '2rem', overflowX: 'hidden' }}>
-          {/* WELCOME / HERO STRIP */}
-          <div style={{
-            background: 'linear-gradient(135deg, rgba(20,40,255,0.15), rgba(8,14,26,0.9))',
-            border: '1px solid rgba(20,40,255,0.25)',
-            borderRadius: 12,
-            padding: '1.5rem',
-            marginBottom: '2rem',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: '1rem'
-          }}>
-            <div>
-              <div style={{ fontSize: '0.78rem', color: '#FF8A00', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-                Sofian Success Portal
-              </div>
-              <h1 style={{ fontSize: '1.45rem', fontWeight: 800, marginTop: '0.2rem' }}>
-                Welcome Back, <span style={{ color: '#FF8A00' }}>{fullName}</span>!
-              </h1>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', marginTop: '0.4rem', fontSize: '0.78rem', color: 'rgba(200,215,240,0.7)' }}>
-                <span>{currentTier.icon} {currentTier.name} ({xpTotal.toLocaleString()} XP)</span>
-                <span>•</span>
-                <span>ID: {userData?.sofian_id || currentUser.uid.slice(0, 8)}</span>
-                {myChapter && (
-                  <>
+        <main className="dash-content" style={{ flex: 1, padding: '2rem', overflowX: 'hidden' }}>
+          {activeWorkspace !== 'admin' && (
+            <>
+              {/* WELCOME / HERO STRIP */}
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(20,40,255,0.15), rgba(8,14,26,0.9))',
+                border: '1px solid rgba(20,40,255,0.25)',
+                borderRadius: 12,
+                padding: '1.5rem',
+                marginBottom: '2rem',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '1rem'
+              }}>
+                <div>
+                  <div style={{ fontSize: '0.78rem', color: '#FF8A00', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                    Sofian Success Portal
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                    <h1 style={{ fontSize: '1.45rem', fontWeight: 800, margin: 0 }}>
+                      Welcome Back, <span style={{ color: '#FF8A00' }}>{fullName}</span>!
+                    </h1>
+                    {userData?.is_premium && <span style={{ background: 'linear-gradient(135deg, #FF8A00, #E07800)', padding: '0.2rem 0.6rem', borderRadius: 12, fontSize: '0.65rem', fontWeight: 700, color: '#fff' }}>Premium VIP</span>}
+                    {userData?.account_type === 'protocol' && <span style={{ background: '#1428FF', padding: '0.2rem 0.6rem', borderRadius: 12, fontSize: '0.65rem', fontWeight: 700, color: '#fff' }}>Protocol Partner</span>}
+                    {isNodeLead && <span style={{ background: '#10b981', padding: '0.2rem 0.6rem', borderRadius: 12, fontSize: '0.65rem', fontWeight: 700, color: '#fff' }}>Node Lead</span>}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', marginTop: '0.4rem', fontSize: '0.78rem', color: 'rgba(200,215,240,0.7)' }}>
+                    <span>{currentTier?.icon} {currentTier?.name} ({xpTotal.toLocaleString()} XP)</span>
                     <span>•</span>
-                    <span>🏛 Campus Node: <strong>{myChapter.name}</strong></span>
-                  </>
-                )}
-              </div>
-            </div>
+                    <span>ID: {userData?.sofian_id || currentUser.uid.slice(0, 8)}</span>
+                    {myChapter && (
+                      <>
+                        <span>•</span>
+                        <span>🏛 Campus Node: <strong>{myChapter.name}</strong></span>
+                      </>
+                    )}
+                  </div>
+                </div>
 
-            {/* Quick Stats Badges */}
-            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-              <div style={{ background: 'rgba(8,14,26,0.8)', border: '1px solid rgba(200,215,240,0.15)', borderRadius: 8, padding: '0.6rem 1rem', textAlign: 'center' }}>
-                <div style={{ fontSize: '0.68rem', color: 'rgba(200,215,240,0.6)' }}>Wallet Balance</div>
-                <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#00c864' }}>₦{walletBalance.toLocaleString('en-NG')}</div>
-              </div>
-              <div style={{ background: 'rgba(8,14,26,0.8)', border: '1px solid rgba(200,215,240,0.15)', borderRadius: 8, padding: '0.6rem 1rem', textAlign: 'center' }}>
-                <div style={{ fontSize: '0.68rem', color: 'rgba(200,215,240,0.6)' }}>Validated Referrals</div>
-                <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#FF8A00' }}>{validatedRefs}</div>
-              </div>
-            </div>
-          </div>
+                {/* Quick Stats Badges & Actions */}
+                <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <button
+                    onClick={handleDailyClaim}
+                    disabled={claimedToday}
+                    style={{
+                      background: claimedToday ? 'rgba(0,200,100,0.12)' : 'linear-gradient(135deg, #FF8A00, #E07800)',
+                      border: claimedToday ? '1px solid rgba(0,200,100,0.3)' : 'none',
+                      color: claimedToday ? '#00c864' : '#fff',
+                      borderRadius: 20,
+                      padding: '0.4rem 1rem',
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                      cursor: claimedToday ? 'default' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      boxShadow: claimedToday ? 'none' : '0 4px 15px rgba(255,138,0,0.3)'
+                    }}
+                  >
+                    <span>{claimedToday ? '✓' : '⚡'}</span>
+                    <span>{claimedToday ? `Streak: ${dailyStreak}d` : 'Claim +2 XP'}</span>
+                  </button>
 
-          {/* 💎 $100 PREMIUM MEMBERSHIP BANNER */}
-          {!isPremium ? (
-            <div style={{
-              background: 'linear-gradient(135deg, rgba(255,138,0,0.12), rgba(20,40,255,0.12))',
-              border: '1px solid rgba(255,138,0,0.4)',
+                  {userData?.referral_code && (
+                    <button
+                      onClick={handleCopyRef}
+                      style={{
+                        background: 'rgba(20,40,255,0.12)',
+                        border: '1px solid rgba(20,40,255,0.3)',
+                        color: '#6b8cff',
+                        borderRadius: 20,
+                        padding: '0.4rem 1rem',
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.4rem'
+                      }}
+                    >
+                      {copyFeedback ? '✓ Copied!' : '🔗 Copy Ref Link'}
+                    </button>
+                  )}
+
+                  <div style={{ background: 'rgba(8,14,26,0.8)', border: '1px solid rgba(200,215,240,0.15)', borderRadius: 8, padding: '0.6rem 1rem', textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.68rem', color: 'rgba(200,215,240,0.6)' }}>Wallet Balance</div>
+                    <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#00c864' }}>₦{walletBalance.toLocaleString('en-NG')}</div>
+                  </div>
+                  <div style={{ background: 'rgba(8,14,26,0.8)', border: '1px solid rgba(200,215,240,0.15)', borderRadius: 8, padding: '0.6rem 1rem', textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.68rem', color: 'rgba(200,215,240,0.6)' }}>Validated Referrals</div>
+                    <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#FF8A00' }}>{validatedRefs}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 💎 $100 PREMIUM MEMBERSHIP BANNER */}
+              {!isPremium ? (
+                <div style={{
+                  background: 'linear-gradient(135deg, rgba(255,138,0,0.12), rgba(20,40,255,0.12))',
+                  border: '1px solid rgba(255,138,0,0.4)',
               borderRadius: 12,
               padding: '1.25rem 1.5rem',
               marginBottom: '2rem',
@@ -1529,6 +1329,23 @@ export default function DashboardClient() {
                 <span>💬</span> Contact VIP Admin on WhatsApp
               </a>
             </div>
+          )}
+          </>
+          )}
+
+          {activeTab === 'admin-iframe' && (
+            <iframe
+              src="/admin-dashboard-v2.html"
+              style={{
+                width: '100%',
+                height: 'calc(100vh - 65px)',
+                border: 'none',
+                background: '#04080F',
+                borderRadius: '8px',
+                overflow: 'hidden'
+              }}
+              title="Admin Console"
+            />
           )}
 
           {/* TAB 1: CLASSROOM (SOFE ACADEMY) */}

@@ -282,8 +282,6 @@ export default function SignupClient() {
 
   return (
     <>
-      <link rel="stylesheet" href="/css/signup.css" />
-
       <div className="auth-page">
         {/* LEFT panel — adapts based on account type */}
         <div className="auth-brand">

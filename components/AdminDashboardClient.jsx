@@ -878,9 +878,11 @@ export default function AdminDashboardClient() {
                   <option value="">None (Standard)</option>
                   <option value="super_admin">Super Admin</option>
                   <option value="course_manager">Course Manager</option>
-                  <option value="tutor">Tutor / Grader</option>
+                  <option value="tutor">Tutor</option>
                   <option value="finance_admin">Finance Admin</option>
                   <option value="community_manager">Community Manager</option>
+                  <option value="social_media_manager">Social Media Manager</option>
+                  <option value="node_lead">Node Lead</option>
                 </select>
               </div>
 

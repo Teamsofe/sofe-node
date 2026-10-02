@@ -82,7 +82,7 @@ export default function AcademyClient() {
   };
 
   return (
-    <div style={{ background: 'var(--black)', color: 'var(--white)', minHeight: '100vh', fontFamily: 'Poppins, sans-serif', transition: 'background .3s, color .3s' }}>
+    <div style={{ minHeight: '100vh', transition: 'background .3s, color .3s' }}>
       {/* HERO SECTION */}
       <section style={{
         padding: '7rem 1.5rem 3rem',

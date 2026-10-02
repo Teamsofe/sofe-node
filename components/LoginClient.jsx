@@ -93,8 +93,6 @@ export default function LoginClient() {
 
   return (
     <>
-      <link rel="stylesheet" href="/css/login.css" />
-
       <div className="auth-page">
         {/* LEFT: Branding */}
         <div className="auth-brand">
