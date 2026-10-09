@@ -583,8 +583,8 @@ export default function DashboardClient() {
     // Check if user has ANY admin role
     const adminRole = u?.admin_role || (u?.role === 'admin' ? 'super_admin' : null);
     const hasAdminPanel = isSuperAdminUser || ['super_admin', 'admin', 'course_manager', 'finance_admin', 'community_manager', 'social_media_manager'].includes(adminRole);
-    const isTutor = u?.role === 'tutor' || u?.admin_role === 'tutor';
-    const isNodeLead = !!u?.node_lead_for || u?.role === 'node_lead' || u?.is_node_lead;
+    const isTutor = !isSuperAdminUser && (u?.role === 'tutor' || u?.admin_role === 'tutor');
+    const isNodeLead = !isSuperAdminUser && (!!u?.node_lead_for || u?.role === 'node_lead' || u?.is_node_lead);
 
     // Protocol and Partner accounts only see 'Learner' if they have an assigned role (admin/tutor/node_lead)
     const isRestrictedExclusive = (isProtocol || isPartner) && !hasAdminPanel && !isTutor && !isNodeLead;
@@ -596,10 +596,10 @@ export default function DashboardClient() {
     if (hasAdminPanel) {
       list.push({ id: 'admin', label: 'Admin Console', icon: '⚡', defaultTab: 'admin-iframe' });
     }
-    if (isProtocol) {
+    if (isProtocol && !isSuperAdminUser) {
       list.push({ id: 'protocol', label: 'Protocol Console', icon: '🌐', defaultTab: 'protocol-bounties' });
     }
-    if (isPartner) {
+    if (isPartner && !isSuperAdminUser) {
       list.push({ id: 'partner', label: 'Partner Portal', icon: '🤝', defaultTab: 'partner-analytics' });
     }
     if (isNodeLead) {
@@ -608,6 +608,7 @@ export default function DashboardClient() {
     if (isTutor) {
       list.push({ id: 'tutor', label: 'Tutor Desk', icon: '✍️', defaultTab: 'tutor-queue' });
     }
+
     
     return list;
   };
