@@ -85,7 +85,7 @@ export default function Nav() {
           </li>
           <li className="nav-dropdown">
             <Link href="/services" className={isLinkActive('/services') ? 'active-pill' : ''}>
-              Services
+              Services <span className="nav-chevron">&#9660;</span>
             </Link>
             <div className="nav-dropdown-menu">
               <div className="nav-dropdown-panel">
@@ -103,7 +103,7 @@ export default function Nav() {
           </li>
           <li className="nav-dropdown">
             <Link href="#" className={isLinkActive('/blog') || isLinkActive('/events') || isLinkActive('/about') ? 'active-pill' : ''}>
-              Resources
+              Resources <span className="nav-chevron">&#9660;</span>
             </Link>
             <div className="nav-dropdown-menu">
               <div className="nav-dropdown-panel">

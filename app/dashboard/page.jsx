@@ -1,4 +1,5 @@
 import DashboardClient from '@/components/DashboardClient';
+import { Suspense } from 'react';
 
 export const metadata = {
   title: 'Sofian Dashboard & Success Portal | Sofe Node',
@@ -6,5 +7,9 @@ export const metadata = {
 };
 
 export default function DashboardPage() {
-  return <DashboardClient />;
+  return (
+    <Suspense fallback={<div style={{ minHeight: '100vh', background: '#04080F', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Loading Dashboard...</div>}>
+      <DashboardClient />
+    </Suspense>
+  );
 }
