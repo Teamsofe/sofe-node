@@ -1,196 +1,332 @@
 'use client';
-import React from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import {
+  db,
+  auth,
+  collection,
+  getDocs,
+  addDoc,
+  query,
+  orderBy,
+  where,
+  serverTimestamp,
+  doc,
+  getDoc,
+  onAuthStateChanged
+} from '@/lib/firebase';
 
 export default function BountiesClient() {
+  const [bounties, setBounties] = useState([]);
+  const [category, setCategory] = useState('all');
+  const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [userProfile, setUserProfile] = useState(null);
+
+  // New bounty modal for Protocol Partners
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newBounty, setNewBounty] = useState({
+    title: '',
+    category: 'dev',
+    reward_usd: '',
+    deadline: '',
+    description: '',
+    requirements: '',
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [msg, setMsg] = useState('');
+
+  useEffect(() => {
+    if (!auth) return;
+    const unsub = onAuthStateChanged(auth, async u => {
+      setCurrentUser(u);
+      if (u && db) {
+        try {
+          const uDoc = await getDoc(doc(db, 'users', u.uid));
+          if (uDoc.exists()) setUserProfile(uDoc.data());
+        } catch (e) {}
+      }
+    });
+    return () => unsub();
+  }, []);
+
+  useEffect(() => {
+    async function fetchBounties() {
+      if (!db) return;
+      setLoading(true);
+      try {
+        const snap = await getDocs(query(collection(db, 'bounties'), orderBy('created_at', 'desc')));
+        const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        setBounties(list);
+      } catch (err) {
+        // Fallback without orderBy if index is building
+        try {
+          const snap2 = await getDocs(collection(db, 'bounties'));
+          setBounties(snap2.docs.map(d => ({ id: d.id, ...d.data() })));
+        } catch (e2) {
+          console.warn('Error fetching bounties:', e2);
+        }
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchBounties();
+  }, []);
+
+  async function handleCreateBounty(e) {
+    e.preventDefault();
+    if (!newBounty.title || !newBounty.reward_usd) return;
+    setSubmitting(true);
+    setMsg('');
+
+    try {
+      if (!db || !currentUser) throw new Error('Authentication required');
+
+      await addDoc(collection(db, 'bounties'), {
+        title: newBounty.title.trim(),
+        category: newBounty.category,
+        reward_usd: Number(newBounty.reward_usd) || 0,
+        deadline: newBounty.deadline || null,
+        description: newBounty.description.trim(),
+        requirements: newBounty.requirements.trim(),
+        status: userProfile?.role === 'admin' ? 'active' : 'pending_approval',
+        posted_by: currentUser.uid,
+        creator_name: userProfile ? `${userProfile.first_name || ''} ${userProfile.last_name || ''}`.trim() : currentUser.email,
+        creator_email: currentUser.email,
+        created_at: serverTimestamp(),
+        applicants_count: 0,
+      });
+
+      setMsg('✓ Bounty submitted successfully! It will be reviewed by admin before going live.');
+      setNewBounty({ title: '', category: 'dev', reward_usd: '', deadline: '', description: '', requirements: '' });
+      setTimeout(() => setShowCreateModal(false), 2000);
+    } catch (err) {
+      console.error('Error creating bounty:', err);
+      setMsg('Error: ' + err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const isProtocolPartner = userProfile?.account_type === 'protocol' || userProfile?.role === 'admin';
+
+  const filtered = bounties.filter(b => {
+    const matchCat = category === 'all' || (b.category || '').toLowerCase() === category.toLowerCase();
+    const matchSearch = (b.title || '').toLowerCase().includes(search.toLowerCase()) ||
+                        (b.description || '').toLowerCase().includes(search.toLowerCase());
+    return matchCat && matchSearch;
+  });
+
   return (
     <>
-      
+      <link rel="stylesheet" href="/css/bounties.css" />
 
+      {/* ── HERO ── */}
+      <section className="bounty-hero" style={{ padding: '8rem 5vw 4rem', textAlign: 'center' }}>
+        <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+          <div style={{ display: 'inline-block', background: 'rgba(20,40,255,.12)', color: '#6b8cff', border: '1px solid rgba(20,40,255,.3)', padding: '.35rem 1rem', borderRadius: '20px', fontSize: '.78rem', fontWeight: 700, textTransform: 'uppercase', marginBottom: '1.2rem' }}>
+            Earn On-Chain Rewards
+          </div>
+          <h1 style={{ fontSize: 'clamp(2.2rem, 4.5vw, 3.6rem)', fontWeight: 800, lineHeight: 1.15, marginBottom: '1.2rem' }}>
+            Sofe Node <span style={{ color: 'var(--orange)' }}>Bounty</span> Campaigns
+          </h1>
+          <p style={{ color: 'var(--muted)', fontSize: '1rem', lineHeight: 1.7, marginBottom: '2rem' }}>
+            Contribute to leading Web3 protocols, complete technical and creative quests, build your on-chain reputation, and earn bounties paid in crypto &amp; fiat.
+          </p>
 
-
-{/*  Hero Section  */}
-<section style={{"position":"relative","padding":"8rem 2rem 3rem","textAlign":"center","background":"linear-gradient(180deg, var(--deep) 0%, var(--black) 100%)"}}>
-  <div style={{"maxWidth":"900px","margin":"0 auto"}}>
-    {/*  Label  */}
-    <div style={{"display":"inline-flex","alignItems":"center","gap":"0.5rem","padding":"0.5rem 1rem","background":"rgba(255,138,0,0.12)","border":"1px solid rgba(255,138,0,0.3)","borderRadius":"50px","marginBottom":"1.5rem"}}>
-      <span style={{"fontSize":"1.2rem"}}>🎯</span>
-      <span style={{"fontSize":"0.7rem","fontWeight":"700","letterSpacing":"0.1em","textTransform":"uppercase","color":"var(--orange)"}}>Sofe Bounties</span>
-    </div>
-    
-    {/*  Headline  */}
-    <h1 style={{"fontSize":"clamp(2.5rem, 6vw, 4rem)","fontWeight":"900","lineHeight":"1.1","marginBottom":"1rem"}}>
-      Activate the Network.<br/>
-      <span style={{"color":"var(--orange)"}}>Claim the Bounty.</span>
-    </h1>
-    
-    {/*  Subtitle  */}
-    <p style={{"fontSize":"clamp(1rem, 2vw, 1.2rem)","color":"var(--muted)","maxWidth":"680px","margin":"0 auto 2rem","lineHeight":"1.7"}}>
-      Complete challenges, earn rewards, and build your Web3 portfolio — from referrals to development tasks.
-    </p>
-  </div>
-</section>
-
-{/*  Loading State  */}
-<div id="loadingState" className="loading-state">
-  <div style={{"fontSize":"3rem","marginBottom":"1rem"}}>⏳</div>
-  Loading bounty campaigns...
-</div>
-
-{/*  Filters Section  */}
-<div id="filtersSection" style={{"display":"none"}}>
-  <div style={{"maxWidth":"1200px","margin":"0 auto","padding":"2rem 2rem 1rem"}}>
-    
-    {/*  Track Filters  */}
-    <div style={{"marginBottom":"1rem"}}>
-      <div style={{"fontSize":"0.75rem","fontWeight":"700","letterSpacing":"0.1em","textTransform":"uppercase","color":"var(--muted)","marginBottom":"0.75rem"}}>
-        Filter by Track:
-      </div>
-      <div style={{"display":"flex","gap":"0.5rem","flexWrap":"wrap"}} id="trackFilters">
-        <button className="filter-pill active" data-filter="all" onClick="filterByTrack('all', this)">All Tracks</button>
-        <button className="filter-pill" data-filter="development" onClick="filterByTrack('development', this)">Development</button>
-        <button className="filter-pill" data-filter="data-analysis" onClick="filterByTrack('data-analysis', this)">Data Analysis</button>
-        <button className="filter-pill" data-filter="ai-automation" onClick="filterByTrack('ai-automation', this)">AI & Automation</button>
-        <button className="filter-pill" data-filter="design" onClick="filterByTrack('design', this)">Design</button>
-        <button className="filter-pill" data-filter="management" onClick="filterByTrack('management', this)">Management</button>
-        <button className="filter-pill" data-filter="growth-media" onClick="filterByTrack('growth-media', this)">Growth & Media</button>
-        <button className="filter-pill" data-filter="trading" onClick="filterByTrack('trading', this)">Trading</button>
-      </div>
-    </div>
-    
-    {/*  Status Filters  */}
-    <div>
-      <div style={{"fontSize":"0.75rem","fontWeight":"700","letterSpacing":"0.1em","textTransform":"uppercase","color":"var(--muted)","marginBottom":"0.75rem"}}>
-        Status:
-      </div>
-      <div style={{"display":"flex","gap":"0.5rem","flexWrap":"wrap"}} id="statusFilters">
-        <button className="filter-pill active" data-filter="all" onClick="filterByStatus('all', this)">All</button>
-        <button className="filter-pill" data-filter="open" onClick="filterByStatus('open', this)">Open</button>
-        <button className="filter-pill" data-filter="application" onClick="filterByStatus('application', this)">Application Required</button>
-      </div>
-    </div>
-    
-  </div>
-</div>
-
-
-
-{/*  Bounties List  */}
-<div id="bountiesList" style={{"display":"none","maxWidth":"1200px","margin":"0 auto","padding":"2rem"}}>
-</div>
-
-{/*  Main Bounty Content (Hidden until loaded)  */}
-<div id="bountyContent" style={{"display":"none"}}>
-  
-  {/*  Hero  */}
-  <div className="bounty-hero">
-    <div className="bounty-eyebrow">
-      <span id="heroEyebrow">📚 Sofe Node Academy</span>
-    </div>
-    <h1 className="bounty-title">
-      <span className="bounty-title-word" id="heroTitle1">THE REFERRAL</span>
-      <span className="bounty-title-word blue" id="heroTitle2">BOUNTY</span>
-      <span className="bounty-title-word live" id="heroTitle3">IS LIVE!</span>
-    </h1>
-    <div className="bounty-subtitle">
-      <span className="bounty-icon">🚀</span>
-      <span id="heroSubtitle1">ACTIVATE THE NETWORK</span>
-      <span id="heroSubtitle2">CLAIM THE BOUNTY.</span>
-    </div>
-  </div>
-
-  {/*  Main Container  */}
-  <div className="bounty-container">
-    
-    {/*  Grid  */}
-    <div className="bounty-grid">
-      
-      {/*  How to Win  */}
-      <div className="bounty-card">
-        <div className="bounty-card-header">How to Win:</div>
-        <div id="requirementsList"></div>
-      </div>
-      
-      {/*  Leaderboard Rewards  */}
-      <div className="bounty-card">
-        <div className="bounty-card-header rewards">The Leaderboard Rewards:</div>
-        <div id="prizesList"></div>
-      </div>
-      
-      {/*  Total Prize Pool  */}
-      <div className="bounty-card">
-        <div className="bounty-card-header pool">💰 Prize Pool</div>
-        <div className="prize-pool">
-          <div className="prize-pool-icon">🏆</div>
-          <div className="prize-pool-label">Total Prize Pool:</div>
-          <div className="prize-pool-amount" id="totalPrizePool">₦0</div>
-        </div>
-      </div>
-      
-    </div>
-    
-    {/*  Campaign Details  */}
-    <div className="details-card bounty-card">
-      <div className="bounty-card-header">📋 Campaign Details:</div>
-      <div className="details-grid">
-        
-        <div className="detail-item">
-          <div className="detail-icon">📅</div>
-          <div className="detail-content">
-            <h3>Duration:</h3>
-            <div className="detail-value" id="campaignDuration">14 DAYS ONLY!</div>
-            <div className="detail-text" id="campaignDates">Ends on...</div>
+          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <Link href="#explore" style={{ padding: '.8rem 1.8rem', background: 'var(--blue)', color: '#fff', borderRadius: '8px', fontWeight: 700, textDecoration: 'none' }}>
+              Explore Active Bounties →
+            </Link>
+            {isProtocolPartner && (
+              <button
+                onClick={() => setShowCreateModal(true)}
+                style={{ padding: '.8rem 1.8rem', background: 'var(--orange)', color: '#000', border: 'none', borderRadius: '8px', fontWeight: 800, cursor: 'pointer' }}
+              >
+                + Post Protocol Bounty
+              </button>
+            )}
           </div>
         </div>
-        
-        <div className="detail-item">
-          <div className="detail-icon">✅</div>
-          <div className="detail-content">
-            <h3>Validation:</h3>
-            <div className="detail-text" id="validationRules">Only verified entries count toward the final leaderboard.</div>
+      </section>
+
+      {/* ── FILTER & LISTING ── */}
+      <section id="explore" style={{ padding: '3rem 5vw 6rem' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+          {/* Controls */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
+            <div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap' }}>
+              {['all', 'dev', 'design', 'growth', 'content'].map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => setCategory(cat)}
+                  style={{
+                    padding: '.5rem 1.1rem',
+                    borderRadius: '20px',
+                    border: category === cat ? '1px solid var(--blue)' : '1px solid var(--border)',
+                    background: category === cat ? 'var(--blue)' : 'var(--panel)',
+                    color: '#fff',
+                    fontSize: '.8rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    textTransform: 'capitalize'
+                  }}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+
+            <input
+              type="text"
+              placeholder="Search bounties…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              style={{ padding: '.6rem 1.2rem', background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: '25px', color: '#fff', fontSize: '.85rem', width: '280px' }}
+            />
+          </div>
+
+          {/* Bounty Grid */}
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--muted)' }}>Loading active bounties…</div>
+          ) : filtered.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '4rem', background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: '12px', color: 'var(--muted)' }}>
+              No bounties found matching your search.
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.8rem' }}>
+              {filtered.map(b => (
+                <div key={b.id} style={{ background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: '12px', padding: '2rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                      <span style={{ background: 'rgba(20,40,255,.15)', color: '#6b8cff', padding: '.25rem .7rem', borderRadius: '5px', fontSize: '.72rem', fontWeight: 700, textTransform: 'uppercase' }}>
+                        {b.category || 'General'}
+                      </span>
+                      <span style={{ fontSize: '.78rem', color: 'var(--muted)' }}>
+                        {b.deadline ? `Due: ${b.deadline}` : 'Open'}
+                      </span>
+                    </div>
+
+                    <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--white)', marginBottom: '.6rem' }}>
+                      {b.title}
+                    </h3>
+                    <p style={{ color: 'var(--muted)', fontSize: '.85rem', lineHeight: 1.6, marginBottom: '1.5rem', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                      {b.description || 'Complete this task to earn bounty rewards.'}
+                    </p>
+                  </div>
+
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
+                      <div>
+                        <div style={{ fontSize: '.7rem', color: 'var(--muted)', textTransform: 'uppercase' }}>Reward</div>
+                        <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--orange)' }}>
+                          ${(b.reward_usd || 0).toLocaleString()}
+                        </div>
+                      </div>
+                      <Link
+                        href={`/bounties/${b.id}`}
+                        style={{ padding: '.55rem 1.2rem', background: 'var(--blue)', color: '#fff', borderRadius: '6px', fontSize: '.8rem', fontWeight: 700, textDecoration: 'none' }}
+                      >
+                        Apply / View →
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* CREATE BOUNTY MODAL (FOR PROTOCOL PARTNERS) */}
+      {showCreateModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div style={{ background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: '14px', maxWidth: '600px', width: '100%', padding: '2rem', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h3 style={{ fontSize: '1.3rem', fontWeight: 700, color: 'var(--white)' }}>Post Protocol Bounty</h3>
+              <button onClick={() => setShowCreateModal(false)} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
+            </div>
+
+            {msg && (
+              <div style={{ background: 'rgba(16,185,129,.15)', border: '1px solid rgba(16,185,129,.3)', borderRadius: '6px', padding: '.8rem', color: '#10b981', fontSize: '.85rem', marginBottom: '1.2rem' }}>
+                {msg}
+              </div>
+            )}
+
+            <form onSubmit={handleCreateBounty}>
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', fontSize: '.75rem', fontWeight: 600, color: 'var(--muted)', marginBottom: '.3rem' }}>Bounty Title</label>
+                <input
+                  type="text"
+                  required
+                  value={newBounty.title}
+                  onChange={e => setNewBounty({ ...newBounty, title: e.target.value })}
+                  placeholder="e.g. Build an Open-Source Staking Dashboard"
+                  style={{ width: '100%', padding: '.75rem', background: 'var(--deep)', border: '1px solid var(--border)', borderRadius: '6px', color: '#fff' }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '.75rem', fontWeight: 600, color: 'var(--muted)', marginBottom: '.3rem' }}>Category</label>
+                  <select
+                    value={newBounty.category}
+                    onChange={e => setNewBounty({ ...newBounty, category: e.target.value })}
+                    style={{ width: '100%', padding: '.75rem', background: 'var(--deep)', border: '1px solid var(--border)', borderRadius: '6px', color: '#fff' }}
+                  >
+                    <option value="dev">Development</option>
+                    <option value="design">Design / UI</option>
+                    <option value="growth">Growth &amp; Marketing</option>
+                    <option value="content">Content &amp; Research</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '.75rem', fontWeight: 600, color: 'var(--muted)', marginBottom: '.3rem' }}>Prize Pool (USD)</label>
+                  <input
+                    type="number"
+                    required
+                    value={newBounty.reward_usd}
+                    onChange={e => setNewBounty({ ...newBounty, reward_usd: e.target.value })}
+                    placeholder="500"
+                    style={{ width: '100%', padding: '.75rem', background: 'var(--deep)', border: '1px solid var(--border)', borderRadius: '6px', color: '#fff' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', fontSize: '.75rem', fontWeight: 600, color: 'var(--muted)', marginBottom: '.3rem' }}>Deadline Date</label>
+                <input
+                  type="date"
+                  value={newBounty.deadline}
+                  onChange={e => setNewBounty({ ...newBounty, deadline: e.target.value })}
+                  style={{ width: '100%', padding: '.75rem', background: 'var(--deep)', border: '1px solid var(--border)', borderRadius: '6px', color: '#fff' }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', fontSize: '.75rem', fontWeight: 600, color: 'var(--muted)', marginBottom: '.3rem' }}>Description &amp; Deliverables</label>
+                <textarea
+                  rows={4}
+                  required
+                  value={newBounty.description}
+                  onChange={e => setNewBounty({ ...newBounty, description: e.target.value })}
+                  placeholder="Outline the scope and submission instructions..."
+                  style={{ width: '100%', padding: '.75rem', background: 'var(--deep)', border: '1px solid var(--border)', borderRadius: '6px', color: '#fff' }}
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={submitting}
+                style={{ width: '100%', padding: '.85rem', background: 'var(--orange)', color: '#000', border: 'none', borderRadius: '6px', fontWeight: 800, cursor: 'pointer', fontSize: '.9rem' }}
+              >
+                {submitting ? 'Submitting…' : 'Submit Bounty for Review →'}
+              </button>
+            </form>
           </div>
         </div>
-        
-      </div>
-    </div>
-    
-    {/*  CTA  */}
-    <div className="bounty-cta">
-      <a href="#" className="cta-button" id="ctaButton">
-        <span id="ctaText">START REFERRING NOW</span>
-        <span>→</span>
-      </a>
-    </div>
-    
-    {/*  Live Leaderboard  */}
-    <div className="leaderboard-section" id="leaderboardSection">
-      <div className="leaderboard-header">
-        <h2 className="leaderboard-title">🏆 Live Leaderboard</h2>
-        <p className="leaderboard-subtitle">Top participants competing for prizes</p>
-      </div>
-      <div className="leaderboard-table" id="leaderboardTable"></div>
-    </div>
-    
-  </div>
-  
-</div>
-
-{/*  No Active Bounty State  */}
-<div id="noBountyState" className="empty-state" style={{"display":"none"}}>
-  <div style={{"fontSize":"4rem","marginBottom":"1rem"}}>📭</div>
-  <h2>No Active Bounty Campaign</h2>
-  <p style={{"marginTop":"1rem"}}>Check back soon for exciting bounty opportunities!</p>
-</div>
-
-{/*  FOOTER (would come from include)  */}
-
-
-
-
-{/*  Universal navbar  */}
-
-
-
+      )}
     </>
   );
 }

@@ -1,221 +1,129 @@
 'use client';
-import React from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
 export default function BceClient() {
+  const [timeLeft, setTimeLeft] = useState({ days: 45, hours: 12, mins: 30, secs: 15 });
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev.secs > 0) return { ...prev, secs: prev.secs - 1 };
+        if (prev.mins > 0) return { ...prev, mins: 59, secs: 59 };
+        if (prev.hours > 0) return { ...prev, hours: prev.hours - 1, mins: 59, secs: 59 };
+        if (prev.days > 0) return { ...prev, days: prev.days - 1, hours: 23, mins: 59, secs: 59 };
+        return prev;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const tracks = [
+    { icon: '💻', title: 'Engineering & Dev', desc: 'Smart contracts, dApp security, architecture workshops with leading protocol core devs.' },
+    { icon: '📈', title: 'DeFi & Trading', desc: 'Market making, on-chain liquidity, derivatives trading, and algorithmic models.' },
+    { icon: '🤝', title: 'Community & Ecosystem', desc: 'Growth strategies, developer relations, campus node leadership in African markets.' },
+    { icon: '🏛', title: 'Governance & DAOs', desc: 'Decentralized decision-making, tokenomics, legal frameworks, and treasury management.' },
+  ];
+
+  const tickets = [
+    { name: 'Student Pass', price: 'Free', sub: 'Verified university students', perks: ['Access to main stage keynotes', 'Virtual career expo', 'Certificate of attendance'], popular: false },
+    { name: 'Professional Pass', price: '₦15,000', sub: 'Developers & Web3 workers', perks: ['Full stage & workshop access', 'Priority career fair matching', 'VIP Networking Lounge', 'Official BCE Swag Bag'], popular: true },
+    { name: 'Protocol / Sponsor', price: 'Contact Us', sub: 'Exhibitors & recruiters', perks: ['Exhibition booth space', 'Keynote & panel speaking slot', 'Direct talent pipeline database', 'Brand feature across all nodes'], popular: false },
+  ];
+
   return (
     <>
-      
+      <link rel="stylesheet" href="/css/bce.css" />
 
+      {/* ── HERO ── */}
+      <section className="bce-hero" id="bce-hero" style={{ padding: '8rem 5vw 4rem', textAlign: 'center' }}>
+        <div style={{ maxWidth: '850px', margin: '0 auto' }}>
+          <div className="bce-badge" style={{ display: 'inline-block', background: 'rgba(255,138,0,.15)', color: 'var(--orange)', border: '1px solid rgba(255,138,0,.3)', borderRadius: '20px', padding: '.4rem 1.2rem', fontSize: '.8rem', fontWeight: 700, marginBottom: '1.2rem' }}>
+            🔥 Annual Flagship Event &middot; 2026 Edition
+          </div>
+          <h1 className="bce-h1" style={{ fontSize: 'clamp(2.5rem, 5vw, 4rem)', fontWeight: 800, lineHeight: 1.15 }}>
+            Blockchain <br /><span style={{ color: 'var(--blue)' }}>Career</span> <span style={{ color: 'var(--orange)' }}>Expo 2026</span>
+          </h1>
+          <p className="body-text" style={{ maxWidth: '580px', margin: '1.2rem auto 2rem', color: 'var(--muted)', fontSize: '1rem', lineHeight: 1.7 }}>
+            Africa&apos;s premier Web3 career event. Keynotes, workshops, a live career fair, and protocol exhibitions across our campus node networks. One day. Hundreds of opportunities.
+          </p>
 
+          {/* Countdown */}
+          <div className="countdown-wrap" style={{ display: 'flex', gap: '1.2rem', justifyContent: 'center', marginBottom: '2.5rem' }}>
+            <div style={{ background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: '10px', padding: '1rem 1.4rem', minWidth: '80px' }}>
+              <span style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--orange)', display: 'block' }}>{timeLeft.days}</span>
+              <span style={{ fontSize: '.7rem', color: 'var(--muted)', textTransform: 'uppercase' }}>Days</span>
+            </div>
+            <div style={{ background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: '10px', padding: '1rem 1.4rem', minWidth: '80px' }}>
+              <span style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--orange)', display: 'block' }}>{timeLeft.hours}</span>
+              <span style={{ fontSize: '.7rem', color: 'var(--muted)', textTransform: 'uppercase' }}>Hours</span>
+            </div>
+            <div style={{ background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: '10px', padding: '1rem 1.4rem', minWidth: '80px' }}>
+              <span style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--orange)', display: 'block' }}>{timeLeft.mins}</span>
+              <span style={{ fontSize: '.7rem', color: 'var(--muted)', textTransform: 'uppercase' }}>Minutes</span>
+            </div>
+            <div style={{ background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: '10px', padding: '1rem 1.4rem', minWidth: '80px' }}>
+              <span style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--orange)', display: 'block' }}>{timeLeft.secs}</span>
+              <span style={{ fontSize: '.7rem', color: 'var(--muted)', textTransform: 'uppercase' }}>Seconds</span>
+            </div>
+          </div>
 
+          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+            <a href="#tickets" className="btn-primary" style={{ padding: '.8rem 1.8rem', background: 'var(--orange)', color: '#000', borderRadius: '8px', fontWeight: 700, textDecoration: 'none' }}>Get Your Ticket</a>
+            <a href="#tracks" className="btn-outline" style={{ padding: '.8rem 1.8rem', border: '1px solid var(--border)', color: 'var(--white)', borderRadius: '8px', fontWeight: 600, textDecoration: 'none' }}>View Tracks</a>
+          </div>
+          <p style={{ marginTop: '1.2rem', fontSize: '.78rem', color: 'var(--muted)' }}>📍 University of Nigeria, Nsukka &amp; Virtual &middot; November 2026</p>
+        </div>
+      </section>
 
+      {/* ── TRACKS ── */}
+      <section id="tracks" style={{ padding: '5rem 5vw', background: 'var(--deep)' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
+            <div style={{ color: 'var(--blue)', fontWeight: 700, textTransform: 'uppercase', fontSize: '.75rem', marginBottom: '.5rem' }}>Expo Content</div>
+            <h2 style={{ fontSize: '2.2rem', fontWeight: 800 }}>Four Curated <span style={{ color: 'var(--blue)' }}>Tracks</span></h2>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.5rem' }}>
+            {tracks.map((t, idx) => (
+              <div key={idx} style={{ background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: '10px', padding: '2rem' }}>
+                <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>{t.icon}</div>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: 'var(--white)', marginBottom: '.5rem' }}>{t.title}</h3>
+                <p style={{ color: 'var(--muted)', fontSize: '.88rem', lineHeight: 1.65 }}>{t.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
-{/*  HERO  */}
-<section className="bce-hero" id="bce-hero">
-  <div className="bce-badge">🔥 Annual Flagship Event &middot; 2026 Edition</div>
-  <h1 className="bce-h1">
-    Blockchain<br /><em>Career</em> <span>Expo 2026</span><br />
-  </h1>
-  <p className="body-text" style={{"maxWidth":"580px","marginTop":"1.2rem"}}>
-    Africa's premier Web3 career event. Keynotes, workshops, a live career fair, and protocol exhibitions
-    — across our campus node networks. One day. Hundreds of opportunities.
-  </p>
-  <div className="countdown-wrap" id="countdown">
-    <div className="cd-unit"><span className="cd-num" id="cd-days">--</span><span className="cd-label">Days</span></div>
-    <div className="cd-unit"><span className="cd-num" id="cd-hours">--</span><span className="cd-label">Hours</span></div>
-    <div className="cd-unit"><span className="cd-num" id="cd-mins">--</span><span className="cd-label">Minutes</span></div>
-    <div className="cd-unit"><span className="cd-num" id="cd-secs">--</span><span className="cd-label">Seconds</span></div>
-  </div>
-  <div style={{"display":"flex","gap":"1rem","flexWrap":"wrap"}}>
-    <a href="#tickets" className="btn-primary orange">Get Your Ticket</a>
-    <a href="#schedule" className="btn-outline">View Schedule</a>
-  </div>
-  <p style={{"marginTop":"1rem","fontSize":".78rem","color":"var(--muted)"}}>📍 University of Nigeria, Nsukka &amp; Virtual &middot; November 2025</p>
-</section>
-
-{/*  STATS  */}
-<div className="stats-wrap">
-  <div className="stats-strip reveal">
-    <div className="stat-cell"><span className="stat-num">1 Day</span><span className="stat-label">Conference</span></div>
-    <div className="stat-cell"><span className="stat-num">2 Weeks</span><span className="stat-label">Dev, Trading And Content Hackathon</span></div>
-    <div className="stat-cell"><span className="stat-num">2,000+</span><span className="stat-label">Expected Attendees</span></div>
-    <div className="stat-cell"><span className="stat-num">20+</span><span className="stat-label">Protocol Exhibitors</span></div>
-    <div className="stat-cell"><span className="stat-num">10+</span><span className="stat-label">Keynote Speakers</span></div>
-    <div className="stat-cell"><span className="stat-num">5+</span><span className="stat-label">Node Participation</span></div>
-  </div>
-</div>
-
-{/*  HIGHLIGHTS  */}
-<section>
-  <div className="section-tag orange-tag">Why Attend</div>
-  <h2>One Day. <em className="orange">Unlimited</em> Opportunity.</h2>
-  <div className="bce-highlights reveal">
-    <div className="bce-hl-card">
-      <div className="bce-hl-icon">🎤</div>
-      <div className="bce-hl-num">10+</div>
-      <div className="bce-hl-label">Keynote Speakers</div>
-      <p className="body-text" style={{"fontSize":".82rem","marginTop":".8rem"}}>Industry leaders from Africa's top Web3 protocols, VCs, and developer ecosystems.</p>
-    </div>
-    <div className="bce-hl-card">
-      <div className="bce-hl-icon">🏆</div>
-      <div className="bce-hl-num">$3,000</div>
-      <div className="bce-hl-label">Prize Pool</div>
-      <p className="body-text" style={{"fontSize":".82rem","marginTop":".8rem"}}>Hackathon challenge with prizes for top Web3 builders, traders, and content creators.</p>
-    </div>
-    <div className="bce-hl-card">
-      <div className="bce-hl-icon">💼</div>
-      <div className="bce-hl-num">100+</div>
-      <div className="bce-hl-label">Jobs Available</div>
-      <p className="body-text" style={{"fontSize":".82rem","marginTop":".8rem"}}>Live career fair with global protocols actively hiring Web3 developers, marketers, and traders.</p>
-    </div>
-    <div className="bce-hl-card">
-      <div className="bce-hl-icon">🛠️</div>
-      <div className="bce-hl-num">5</div>
-      <div className="bce-hl-label">Workshops</div>
-      <p className="body-text" style={{"fontSize":".82rem","marginTop":".8rem"}}>Hands-on sessions: Smart contract dev, Tokenization, Web3 career strategy, Content Marketing, Crypto Trading.</p>
-    </div>
-    <div className="bce-hl-card">
-      <div className="bce-hl-icon">🌍</div>
-      <div className="bce-hl-num">5</div>
-      <div className="bce-hl-label">Campus Nodes</div>
-      <p className="body-text" style={{"fontSize":".82rem","marginTop":".8rem"}}>Node participation across UNN, UniJos, and 3 more campuses — plus a live-streamed virtual track.</p>
-    </div>
-    <div className="bce-hl-card">
-      <div className="bce-hl-icon">🎓</div>
-      <div className="bce-hl-num">FREE</div>
-      <div className="bce-hl-label">Student Track</div>
-      <p className="body-text" style={{"fontSize":".82rem","marginTop":".8rem"}}>Students with a valid .edu email attend the virtual track at zero cost. No excuses.</p>
-    </div>
-  </div>
-</section>
-
-{/*  SPONSORS  */}
-<section>
-  <div className="section-tag orange-tag">Our Event Sponsors</div>
-  <h2>Powered By <em className="orange">Industry Leaders</em></h2>
-  <p className="body-text" style={{"maxWidth":"540px","marginTop":".8rem"}}>These global protocols make the BCE possible — and are actively hiring at the career fair.</p>
-  <div className="sponsors-grid reveal">
-    <div className="sponsor-card" style={{"borderStyle":"dashed","cursor":"pointer"}} onClick="window.location='./contact.html'">
-      <div style={{"fontSize":"1.2rem","marginBottom":".6rem"}}>🏅 TITLE SPONSOR</div>
-      <div className="sponsor-name">$3,000</div>
-      <div style={{"fontSize":".72rem","color":"var(--blue)","marginTop":".3rem"}}>Become a Sponsor →</div>
-    </div>
-    <div className="sponsor-card" style={{"borderStyle":"dashed","cursor":"pointer"}} onClick="window.location='./contact.html'">
-      <div style={{"fontSize":"1.2rem","marginBottom":".6rem"}}>🏅GOLD SPONSOR</div>
-      <div className="sponsor-name">$2,000</div>
-      <div style={{"fontSize":".72rem","color":"var(--blue)","marginTop":".3rem"}}>Become a Sponsor →</div>
-    </div>
-    <div className="sponsor-card" style={{"borderStyle":"dashed","cursor":"pointer"}} onClick="window.location='./contact.html'">
-      <div style={{"fontSize":"1.2rem","marginBottom":".6rem"}}>🥈SILVER SPONSOR</div>
-      <div className="sponsor-name">$1,500</div>
-      <div style={{"fontSize":".72rem","color":"var(--blue)","marginTop":".3rem"}}>Become a Sponsor →</div>
-    </div>
-    <div className="sponsor-card" style={{"borderStyle":"dashed","cursor":"pointer"}} onClick="window.location='./contact.html'">
-      <div style={{"fontSize":"1.2rem","marginBottom":".6rem"}}>🥈BRONZE SPONSOR</div>
-      <div className="sponsor-name">$1,000</div>
-      <div style={{"fontSize":".72rem","color":"var(--blue)","marginTop":".3rem"}}>Become a Sponsor →</div>
-    </div>
-  </div>
-  <div>
-  <div className="section-tag orange-tag"></div>
-  <h3 style={{"fontSize":"1.2rem"}}> Sponsor a <em className="orange">Two Weeks Hackathon</em> </h3>
-  <p className="body-text" style={{"maxWidth":"540px","marginTop":".8rem"}}>Acquire high quality products, users, volume and marketing across our Hakathon Tracks</p>
-  <div className="sponsors-grid reveal">
-    <div className="sponsor-card" style={{"borderStyle":"dashed","cursor":"pointer"}} onClick="window.location='./contact.html'">
-      <div style={{"fontSize":"1.2rem","marginBottom":".6rem"}}>💻 DEV. HACKATHON</div>
-      <div className="sponsor-name">$2,000</div>
-      <div style={{"fontSize":".72rem","color":"var(--blue)","marginTop":".3rem"}}>Become a Sponsor →</div>
-    </div>
-    <div className="sponsor-card" style={{"borderStyle":"dashed","cursor":"pointer"}} onClick="window.location='./contact.html'">
-      <div style={{"fontSize":"1.2rem","marginBottom":".6rem"}}>📈TRADING HACKATHON</div>
-      <div className="sponsor-name">$2,000</div>
-      <div style={{"fontSize":".72rem","color":"var(--blue)","marginTop":".3rem"}}>Become a Sponsor →</div>
-    </div>
-    <div className="sponsor-card" style={{"borderStyle":"dashed","cursor":"pointer"}} onClick="window.location='./contact.html'">
-      <div style={{"fontSize":"1.2rem","marginBottom":".6rem"}}>🎮GAMING HACKATHON</div>
-      <div className="sponsor-name">$1,500</div>
-      <div style={{"fontSize":".72rem","color":"var(--blue)","marginTop":".3rem"}}>Become a Sponsor →</div>
-    </div>
-    <div className="sponsor-card" style={{"borderStyle":"dashed","cursor":"pointer"}} onClick="window.location='./contact.html'">
-      <div style={{"fontSize":"1.2rem","marginBottom":".6rem"}}>🎥CONTENT CREATION HACKATHON</div>
-      <div className="sponsor-name">$1,500</div>
-      <div style={{"fontSize":".72rem","color":"var(--blue)","marginTop":".3rem"}}>Become a Sponsor →</div>
-    </div>
-  </div>
-  </div>
-</section>
-
-{/*  TICKETS  */}
-<section id="tickets" style={{"background":"var(--deep)"}}>
-  <div className="section-tag">Attend the BCE</div>
-  <h2>Get Your <em>Ticket</em></h2>
-  <p className="body-text" style={{"maxWidth":"540px","marginTop":".8rem"}}>Spaces are limited at physical locations. Secure your spot now.</p>
-  <div className="ticket-grid reveal">
-    <div className="ticket-card">
-      <div className="ticket-tier">Virtual & Physical</div>
-      <div className="ticket-price">Free <span>/ general</span></div>
-      <div className="ticket-desc">Full virtual/physical access. Learn from every session, live.</div>
-      <ul className="ticket-perks">
-        <li>All keynote livestreams</li>
-        <li>Virtual networking rooms</li>
-        <li>Access to career fair &amp; booths</li>
-        <li>Access to all workshop replays</li>
-        <li>Digital attendance certificate</li>
-      </ul>
-      <a href="#" className="btn-outline" style={{"width":"100%","textAlign":"center","display":"block"}}>Register Free</a>
-    </div>
-    <div className="ticket-card featured">
-      <div className="ticket-tier">In-Person</div>
-      <div className="ticket-price">₦10,000 <span>/ professional</span></div>
-      <div className="ticket-desc">Front Role physical access at your nearest node campus. The real experience.</div>
-      <ul className="ticket-perks">
-        <li>All keynotes &amp; panels (physical)</li>
-        <li>All 6 workshops</li>
-        <li>Lunch &amp; networking breakfast</li>
-        <li>Access to replays of all sessions</li>
-        <li>Physical certificate &amp; welcome pack</li>
-      </ul>
-      <a href="#" className="btn-primary orange" style={{"width":"100%","textAlign":"center","display":"block"}}>Get Ticket — ₦5,000</a>
-    </div>
-    <div className="ticket-card">
-      <div className="ticket-tier">VIP / Corporate</div>
-      <div className="ticket-price">₦30,000 <span>/ VIP</span></div>
-      <div className="ticket-desc">Premium access for professionals, protocol reps, and hiring managers.</div>
-      <ul className="ticket-perks">
-        <li>Everything in In-Person</li>
-        <li>VIP front-row seating</li>
-        <li>Private 1:1 speaker meetings</li>
-        <li>Protocol recruitment lounge access</li>
-        <li>Post-event speaker dinner</li>
-      </ul>
-      <a href="/contact" className="btn-outline" style={{"width":"100%","textAlign":"center","display":"block"}}>Apply for VIP</a>
-    </div>
-  </div>
-</section>
-
-{/*  CTA  */}
-<section style={{"textAlign":"center"}}>
-  <div style={{"maxWidth":"640px","margin":"0 auto"}} className="reveal">
-    <div className="section-tag orange-tag" style={{"justifyContent":"center"}}>Sponsor the BCE</div>
-    <h2>Get Your Brand In Front of<br /><em className="orange">Africa's Top Web3 Talent.</em></h2>
-    <p className="body-text" style={{"maxWidth":"480px","margin":"1rem auto 2rem"}}>
-      The BCE is your direct access to 500+ verified Web3 professionals, students, and campus communities
-      across Nigeria. Download our event pitch deck or contact us directly.
-    </p>
-    <div style={{"display":"flex","gap":"1rem","justifyContent":"center","flexWrap":"wrap"}}>
-      <a href="#" className="btn-primary orange">Download Event Pitch Deck</a>
-      <a href="./contact.html" className="btn-outline">Contact Us</a>
-    </div>
-  </div>
-</section>
-
-
-
-
-
-
-
+      {/* ── TICKETS ── */}
+      <section id="tickets" style={{ padding: '5rem 5vw' }}>
+        <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
+            <div style={{ color: 'var(--orange)', fontWeight: 700, textTransform: 'uppercase', fontSize: '.75rem', marginBottom: '.5rem' }}>Passes</div>
+            <h2 style={{ fontSize: '2.2rem', fontWeight: 800 }}>Reserve Your <span style={{ color: 'var(--orange)' }}>Spot</span></h2>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '2rem' }}>
+            {tickets.map((t, idx) => (
+              <div key={idx} style={{ background: t.popular ? 'rgba(20,40,255,.08)' : 'var(--panel)', border: t.popular ? '2px solid var(--blue)' : '1px solid var(--border)', borderRadius: '14px', padding: '2.2rem', position: 'relative' }}>
+                {t.popular && <div style={{ position: 'absolute', top: '-12px', right: '20px', background: 'var(--blue)', color: '#fff', fontSize: '.7rem', fontWeight: 700, padding: '.2rem .8rem', borderRadius: '20px' }}>MOST POPULAR</div>}
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--white)' }}>{t.name}</h3>
+                <div style={{ fontSize: '.8rem', color: 'var(--muted)', marginBottom: '1.2rem' }}>{t.sub}</div>
+                <div style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--orange)', marginBottom: '1.5rem' }}>{t.price}</div>
+                <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 2rem', color: 'var(--text)', fontSize: '.85rem', lineHeight: 2 }}>
+                  {t.perks.map((p, pidx) => (
+                    <li key={pidx} style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
+                      <span style={{ color: '#10b981' }}>✓</span> {p}
+                    </li>
+                  ))}
+                </ul>
+                <Link href="/login" style={{ display: 'block', textAlign: 'center', padding: '.75rem', background: t.popular ? 'var(--blue)' : 'transparent', border: t.popular ? 'none' : '1px solid var(--border)', color: '#fff', borderRadius: '8px', fontWeight: 700, textDecoration: 'none' }}>
+                  Register Pass →
+                </Link>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
     </>
   );
 }

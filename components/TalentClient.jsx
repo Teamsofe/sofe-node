@@ -1,482 +1,336 @@
 'use client';
-import React from 'react';
 import Link from 'next/link';
 
 export default function TalentClient() {
   return (
     <>
-      
-
-
-
-
-
-{/*  PAGE HEADER  */}
-<div className="page-header">
-  <div className="breadcrumb">
-    <a href="./">Home</a>
-    <span className="breadcrumb-sep">&#8250;</span>
-    <a href="./services">Services</a>
-    <span className="breadcrumb-sep">&#8250;</span>
-    <span>For Talent</span>
-  </div>
-  <div className="page-tag">B2C &middot; Education &amp; Careers</div>
-  <h1>Don&rsquo;t Just Learn Crypto.<br/><em>Master It. Earn From It.</em></h1>
-  <p className="sub">High-quality blockchain education, heavily subsidised by global ecosystem partners. Learn industry-standard skills, earn commissions referring friends, and launch your Web3 career &mdash; all from Africa.</p>
-  <div className="header-btns">
-    <a href="#courses" className="btn-primary orange">Join the Next Cohort &rarr;</a>
-    <a href="#affiliate" className="btn-outline">Earn While You Learn &darr;</a>
-  </div>
-</div>
-
-{/*  PROOF BAR  */}
-<div className="proof-bar reveal">
-  <div className="proof-stat">
-    <span className="proof-num">5,000+</span>
-    <div className="proof-label">Sofians Onboarded to Web3</div>
-  </div>
-  <div className="proof-stat">
-    <span className="proof-num">20+</span>
-    <div className="proof-label">Bootcamps Delivered</div>
-  </div>
-  <div className="proof-stat">
-    <span className="proof-num">80%</span>
-    <div className="proof-label">Tuition Subsidised by Ecosystem Partners</div>
-  </div>
-  <div className="proof-stat">
-    <span className="proof-num">5–10%</span>
-    <div className="proof-label">Affiliate Commission Rate</div>
-  </div>
-</div>
-
-{/*  COURSES  */}
-<section id="courses" style={{"background":"var(--black)"}}>
-  <div className="section-tag">Our Programmes</div>
-  <h2>Two Paths.<br/><em>One Destination.</em></h2>
-  <p className="body-text">Whether you&rsquo;re a complete beginner or ready to go professional, we have a structured programme designed to take you from where you are to where the opportunity is.</p>
-
-  <div className="courses-grid">
-
-    {/*  Course 1  */}
-    <div className="course-card reveal">
-      <span className="course-badge">Most Popular</span>
-      <div className="course-card-top">
-        <div className="course-level beginner">&#128312; Beginner &rarr; Intermediate &nbsp;<span style={{"color":"var(--orange)","fontWeight":"800"}}>(70% 0FF)</span></div>
-        <h3>Blockchain &amp; Cryptocurrency Bootcamp</h3>
-        <p>From newbie to intermediate — get a solid foundation on how to position and profit from blockchain and crypto from day one. No prior experience needed.</p>
-      </div>
-      <div className="course-card-body">
-        <ul className="course-modules">
-          <li>Introduction to Blockchain and its Applications</li>
-          <li>Cryptocurrency, types and trends</li>
-          <li>Wallet and Security</li>
-          <li>Crypto Incentives: Airdrop, Testnets &amp; Bounties</li>
-          <li>Crypto Research and Analytics</li>
-          <li>DeFi and DAO</li>
-          <li>Risk Management &amp; Portfolio Building</li>
-          <li>Spot and Futures Trading Basics</li>
-          <li>Career Opportunities and How to Get Started</li>
-        </ul>
-        <div className="course-meta">
-          <div className="course-meta-item"><span className="icon">&#128197;</span> 4 Weeks</div>
-          <div className="course-meta-item"><span className="icon">&#127760;</span> Virtual</div>
-          <div className="course-meta-item"><span className="icon">&#127891;</span> Certificate Included</div>
-          <div className="course-meta-item"><span className="icon">&#128176;</span> &#8358;5,000 ($4) Certificate</div>
+      {/* ── PAGE HEADER ─────────────────────────────────────────────── */}
+      <div className="page-header">
+        <div className="breadcrumb">
+          <Link href="/">Home</Link>
+          <span className="breadcrumb-sep">›</span>
+          <Link href="/services">Services</Link>
+          <span className="breadcrumb-sep">›</span>
+          <span>For Talent</span>
         </div>
-        <div className="cert-note">
-          &#128279; Certificate verifiable on the blockchain &mdash; shareable directly to LinkedIn
-        </div>
-        <div className="dual-cta">
-          <a href="./academy.html" className="btn-outline" style={{"flex":"1","textAlign":"center"}}>Enrol Self-Paced</a>
-          <a href="./academy.html" className="btn-primary orange" style={{"flex":"1","textAlign":"center"}}>Join Live Cohort &rarr;</a>
+        <div className="page-tag">B2C &middot; Education &amp; Careers</div>
+        <h1>Don&rsquo;t Just Learn Crypto.<br /><em>Master It. Earn From It.</em></h1>
+        <p className="sub">High-quality blockchain education, heavily subsidised by global partners. Learn, refer, and earn while you study.</p>
+        <div className="page-header-ctas">
+          <Link href="#courses" className="btn-primary">View Courses &darr;</Link>
+          <Link href="#affiliate" className="btn-outline">Earn Commissions &darr;</Link>
         </div>
       </div>
-    </div>
 
-    {/*  Course 2  */}
-    <div className="course-card reveal">
-      <span className="course-badge" style={{"background":"var(--blue)"}}>Professional</span>
-      <div className="course-card-top">
-        <div className="course-level professional">&#128188; Professional Track</div>
-        <h3>Certified Blockchain Professional</h3>
-        <p>Join the next generation of blockchain professionals through our career training programme, internship placement, and startup accelerator. Choose your specialisation track and go deep.</p>
-      </div>
-      <div className="course-card-body">
-        <div className="track-table-label">Select Your Track &mdash; Core Focus</div>
-        <div className="track-table">
-          <div className="track-row">
-            <div className="track-name">&#128187; Development</div>
-            <div className="track-desc">Web, Mobile App &amp; Smart Contract Architecture (Solana/Rust &amp; EVM/Solidity)</div>
+      {/* ── PROOF BAR ───────────────────────────────────────────────── */}
+      <div className="proof-bar">
+        {[
+          { num: '5,000+', lbl: 'Sofians Onboarded' },
+          { num: '20+', lbl: 'Bootcamps Delivered' },
+          { num: 'Up to 80%', lbl: 'Tuition Subsidised' },
+          { num: '10–20%', lbl: 'Referral Commission' },
+        ].map(({ num, lbl }) => (
+          <div className="proof-item" key={lbl}>
+            <span className="proof-num">{num}</span>
+            <span className="proof-lbl">{lbl}</span>
           </div>
-          <div className="track-row">
-            <div className="track-name">&#128202; Data Analysis</div>
-            <div className="track-desc">AI & Automation, Prompt Engineering for Web3 workflows &amp; productivity</div>
-          </div>
-          <div className="track-row">
-            <div className="track-name">&#129302; AI & Automation</div>
-            <div className="track-desc">On-chain forensic analysis, Dune Analytics &amp; SQL for Web3 decision-making</div>
-          </div>
-          <div className="track-row">
-            <div className="track-name">&#127912; Product &amp; Design</div>
-            <div className="track-desc">Web3 UI/UX (Figma), Product Design &amp; dApp user-journey mapping</div>
-          </div>
-          <div className="track-row">
-            <div className="track-name">&#128203; Management</div>
-            <div className="track-desc">Web3 Project Management (Agile/Scrum), DAO Governance &amp; Tokenomics Strategy</div>
-          </div>
-          <div className="track-row" style={{"borderBottom":"none"}}>
-            <div className="track-name">&#128227; Growth &amp; Media</div>
-            <div className="track-desc">Content Creation, Digital Marketing (KOL/Ambassador Management) &amp; Community Building</div>
-          </div>
-        </div>
-        <div className="course-meta" style={{"marginTop":"1.4rem"}}>
-          <div className="course-meta-item"><span className="icon">&#128197;</span> 3–4 Months</div>
-          <div className="course-meta-item"><span className="icon">&#127760;</span> Virtual</div>
-          <div className="course-meta-item"><span className="icon">&#128188;</span> Internship Track</div>
-          <div className="course-meta-item"><span className="icon">&#128640;</span> Accelerator Access</div>
-        </div>
-        <div className="cert-note">
-          &#128279; Certificate verifiable on the blockchain &mdash; shareable directly to LinkedIn
-        </div>
-        {/*  LOCKED CTA — unlocks after Foundation cert  */}
-        <div className="locked-cta">
-          <div className="locked-cta-inner">
-            <span>&#128274;</span>
-            <p>Complete the <strong>Blockchain &amp; Cryptocurrency Bootcamp</strong> to enrol</p>
-            <a href="academy.html" className="btn-primary orange">Start Bootcamp &rarr;</a>
-          </div>
-        </div>
-      </div>
-    </div>
-
-  </div>
-</section>
-
-{/*  AFFILIATE / EARN  */}
-<section id="affiliate">
-  <div className="section-tag orange">The Sofian Partner Programme</div>
-  <h2>Sponsor Your Own<br/><em className="orange">Education.</em></h2>
-
-  <div className="affiliate-grid">
-    <div className="reveal">
-      <p className="body-text" style={{"marginBottom":"2rem"}}>Refer friends, earn cash commissions, and fund your own education while you study. Your referral link unlocks the moment you complete the Blockchain Basics course — ensuring every Sofian who earns, also knows what they&rsquo;re sharing.</p>
-
-      <div className="affiliate-levels">
-        <div className="level-card reveal">
-          <div className="level-badge l1">&#9733;</div>
-          <div className="level-info">
-            <h4>Level 1 &mdash; Newbie</h4>
-            <p>Everyone starts here. You earn 5% commission on every successful referral — but you must complete the Foundation Course to receive payouts.</p>
-          </div>
-          <div className="level-pct">5%</div>
-        </div>
-
-        <div className="level-card l2-card reveal">
-          <div className="level-badge l2">&#11088;</div>
-          <div className="level-info">
-            <h4>Level 2 &mdash; Affiiate</h4>
-            <p>Refer 10 people who complete the Foundation Course and enrol in at least one Career Track course. Commission rate doubles automatically once the milestone is reached.</p>
-          </div>
-          <div className="level-pct">10%</div>
-        </div>
-
-        <div className="level-card l2-card reveal">
-          <div className="level-badge l2">&#127894;</div>
-          <div className="level-info">
-            <h4>Level 3 &mdash; Ambassador</h4>
-            <p>Grow as an affilate <strong>to be recommended to represent Sofe Node in your local community.</strong> Our ambassadors are the face of Sofe Node &mdash; leading activations for talent, market entry &amp;distribution campaigns. Earn 10% on direct referrals and 5% on indirect</p>
-          </div>
-          <div className="level-pct">15%</div>
-        </div>
+        ))}
       </div>
 
-      <div style={{"marginTop":"1.6rem","padding":"1.2rem 1.4rem","background":"var(--blue-dim)","border":"1px solid var(--border)","borderRadius":"6px"}}>
-        <p style={{"fontFamily":"'Poppins',sans-serif","fontSize":".82rem","fontWeight":"500","color":"var(--white)","marginBottom":".3rem"}}>&#128176; Payouts direct to your Nigerian bank</p>
-        <p style={{"fontFamily":"'Poppins',sans-serif","fontSize":".78rem","fontWeight":"300","color":"var(--muted)"}}>Commissions are only paid on professional courses via Paystack &amp; Flutterwave — straight to your bank account, no crypto wallet needed.</p>
-      </div>
-    </div>
+      {/* ── COURSES ─────────────────────────────────────────────────── */}
+      <section id="courses">
+        <div className="section-tag">Our Programmes</div>
+        <h2>Two Paths. <em>One Mission.</em></h2>
+        <p className="body-text" style={{ marginBottom: '2.5rem' }}>Choose your entry point. Both tracks lead to the same place — a career in Web3, on your terms.</p>
+        <div className="course-grid reveal">
 
-    {/*  Live mock widget  */}
-    <div className="affiliate-visual reveal">
-      <div style={{"fontFamily":"'Poppins',sans-serif","fontSize":".6rem","fontWeight":"700","letterSpacing":".12em","textTransform":"uppercase","color":"var(--muted)","marginBottom":"1.2rem"}}>Your Affiliate Dashboard Preview</div>
-      <div className="aff-stat-row">
-        <div className="aff-stat"><span className="num">45</span><span className="lbl">Link Clicks</span></div>
-        <div className="aff-stat"><span className="num">3</span><span className="lbl">Signups</span></div>
-        <div className="aff-stat"><span className="num">&#8358;15K</span><span className="lbl">Earned</span></div>
-      </div>
-      <div style={{"fontFamily":"'Poppins',sans-serif","fontSize":".7rem","fontWeight":"600","letterSpacing":".06em","textTransform":"uppercase","color":"var(--muted)","marginBottom":".7rem"}}>Your Referral Link</div>
-      <div className="aff-ref-box">
-        <span className="aff-ref-url">sofenode.com/ref/yourname</span>
-        <button className="aff-copy-btn" onClick="this.textContent='Copied!';setTimeout(()=>this.textContent='Copy',1500)">Copy</button>
-      </div>
-      <div className="aff-hook">&#127881; Refer your friends to unlock discounts and giveaways</div>
-      <div style={{"marginTop":"1.4rem","paddingTop":"1.2rem","borderTop":"1px solid var(--border)"}}>
-        <a href="signup.html" className="btn-primary orange" style={{"width":"100%","textAlign":"center","display":"block"}}>Create Free Account &rarr;</a>
-      </div>
-    </div>
-  </div>
-</section>
+          {/* Course 1 */}
+          <div className="course-card">
+            <div className="course-card-top" />
+            <div className="course-card-body">
+              <div className="course-badge-row">
+                <span className="course-badge popular">Most Popular</span>
+              </div>
+              <h3 className="course-title">Blockchain &amp; Cryptocurrency Bootcamp</h3>
+              <p className="course-level">🔵 Beginner → Intermediate &nbsp;<strong style={{ color: 'var(--orange)' }}>FREE</strong></p>
+              <p className="course-desc">From newbie to intermediate — get a solid foundation on how to position and profit from blockchain and crypto from day one.</p>
+              <div className="course-meta">
+                <span>📅 4 Weeks</span>
+                <span>🌐 Virtual</span>
+                <span>🎓 Certificate Included</span>
+                <span>💰 ₦2,000 Cert Fee</span>
+              </div>
+              <div className="course-modules">
+                <div className="course-modules-label">8 Modules Included</div>
+                <div className="module-list">
+                  {['Intro to Blockchain & DLT', 'Crypto Wallets & Security', 'DeFi Fundamentals', 'Trading Basics & Strategies', 'NFTs & Web3 Culture', 'On-chain Research & Tools', 'Earning in Web3', 'Career & Community Pathways'].map((m) => (
+                    <div className="module-item" key={m}><span className="module-check">✓</span>{m}</div>
+                  ))}
+                </div>
+              </div>
+              <div className="cert-note">
+                <span className="cert-note-icon">🔗</span>
+                Certificate is verifiable on-chain and shareable directly to LinkedIn.
+              </div>
+              <div className="course-ctas">
+                <Link href="/signup" className="btn-outline">Enrol Self-Paced</Link>
+                <Link href="/signup?cohort=live" className="btn-primary orange">Join Live Cohort →</Link>
+              </div>
+            </div>
+          </div>
 
-{/*  XP SYSTEM PREVIEW  */}
-<section id="xp">
-  <div className="section-tag orange">XP &amp; Reputation</div>
-  <h2>Earn Your Rank.<br/><em>Unlock Your Rewards.</em></h2>
-  <p className="body-text">XP is earned across every action on the platform. Your score determines your tier, your bounty access, and your share of partner airdrops and Sofe Node token rewards.</p>
+          {/* Course 2 */}
+          <div className="course-card course-card-pro">
+            <div className="course-card-top pro-top" />
+            <div className="course-card-body">
+              <div className="course-badge-row">
+                <span className="course-badge pro-badge">💼 Professional Track</span>
+              </div>
+              <h3 className="course-title">Certified Blockchain Professional</h3>
+              <p className="course-level">Advanced · Career-Ready Programme</p>
+              <p className="course-desc">Join the next generation of blockchain professionals through our Blockchain Career Training Programme, Internship and Startup Accelerator.</p>
+              <div className="course-meta">
+                <span>📅 3–4 Months</span>
+                <span>🌐 Virtual</span>
+                <span>🏢 Internship Track</span>
+                <span>🚀 Accelerator Access</span>
+              </div>
+              <div className="track-table">
+                <div className="track-table-label">Choose Your Track</div>
+                <div className="track-table-grid">
+                  {[
+                    { icon: '💻', track: 'Development', desc: 'Smart contracts, dApps, Solidity' },
+                    { icon: '📊', track: 'Data Analysis', desc: 'On-chain analytics, DeFi data' },
+                    { icon: '🎨', track: 'Product & Design', desc: 'Web3 UX, protocol product' },
+                    { icon: '📋', track: 'Management', desc: 'DAO ops, project management' },
+                    { icon: '📢', track: 'Growth & Media', desc: 'Community, content, marketing' },
+                  ].map(({ icon, track, desc }) => (
+                    <div className="track-row" key={track}>
+                      <span className="track-icon">{icon}</span>
+                      <span className="track-name">{track}</span>
+                      <span className="track-desc">{desc}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="locked-cta-row">
+                <span className="locked-cta-icon">🔒</span>
+                <span className="locked-cta-msg">Complete the <strong>Blockchain &amp; Crypto Bootcamp</strong> to unlock this programme.</span>
+                <Link href="#courses" className="btn-primary locked-unlock-btn">Start Bootcamp →</Link>
+              </div>
+            </div>
+          </div>
 
-  <div className="xp-grid">
-    {/*  Left: earning actions  */}
-    <div className="reveal">
-      <div className="section-tag" style={{"marginBottom":"1rem"}}>How You Earn XP</div>
+        </div>
+      </section>
 
-      <div style={{"fontFamily":"'Poppins',sans-serif","fontSize":".58rem","fontWeight":"700","letterSpacing":".12em","textTransform":"uppercase","color":"var(--muted)","marginBottom":".6rem","display":"flex","gap":"1rem","padding":"0 1.2rem"}}>
-        <span style={{"flex":"1"}}>Action</span>
-        <span>XP</span>
-        <span style={{"width":"60px","textAlign":"right"}}>Track</span>
-      </div>
-
-      <div className="xp-actions">
-        <div className="xp-action-row">
-          <div className="xp-action-label"><strong>Complete Foundation Course &amp; pass exam</strong></div>
-          <div className="xp-pts">500 XP</div>
-          <span className="xp-track-tag total">Automatically + Total</span>
-        </div>
-        <div className="xp-action-row">
-          <div className="xp-action-label"><strong>Connect wallet to account</strong></div>
-          <div className="xp-pts">10 XP</div>
-          <span className="xp-track-tag total">Total</span>
-        </div>
-        <div className="xp-action-row">
-          <div className="xp-action-label"><strong>Earn a Career Track Certificate</strong> <em style={{"fontSize":".72rem"}}>(per cert)</em></div>
-          <div className="xp-pts">100 XP</div>
-          <span className="xp-track-tag total">Automatically + Total</span>
-        </div>
-        <div className="xp-action-row">
-          <div className="xp-action-label"><strong>Referral signs up</strong> (after email verification)</div>
-          <div className="xp-pts">5 XP</div>
-          <span className="xp-track-tag both">Automatically + Total</span>
-        </div>
-        <div className="xp-action-row">
-          <div className="xp-action-label"><strong>Referral completes Foundation Course</strong></div>
-          <div className="xp-pts">20 XP</div>
-          <span className="xp-track-tag both">Automatically + Total</span>
-        </div>
-        <div className="xp-action-row">
-          <div className="xp-action-label"><strong>Referral completes a Career Track cert</strong></div>
-          <div className="xp-pts">30 XP</div>
-          <span className="xp-track-tag both">Automatically + Total</span>
-        </div>
-        <div className="xp-action-row">
-          <div className="xp-action-label"><strong>Attend an AMA on Telegram (Awarded by Admin)</strong></div>
-          <div className="xp-pts">10 - 20 XP</div>
-          <span className="xp-track-tag both">Weekly + Total</span>
-        </div>
-         <div className="xp-action-row">
-          <div className="xp-action-label"><strong>Attend Sofe Node Sponsored/Partner IRL Event (Awarded by Admin)</strong></div>
-          <div className="xp-pts">30 XP</div>
-          <span className="xp-track-tag both">periodically + Total</span>
-        </div>
-        <div className="xp-action-row">
-          <div className="xp-action-label"><strong>Win a weekly quiz (Awarded by Admin)</strong></div>
-          <div className="xp-pts">10 XP</div>
-          <span className="xp-track-tag both">Weekly + Total</span>
-        </div>
-        <div className="xp-action-row">
-          <div className="xp-action-label"><strong>Win a bounty</strong> (confirmed by protocol)</div>
-          <div className="xp-pts">50 - 20 XP</div>
-          <span className="xp-track-tag both">periodically + Total</span>
-        </div>
-      </div>
-
-      <div style={{"marginTop":"1.4rem","padding":"1rem 1.2rem","background":"var(--blue-dim)","border":"1px solid var(--border)","borderRadius":"6px"}}>
-        <p style={{"fontFamily":"'Poppins',sans-serif","fontSize":".78rem","fontWeight":"300","color":"var(--muted)","lineHeight":"1.65"}}>
-          &#9432; XP has two tracks: <strong style={{"color":"var(--white)"}}>Total XP</strong> (never resets — determines your lifetime tier &amp; airdrop allocation) and <strong style={{"color":"var(--white)"}}>Monthly XP</strong> (resets 1st of each month — determines bounty selection priority &amp; monthly leaderboard).
+      {/* ── AFFILIATE / EARN ────────────────────────────────────────── */}
+      <section id="affiliate">
+        <div className="section-tag orange-tag">Sofian Partner Programme</div>
+        <h2>Sponsor Your Own <em className="orange">Education.</em></h2>
+        <p className="body-text" style={{ marginBottom: '2.5rem' }}>
+          Your referral link is your income stream. Every friend you bring in puts real money in your pocket — and covers your own tuition.
         </p>
-      </div>
-    </div>
+        <div className="affiliate-grid reveal">
+          <div className="affiliate-info">
+            <div className="aff-level">
+              <div className="aff-level-badge l1">L1</div>
+              <div>
+                <div className="aff-level-title">Level 1 — Newbie &nbsp;<span className="aff-commission">10% Commission</span></div>
+                <div className="aff-level-desc">Earn 10% on every successful referral from Day 1. No requirements — just share your link.</div>
+              </div>
+            </div>
+            <div className="aff-level">
+              <div className="aff-level-badge l2">L2</div>
+              <div>
+                <div className="aff-level-title">Level 2 — Ambassador &nbsp;<span className="aff-commission orange-text">15% Commission</span></div>
+                <div className="aff-level-desc">Unlock by completing the Blockchain Basics course <strong>and</strong> referring 5 people who have also completed it. Ambassadors actually know what they&apos;re selling.</div>
+              </div>
+            </div>
+            <div className="aff-hook-box">
+              <div className="aff-hook-icon">💡</div>
+              <div className="aff-hook-text">Refer <strong>2 friends</strong> who enrol → Unlock your next course <strong>for FREE.</strong></div>
+            </div>
+          </div>
 
-    {/*  Right: tier ladder  */}
-    <div className="reveal">
-      <div className="section-tag" style={{"marginBottom":"1rem"}}>XP Tiers</div>
-      <div className="xp-tiers">
-        <div className="xp-tier-row current-tier">
-          <div className="xp-tier-emoji">&#127807;</div>
-          <div className="xp-tier-name">Genesis Node<span>0 – 499 XP &mdash; Earned on signup</span></div>
-          <div className="xp-tier-pts">0 XP</div>
+          {/* Live mock widget */}
+          <div className="aff-widget reveal">
+            <div className="aff-widget-header">
+              <span className="aff-widget-title">My Business Dashboard</span>
+              <span className="aff-widget-badge">Level 1 — Newbie</span>
+            </div>
+            <div className="aff-ref-box">
+              <div className="aff-ref-label">Your Referral Link</div>
+              <div className="aff-ref-row">
+                <span className="aff-ref-link">sofenode.com/r/sofian123</span>
+                <button className="aff-copy-btn">Copy Link</button>
+              </div>
+            </div>
+            <div className="aff-stats-row">
+              {[{ val: '45', lbl: 'Link Clicks' }, { val: '3', lbl: 'Signups' }, { val: '₦15,000', lbl: 'Earnings' }].map(({ val, lbl }) => (
+                <div className="aff-stat" key={lbl}>
+                  <div className="aff-stat-val">{val}</div>
+                  <div className="aff-stat-lbl">{lbl}</div>
+                </div>
+              ))}
+            </div>
+            <div className="aff-progress-box">
+              <div className="aff-progress-label">Ambassador Progress</div>
+              <div className="aff-progress-bar"><div className="aff-progress-fill" style={{ width: '60%' }} /></div>
+              <div className="aff-progress-hint">3 / 5 qualifying referrals &nbsp;·&nbsp; Complete Blockchain Basics to unlock L2</div>
+            </div>
+          </div>
         </div>
-        <div className="xp-tier-row">
-          <div className="xp-tier-emoji">&#9889;</div>
-          <div className="xp-tier-name">Validator<span>500 – 1,499 XP &mdash; Complete Foundation</span></div>
-          <div className="xp-tier-pts">500 XP</div>
-        </div>
-        <div className="xp-tier-row">
-          <div className="xp-tier-emoji">&#9876;&#65039;</div>
-          <div className="xp-tier-name">Crypto Knight<span>1,500 – 3,999 XP</span></div>
-          <div className="xp-tier-pts">1,500 XP</div>
-        </div>
-        <div className="xp-tier-row">
-          <div className="xp-tier-emoji">&#128293;</div>
-          <div className="xp-tier-name">Chain Architect<span>4,000 – 7,999 XP</span></div>
-          <div className="xp-tier-pts">4,000 XP</div>
-        </div>
-        <div className="xp-tier-row">
-          <div className="xp-tier-emoji">&#127942;</div>
-          <div className="xp-tier-name">Protocol Master<span>8,000 – 14,999 XP</span></div>
-          <div className="xp-tier-pts">8,000 XP</div>
-        </div>
-        <div className="xp-tier-row">
-          <div className="xp-tier-emoji">&#128081;</div>
-          <div className="xp-tier-name">Node Sovereign<span>15,000+ XP &mdash; Top tier</span></div>
-          <div className="xp-tier-pts">15,000 XP</div>
-        </div>
-      </div>
-      <div style={{"marginTop":"1.2rem","padding":"1rem 1.2rem","background":"var(--orange-dim)","border":"1px solid rgba(255,138,0,.2)","borderRadius":"6px"}}>
-        <p style={{"fontFamily":"'Poppins',sans-serif","fontSize":".78rem","fontWeight":"500","color":"var(--orange)","lineHeight":"1.6"}}>
-          &#127381; Completing the Foundation cert instantly upgrades you from Genesis Node to Validator &mdash; a meaningful Day 1 reward.
+      </section>
+
+      {/* ── XP SYSTEM PREVIEW ───────────────────────────────────────── */}
+      <section id="xp">
+        <div className="section-tag">Reputation System</div>
+        <h2>Earn XP. <em>Level Up.</em> Get Rewarded.</h2>
+        <p className="body-text" style={{ marginBottom: '2.5rem' }}>
+          Every action you take on Sofe Node earns XP — tracked on two separate leaderboards: monthly rankings and your all-time score.
         </p>
-      </div>
-    </div>
-  </div>
-</section>
+        <div className="xp-grid reveal">
+          {/* XP Earning Actions */}
+          <div className="xp-table-wrap">
+            <div className="xp-table-title">How to Earn XP</div>
+            <div className="xp-table">
+              {[
+                { action: 'Complete Foundation Certification', xp: '+500 XP', tags: ['Monthly', 'Total'] },
+                { action: 'Connect Crypto Wallet', xp: '+100 XP', tags: ['Total'] },
+                { action: 'Complete Career Certification', xp: '+1,000 XP', tags: ['Monthly', 'Total'] },
+                { action: 'Referral Signs Up', xp: '+25 XP', tags: ['Monthly', 'Total'] },
+                { action: 'Referral Completes Foundation', xp: '+200 XP', tags: ['Monthly', 'Total'] },
+                { action: 'Referral Completes Career Cert', xp: '+400 XP', tags: ['Monthly', 'Total'] },
+                { action: 'Attend AMA / Spaces', xp: '+30 XP', tags: ['Monthly'] },
+                { action: 'Win Weekly Quiz', xp: '+150 XP', tags: ['Monthly', 'Total'] },
+                { action: 'Complete Community Bounty', xp: '+300 XP', tags: ['Monthly', 'Total'] },
+              ].map(({ action, xp, tags }) => (
+                <div className="xp-row" key={action}>
+                  <span className="xp-action">{action}</span>
+                  <span className="xp-points">{xp}</span>
+                  <span className="xp-tags">
+                    {tags.map((t) => <span key={t} className={`xp-tag ${t === 'Monthly' ? 'xp-tag-monthly' : 'xp-tag-total'}`}>{t}</span>)}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div className="xp-dual-track">
+              <strong>Dual-Track System:</strong> Monthly XP resets every month — compete for top spots. Total XP never resets — your permanent reputation on the platform.
+            </div>
+          </div>
 
-{/*  HOW IT WORKS  */}
-<section id="how" style={{"background":"var(--deep)"}}>
-  <div className="section-tag">Your Journey</div>
-  <h2>From <em>Zero</em> to <em>Web3 Pro</em></h2>
-  <p className="body-text">A clear, structured path — no confusion, no gatekeeping. Just skills, credentials, and real earning potential.</p>
-  <div className="steps-grid reveal" style={{"marginTop":"3rem"}}>
-    <div className="step">
-      <span className="step-number">01</span>
-      <div className="step-dot">&#128221;</div>
-      <h4>Register Free</h4>
-      <p>Sign up and get your unique referral link instantly. Choose your programme and secure your spot in the next cohort.</p>
-    </div>
-    <div className="step">
-      <span className="step-number">02</span>
-      <div className="step-dot">&#128218;</div>
-      <h4>Learn &amp; Earn</h4>
-      <p>Complete your modules at your pace. Share your referral link and earn 10% commission on every friend who joins.</p>
-    </div>
-    <div className="step">
-      <span className="step-number">03</span>
-      <div className="step-dot">&#127891;</div>
-      <h4>Get Certified</h4>
-      <p>Pass your assessments and receive your Sofe Node certificate — verifiable on-chain and shareable directly to LinkedIn.</p>
-    </div>
-    <div className="step">
-      <span className="step-number">04</span>
-      <div className="step-dot">&#128640;</div>
-      <h4>Launch Your Career</h4>
-      <p>Access internship placements, the startup accelerator, and our partner ecosystem. Your Web3 career starts here.</p>
-    </div>
-  </div>
-</section>
+          {/* Tier Ladder */}
+          <div className="xp-tiers-wrap">
+            <div className="xp-table-title">Tier Ladder</div>
+            {[
+              { icon: '🌱', tier: 'Genesis Node', xp: '0 XP', desc: 'Earned on signup' },
+              { icon: '⚡', tier: 'Validator', xp: '500 XP', desc: 'Foundation cert unlocks this on Day 1' },
+              { icon: '⚔️', tier: 'Crypto Knight', xp: '1,500 XP', desc: '' },
+              { icon: '🔥', tier: 'Chain Architect', xp: '4,000 XP', desc: '' },
+              { icon: '🏆', tier: 'Protocol Master', xp: '8,000 XP', desc: '' },
+              { icon: '👑', tier: 'Node Sovereign', xp: '15,000+ XP', desc: 'Elite' },
+            ].map(({ icon, tier, xp, desc }, i) => (
+              <div key={tier} className={`tier-row${i === 0 ? ' tier-active' : ''}`}>
+                <span className="tier-icon">{icon}</span>
+                <span className="tier-name">{tier}</span>
+                <span className="tier-xp">{xp}</span>
+                {desc && <span className="tier-note">{desc}</span>}
+              </div>
+            ))}
+            <div className="tier-callout">
+              💡 Completing the <strong>Foundation Certificate</strong> upgrades you from Genesis Node → Validator on Day 1 (+500 XP instantly)
+            </div>
+          </div>
+        </div>
+      </section>
 
-{/*  ACHIEVEMENT BADGES  */}
-<section id="badges">
-  <div className="section-tag">Achievement System</div>
-  <h2>Earn Your <em>Badges.</em></h2>
-  <p className="body-text">Every milestone you hit on the platform is recognised with a permanent badge on your Sofian profile — visible to protocols, employers, and the community.</p>
+      {/* ── HOW IT WORKS ────────────────────────────────────────────── */}
+      <section id="how">
+        <div className="section-tag">Your Journey</div>
+        <h2>From Zero to <em>Web3 Pro.</em></h2>
+        <div className="steps-grid reveal">
+          {[
+            { num: '01', title: 'Create Your Free Account', desc: 'Sign up and get your unique referral link instantly. No upfront fees required.', icon: '👤' },
+            { num: '02', title: 'Enrol in the Bootcamp', desc: 'Join a live cohort or study self-paced. Tuition is subsidized by our global partners.', icon: '🎓' },
+            { num: '03', title: 'Learn & Refer', desc: 'Study the curriculum and share your referral link to earn 10–20% commissions in parallel.', icon: '🔗' },
+            { num: '04', title: 'Earn Your Certificate', desc: 'Pass the assessment to earn a verifiable on-chain certificate. Share it to LinkedIn with one click.', icon: '🏅' },
+            { num: '05', title: 'Level Up & Get Hired', desc: 'Unlock the Career Track, build your on-chain reputation, and connect with protocols hiring Sofians.', icon: '🚀' },
+          ].map(({ num, title, desc, icon }) => (
+            <div className="step-card" key={num}>
+              <div className="step-num">{num}</div>
+              <div className="step-icon">{icon}</div>
+              <h4>{title}</h4>
+              <p>{desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
 
-  <div className="badges-grid">
-    <div className="badge-card reveal">
-      <span className="badge-status earned">Earned on Signup</span>
-      <span className="badge-emoji">&#127807;</span>
-      <h4>Genesis Node</h4>
-      <p>Create your Sofe Node account. Welcome to the network — your journey begins here.</p>
-    </div>
-    <div className="badge-card reveal">
-      <span className="badge-status unlockable">Unlockable</span>
-      <span className="badge-emoji">&#9889;</span>
-      <h4>Validator</h4>
-      <p>Complete the Foundation Course &amp; pass the exam. Earn 500 XP and unlock the full platform.</p>
-    </div>
-    <div className="badge-card locked-badge reveal">
-      <span className="badge-status unlockable">Unlockable</span>
-      <span className="badge-emoji">&#9876;&#65039;</span>
-      <h4>Crypto Knight</h4>
-      <p>Complete 5 Academy modules across the platform. Requires Foundation cert.</p>
-    </div>
-    <div className="badge-card locked-badge reveal">
-      <span className="badge-status unlockable">Unlockable</span>
-      <span className="badge-emoji">&#128293;</span>
-      <h4>Chain Architect</h4>
-      <p>Complete the full Career Track programme. Mastery recognised on-chain.</p>
-    </div>
-    <div className="badge-card locked-badge reveal">
-      <span className="badge-status unlockable">Unlockable</span>
-      <span className="badge-emoji">&#127942;</span>
-      <h4>Node Operator</h4>
-      <p>Earn your Certified Blockchain Professional credential. The mark of a professional Sofian.</p>
-    </div>
-    <div className="badge-card locked-badge reveal">
-      <span className="badge-status unlockable">Unlockable</span>
-      <span className="badge-emoji">&#128081;</span>
-      <h4>Node Sovereign</h4>
-      <p>Reach 15,000+ Total XP. The highest rank in the Sofian ecosystem — earned, never given.</p>
-    </div>
-  </div>
-</section>
+      {/* ── ACHIEVEMENT BADGES ──────────────────────────────────────── */}
+      <section id="badges">
+        <div className="section-tag">Achievement System</div>
+        <h2>Earn Badges. <em>Own Your Rep.</em></h2>
+        <p className="body-text" style={{ marginBottom: '2.5rem' }}>Collect verifiable achievement badges as you progress. Every badge is a signal to employers and the community.</p>
+        <div className="badges-grid reveal">
+          {[
+            { icon: '🌱', title: 'Genesis Node', subtitle: 'Earned on Signup', desc: 'Welcome to the network. Your journey starts here.', status: 'earned' },
+            { icon: '⚡', title: 'Validator', subtitle: '500 XP — Foundation Cert', desc: 'You\'ve been validated. The chain recognises you.', status: 'locked' },
+            { icon: '⚔️', title: 'Crypto Knight', subtitle: '1,500 XP', desc: 'You fight for knowledge. The market respects you.', status: 'locked' },
+            { icon: '🔥', title: 'Chain Architect', subtitle: '4,000 XP', desc: 'You\'re building the new financial system.', status: 'locked' },
+            { icon: '🏆', title: 'Node Operator', subtitle: '8,000 XP', desc: 'You keep the network alive. Protocol-grade talent.', status: 'locked' },
+            { icon: '👑', title: 'Node Sovereign', subtitle: '15,000+ XP — Elite', desc: 'Governance-level. The community looks to you.', status: 'locked' },
+          ].map(({ icon, title, subtitle, desc, status }) => (
+            <div key={title} className={`badge-card${status === 'locked' ? ' locked-badge' : ''}`}>
+              <div className="badge-icon-wrap">{icon}</div>
+              <div className="badge-title">{title}</div>
+              <div className="badge-subtitle">{subtitle}</div>
+              <div className="badge-desc">{desc}</div>
+              {status === 'locked' && <div className="badge-lock-label">🔒 Locked</div>}
+            </div>
+          ))}
+        </div>
+      </section>
 
-{/*  SOCIAL PROOF  */}
-<section id="proof">
-  <div className="section-tag">Sofian Voices</div>
-  <h2>What Our <em>Community</em> Says</h2>
-  <p className="body-text">5,000+ Sofians have come through our programmes. Here&rsquo;s a glimpse of the impact.</p>
-  <div className="proof-grid">
-    <div className="proof-card reveal">
-      <div className="proof-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
-      <p>&ldquo;Before Sofe Node I had zero understanding of crypto. After the bootcamp I was actively trading, earning, and I&rsquo;ve already referred 4 friends. The affiliate commission paid for my entire course.&rdquo;</p>
-      <div className="proof-author">
-        <div className="proof-avatar">&#128100;</div>
-        <div className="proof-author-info">
-          <h5>Chukwuemeka O.</h5>
-          <span>Bootcamp Graduate &mdash; UNN</span>
+      {/* ── SOCIAL PROOF ────────────────────────────────────────────── */}
+      <section id="proof">
+        <div className="section-tag">Sofian Voices</div>
+        <h2>What Our <em>Community</em> Says</h2>
+        <div className="testimonials-grid reveal">
+          {[
+            { name: 'Chidera O.', role: 'Blockchain Bootcamp Graduate', text: 'I went from knowing nothing about crypto to trading confidently and earning commissions from my referrals. The course actually makes sense.', xp: 'Validator · 620 XP' },
+            { name: 'Fatima A.', role: 'Campus Ambassador, ABU Zaria', text: 'Sofe Node gave me a legit way to earn while studying. I referred 7 friends last semester and made enough to cover two semesters of fees.', xp: 'Crypto Knight · 2,100 XP' },
+            { name: 'Emeka T.', role: 'Career Track — Development', text: 'The Smart Contract module is the real deal. I landed a remote internship with a DeFi protocol three weeks after completing the Career Track.', xp: 'Chain Architect · 4,800 XP' },
+          ].map(({ name, role, text, xp }) => (
+            <div className="testimonial-card" key={name}>
+              <div className="testimonial-text">&ldquo;{text}&rdquo;</div>
+              <div className="testimonial-meta">
+                <div className="testimonial-avatar">{name[0]}</div>
+                <div>
+                  <div className="testimonial-name">{name}</div>
+                  <div className="testimonial-role">{role}</div>
+                </div>
+                <div className="testimonial-xp">{xp}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── CTA STRIP ───────────────────────────────────────────────── */}
+      <div className="cta-strip" id="cta-strip">
+        <div className="cta-strip-inner reveal">
+          <div>
+            <div className="cta-strip-tag">Ready to Start?</div>
+            <h2>Your <em>Web3 Career</em> Starts Today.</h2>
+            <p>Join 5,000+ Sofians already learning, earning, and building in the blockchain economy.</p>
+          </div>
+          <div className="cta-strip-btns">
+            <Link href="/signup" className="btn-primary orange">Create Free Account →</Link>
+            <Link href="/academy" className="btn-outline">Explore Academy</Link>
+          </div>
         </div>
       </div>
-    </div>
-    <div className="proof-card reveal">
-      <div className="proof-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
-      <p>&ldquo;The career programme placed me in an internship with a DeFi protocol within 3 months of graduating. I&rsquo;m now a full-time smart contract developer. This programme changed my trajectory.&rdquo;</p>
-      <div className="proof-author">
-        <div className="proof-avatar">&#128100;</div>
-        <div className="proof-author-info">
-          <h5>Amina B.</h5>
-          <span>Career Programme Graduate &mdash; UniJos</span>
-        </div>
-      </div>
-    </div>
-    <div className="proof-card reveal">
-      <div className="proof-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
-      <p>&ldquo;What sets Sofe Node apart is that it&rsquo;s practical. You don&rsquo;t just learn theory — you trade, you build, you earn. And the community keeps pushing you long after the bootcamp ends.&rdquo;</p>
-      <div className="proof-author">
-        <div className="proof-avatar">&#128100;</div>
-        <div className="proof-author-info">
-          <h5>David A.</h5>
-          <span>Ambassador &mdash; Level 2 Affiliate</span>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-{/*  CTA STRIP  */}
-<section id="cta-strip">
-  <div className="section-tag orange" style={{"justifyContent":"center"}}>Your Next Step</div>
-  <h2>Ready to Start Your<br/><em className="orange">Web3 Journey?</em></h2>
-  <p>Seats in each cohort are limited. Join thousands of Sofians already learning, earning, and building their Web3 future.</p>
-  <div className="cta-btns">
-    <a href="academy.html" className="btn-primary orange">&#127891; Join the Next Cohort</a>
-    <a href="dashboard.html" className="btn-primary">View Your Dashboard &rarr;</a>
-    <a href="ecosystems.html" className="btn-outline">Are You a Web3 Ecosystem? &rarr;</a>
-  </div>
-</section>
-
-{/*  FOOTER  */}
-
-
-
-
-
     </>
   );
 }
