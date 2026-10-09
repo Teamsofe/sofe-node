@@ -343,7 +343,7 @@ export default function AdminDashboardClient() {
       {/* ADMIN SHELL */}
       <div style={{ display: 'flex', minHeight: '100vh' }}>
         {/* SIDEBAR */}
-        <aside style={{
+        <aside className="admin-sidebar" style={{
           width: sidebarExpanded ? 240 : 70,
           background: '#080E1A',
           borderRight: '1px solid rgba(20,40,255,0.18)',

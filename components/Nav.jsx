@@ -45,7 +45,9 @@ export default function Nav() {
   function closeMenu() {
     setMenuOpen(false);
     setMobServOpen(false);
+    setMobResOpen(false);
   }
+
 
   const isLinkActive = (href) => {
     if (href === '/') return pathname === '/';
@@ -174,8 +176,9 @@ export default function Nav() {
                   zIndex: 999
                 }}>
                   <Link href="/dashboard" style={{ display: 'block', padding: '0.6rem 1.2rem', color: '#fff', textDecoration: 'none', fontSize: '0.85rem' }} onClick={() => setProfileOpen(false)}>Dashboard</Link>
-                  <Link href="/dashboard" style={{ display: 'block', padding: '0.6rem 1.2rem', color: '#fff', textDecoration: 'none', fontSize: '0.85rem' }} onClick={() => setProfileOpen(false)}>Profile</Link>
-                  <Link href="/dashboard" style={{ display: 'block', padding: '0.6rem 1.2rem', color: '#fff', textDecoration: 'none', fontSize: '0.85rem' }} onClick={() => setProfileOpen(false)}>Settings</Link>
+                  <Link href="/dashboard?tab=profile" style={{ display: 'block', padding: '0.6rem 1.2rem', color: '#fff', textDecoration: 'none', fontSize: '0.85rem' }} onClick={() => setProfileOpen(false)}>Profile</Link>
+                  <Link href="/dashboard?tab=settings" style={{ display: 'block', padding: '0.6rem 1.2rem', color: '#fff', textDecoration: 'none', fontSize: '0.85rem' }} onClick={() => setProfileOpen(false)}>Settings</Link>
+
                   <div style={{ height: 1, background: 'rgba(255,255,255,0.1)', margin: '4px 0' }} />
                   <button onClick={() => { signOut(auth); setProfileOpen(false); }} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '0.6rem 1.2rem', color: '#FF4444', textDecoration: 'none', fontSize: '0.85rem', background: 'transparent', border: 'none', cursor: 'pointer' }}>Logout</button>
                 </div>

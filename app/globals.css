@@ -198,6 +198,9 @@
   .nav-dropdown-menu a:first-child .dd-icon { background: rgba(20,40,255,0.15); }
   .nav-dropdown-menu a:last-child .dd-icon { background: rgba(255,138,0,0.15); }
   .dd-sep { height: 1px; background: rgba(20,40,255,0.18); margin: .3rem .5rem; }
+  .nav-dropdown-menu a .dd-icon { background: rgba(20,40,255,0.15); }
+  .nav-dropdown-menu a:last-child .dd-icon { background: rgba(255,138,0,0.15); }
+
 
   /* nav right side */
   .nav-right { display: flex; align-items: center; gap: .8rem; }
@@ -1609,3 +1612,38 @@
 }
 
 .nav-links::-webkit-scrollbar { display: none; }
+
+/* Admin Sidebar Mobile */
+@media (max-width: 768px) {
+  .admin-sidebar {
+    position: fixed !important;
+    bottom: 0;
+    left: 0;
+    width: 100vw !important;
+    height: 70px !important;
+    border-right: none !important;
+    border-top: 1px solid rgba(20,40,255,0.18) !important;
+    flex-direction: row !important;
+    z-index: 1000;
+    padding: 0 !important;
+  }
+  .admin-sidebar > div:first-child { display: none !important; }
+  .admin-sidebar nav {
+    flex-direction: row !important;
+    width: 100%;
+    justify-content: space-around;
+    align-items: center;
+    padding: 0;
+  }
+  .admin-sidebar nav button {
+    flex: 1;
+    flex-direction: column !important;
+    justify-content: center !important;
+    padding: 5px !important;
+    font-size: 0.55rem !important;
+    gap: 2px !important;
+  }
+  .admin-sidebar nav button span:first-child { font-size: 1.2rem !important; margin: 0 !important; }
+  .admin-sidebar nav button span:last-child { display: block !important; }
+  .admin-sidebar > div:last-child { display: none !important; }
+}

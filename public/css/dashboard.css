@@ -30,15 +30,7 @@
   nav, section, footer, #trust, .stats-wrap { position: relative; z-index: 1; }
 
   /* NAV */
-  nav {
-    position: fixed; top: 0; left: 0; right: 0; z-index: 200;
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 1rem 5vw;
-    background: rgba(4,8,15,0.88);
-    backdrop-filter: blur(20px);
-    border-bottom: 1px solid var(--border);
-    transition: background .3s;
-  }
+  /* nav override removed */
   .nav-logo {
     font-family: 'Poppins', sans-serif; font-weight: 800; font-size: 1.25rem;
     display: flex; align-items: center; gap: .5rem;

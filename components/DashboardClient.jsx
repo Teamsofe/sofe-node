@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+
 import {
   auth,
   db,
@@ -38,13 +39,18 @@ const XP_TIERS = [
 
 export default function DashboardClient() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   // Loading & User State
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
   const [userData, setUserData] = useState(null);
-  const [activeTab, setActiveTab] = useState('classroom');
+  const [activeTab, setActiveTab] = useState(() => {
+    const tabParam = searchParams?.get('tab');
+    return tabParam || 'classroom';
+  });
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
 
   // ── WORKSPACE CONTEXT SWITCHER ──
   const [activeWorkspace, setActiveWorkspace] = useState('learner');
