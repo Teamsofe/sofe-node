@@ -29,14 +29,15 @@
     pointer-events: none;
   }
   main { position: relative; z-index: 1; }
-  nav, section, footer, #trust, .stats-wrap { position: relative; z-index: 1; }
+  section, footer, #trust, .stats-wrap { position: relative; z-index: 1; }
 
   /* FLOATING NAV */
+  nav#nav,
   nav {
-    position: fixed; top: 1rem; left: 0; z-index: 200;
-    width: 100vw;
-    display: flex; align-items: center; justify-content: center;
-    pointer-events: none;
+    position: fixed !important; top: 1rem !important; left: 0 !important; right: 0 !important; z-index: 1000 !important;
+    width: 100vw !important;
+    display: flex !important; align-items: center !important; justify-content: center !important;
+    pointer-events: none !important;
     transition: background .3s, border-color .3s, box-shadow .3s;
   }
   .nav-inner {
@@ -147,7 +148,7 @@
     }
   }
 
-  /* Services dropdown */
+  /* Services & Resources dropdown */
   .nav-dropdown { position: relative; }
   .nav-dropdown > a { display: flex; align-items: center; gap: .35rem; cursor: pointer; }
   .nav-chevron {
@@ -156,13 +157,26 @@
     color: var(--muted);
     transition: transform .2s, color .2s;
   }
-  .nav-dropdown:hover .nav-chevron { transform: rotate(180deg); color: var(--white); }
+  .nav-dropdown:hover .nav-chevron,
+  .nav-dropdown.open .nav-chevron { transform: rotate(180deg); color: var(--white); }
+  /* Hover bridge to keep dropdown from disappearing */
+  .nav-dropdown::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: -20px;
+    right: -20px;
+    height: 20px;
+    pointer-events: auto;
+  }
   .nav-dropdown-menu {
     display: none; position: absolute; top: 100%; left: 50%;
     transform: translateX(-50%);
-    padding-top: 0.8rem; /* invisible bridge — keeps hover alive over the gap */
-    z-index: 300;
+    padding-top: 0.6rem;
+    z-index: 1002;
   }
+  .nav-dropdown:hover .nav-dropdown-menu,
+  .nav-dropdown.open .nav-dropdown-menu { display: block; animation: dropIn .18s ease; }
   /* Inner panel — visually separated from the link */
   .nav-dropdown-panel {
     background: rgba(8,14,26,0.97); backdrop-filter: blur(24px);
@@ -179,7 +193,6 @@
     border-top: 1px solid rgba(20,40,255,0.22);
     transform: translateX(-50%) rotate(45deg);
   }
-  .nav-dropdown:hover .nav-dropdown-menu { display: block; animation: dropIn .18s ease; }
   @keyframes dropIn { from { opacity:0; transform: translateX(-50%) translateY(-4px); } to { opacity:1; transform: translateX(-50%) translateY(0); } }
   .nav-dropdown-menu a {
     display: flex; align-items: center; gap: .7rem;

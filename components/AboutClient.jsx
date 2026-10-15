@@ -49,18 +49,22 @@ export default function AboutClient() {
       <link rel="stylesheet" href="/css/about.css" />
 
       {/* ── PAGE HEADER ── */}
-      <header className="page-header" style={{ padding: '9rem 5vw 4rem', textAlign: 'center' }}>
-        <div className="hero-content" style={{ maxWidth: '850px', margin: '0 auto' }}>
-          <div className="ph-eyebrow" style={{ color: 'var(--orange)', textTransform: 'uppercase', fontSize: '.8rem', fontWeight: 700, letterSpacing: '.1em', marginBottom: '.8rem' }}>Our Story</div>
-          <h1 style={{ fontSize: 'clamp(2.2rem, 4vw, 3.5rem)', fontWeight: 800, lineHeight: 1.15, marginBottom: '1.2rem' }}>
-            Scaling Africa’s <em>Web3 Ecosystems</em> Through The <span style={{ color: 'var(--orange)' }}>Node</span>
+      <header className="page-header">
+        <div className="hero-content">
+          <div className="ph-eyebrow">Our Story</div>
+          <h1>
+            Scaling Africa’s <em>Web3 Ecosystems</em> Through The <em>Node</em>
           </h1>
-          <p className="ph-sub" style={{ color: 'var(--muted)', fontSize: '1.05rem', lineHeight: 1.7, marginBottom: '2rem' }}>
+          <p className="ph-sub">
             Just as a node validates every transaction on a blockchain, Sofe Node validates talent, verifies market entry, and routes global Web3 innovation into Africa — reliably, at scale.
           </p>
-          <div className="ph-btns" style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <Link href="/login" className="btn-primary" style={{ padding: '.8rem 1.8rem', background: 'var(--blue)', color: '#fff', borderRadius: '8px', fontWeight: 700, textDecoration: 'none' }}>Join Our Community</Link>
-            <Link href="/services/partners" className="btn-outline" style={{ padding: '.8rem 1.8rem', border: '1px solid var(--border)', color: 'var(--white)', borderRadius: '8px', fontWeight: 600, textDecoration: 'none' }}>Scale With Us</Link>
+          <div className="ph-btns">
+            <Link href="/login" className="btn-primary">
+              Join Our Community
+            </Link>
+            <Link href="/services/partners" className="btn-outline">
+              Scale With Us
+            </Link>
           </div>
         </div>
       </header>

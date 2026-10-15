@@ -10,6 +10,8 @@ export default function Nav() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobServOpen, setMobServOpen] = useState(false);
   const [mobResOpen, setMobResOpen] = useState(false);
+  const [desktopServOpen, setDesktopServOpen] = useState(false);
+  const [desktopResOpen, setDesktopResOpen] = useState(false);
   const [isLight, setIsLight] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [user, setUser] = useState(null);
@@ -17,13 +19,30 @@ export default function Nav() {
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
+    const onDocClick = (e) => {
+      if (!e.target.closest('.nav-dropdown')) {
+        setDesktopServOpen(false);
+        setDesktopResOpen(false);
+      }
+      if (!e.target.closest('.nav-right')) {
+        setProfileOpen(false);
+      }
+    };
     window.addEventListener('scroll', onScroll);
+    window.addEventListener('click', onDocClick);
     const unsub = onAuthStateChanged(auth, u => setUser(u));
     return () => {
       window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('click', onDocClick);
       unsub();
     };
   }, []);
+
+  useEffect(() => {
+    setDesktopServOpen(false);
+    setDesktopResOpen(false);
+    setMenuOpen(false);
+  }, [pathname]);
 
   if (
     pathname?.startsWith('/admin') ||
@@ -83,41 +102,57 @@ export default function Nav() {
               CBIE
             </Link>
           </li>
-          <li className="nav-dropdown">
-            <Link href="/services" className={isLinkActive('/services') ? 'active-pill' : ''}>
+          <li className={`nav-dropdown${desktopServOpen ? ' open' : ''}`}>
+            <a
+              href="/services"
+              className={isLinkActive('/services') ? 'active-pill' : ''}
+              onClick={(e) => {
+                e.preventDefault();
+                setDesktopServOpen((v) => !v);
+                setDesktopResOpen(false);
+              }}
+            >
               Services <span className="nav-chevron">&#9660;</span>
-            </Link>
+            </a>
             <div className="nav-dropdown-menu">
               <div className="nav-dropdown-panel">
-                <Link href="/services/talent">
+                <Link href="/services/talent" onClick={() => setDesktopServOpen(false)}>
                   <span className="dd-icon">🎓</span>
                   <span>For Talent</span>
                 </Link>
                 <div className="dd-sep" />
-                <Link href="/services/partners">
+                <Link href="/services/partners" onClick={() => setDesktopServOpen(false)}>
                   <span className="dd-icon">🌍</span>
                   <span>For Partners</span>
                 </Link>
               </div>
             </div>
           </li>
-          <li className="nav-dropdown">
-            <Link href="#" className={isLinkActive('/blog') || isLinkActive('/events') || isLinkActive('/about') ? 'active-pill' : ''}>
+          <li className={`nav-dropdown${desktopResOpen ? ' open' : ''}`}>
+            <a
+              href="#"
+              className={isLinkActive('/blog') || isLinkActive('/events') || isLinkActive('/about') ? 'active-pill' : ''}
+              onClick={(e) => {
+                e.preventDefault();
+                setDesktopResOpen((v) => !v);
+                setDesktopServOpen(false);
+              }}
+            >
               Resources <span className="nav-chevron">&#9660;</span>
-            </Link>
+            </a>
             <div className="nav-dropdown-menu">
               <div className="nav-dropdown-panel">
-                <Link href="/blog">
+                <Link href="/blog" onClick={() => setDesktopResOpen(false)}>
                   <span className="dd-icon">📝</span>
                   <span>Blog</span>
                 </Link>
                 <div className="dd-sep" />
-                <Link href="/events">
+                <Link href="/events" onClick={() => setDesktopResOpen(false)}>
                   <span className="dd-icon">📅</span>
                   <span>Events</span>
                 </Link>
                 <div className="dd-sep" />
-                <Link href="/about">
+                <Link href="/about" onClick={() => setDesktopResOpen(false)}>
                   <span className="dd-icon">ℹ️</span>
                   <span>About Us</span>
                 </Link>

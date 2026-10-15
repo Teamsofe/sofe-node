@@ -81,7 +81,7 @@ export default function BlogClient() {
 
       {/* HEADER */}
       <section style={{
-        padding: '5rem 1.5rem 2.5rem',
+        padding: '8.5rem 1.5rem 2.5rem',
         textAlign: 'center',
         background: 'radial-gradient(circle at 50% 20%, rgba(20,40,255,.12), transparent 60%)'
       }}>
