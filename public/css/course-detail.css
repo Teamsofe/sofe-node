@@ -14,6 +14,28 @@
   --sn-green: #10b981;
 }
 
+body.light {
+  --sn-bg: #F4F7FC;
+  --sn-panel: #FFFFFF;
+  --sn-border: rgba(10, 15, 36, 0.12);
+  --sn-text: #0A0F24;
+  --sn-muted: #475569;
+}
+
+body.light .course-hero {
+  background: radial-gradient(circle at 15% 0%, rgba(255, 138, 0, 0.08), transparent 40%), #F4F7FC !important;
+}
+
+body.light .foundation-notice {
+  background: rgba(20, 40, 255, 0.06) !important;
+  border-color: rgba(20, 40, 255, 0.18) !important;
+  color: #1428FF !important;
+}
+
+body.light .course-sidebar-card {
+  box-shadow: 0 16px 40px rgba(20, 40, 120, 0.08) !important;
+}
+
 /* Base Resets for this page */
 body {
   background-color: var(--sn-bg);

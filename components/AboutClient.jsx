@@ -1,8 +1,10 @@
 'use client';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 
 export default function AboutClient() {
+  const [nodeSlide, setNodeSlide] = useState(0);
   const stats = [
     { num: '5,000+', label: 'Web3 Users Onboarded', sub: 'Across Nigeria & beyond' },
     { num: '20+', label: 'Bootcamps Delivered', sub: 'From 2020 to date' },
@@ -37,12 +39,54 @@ export default function AboutClient() {
   ];
 
   const nodes = [
-    { name: 'UNN Node', loc: 'University of Nigeria, Nsukka', img: '/images/Nodes/SofeNodeUNN.png' },
-    { name: 'UniJos Node', loc: 'University of Jos', img: '/images/Nodes/SofeNodeUniJOS.png' },
-    { name: 'UniBen Node', loc: 'University of Benin', img: '/images/Nodes/SofeNodeUniBEN.png' },
-    { name: 'DSPG Node', loc: 'Delta State Polytechnic, Ogwashi-Uku', img: '/images/Nodes/SofeNodeDSPG.png' },
-    { name: 'FPNO Node', loc: 'Federal Polytechnic, Nekede', img: '/images/Nodes/SofeNodeFPNO.png' },
+    {
+      name: 'UNN Node',
+      institution: 'University of Nigeria',
+      loc: 'Nsukka, Enugu State',
+      img: '/images/Nodes/SofeNodeUNN.png',
+      students: '450+ Active Sofians',
+      focus: 'Smart Contract Architecture & Solana/Rust'
+    },
+    {
+      name: 'UniJos Node',
+      institution: 'University of Jos',
+      loc: 'Jos, Plateau State',
+      img: '/images/Nodes/SofeNodeUniJOS.png',
+      students: '300+ Verified Traders',
+      focus: 'Trading Bootcamps & DeFi Liquidity'
+    },
+    {
+      name: 'UniBen Node',
+      institution: 'University of Benin',
+      loc: 'Benin City, Edo State',
+      img: '/images/Nodes/SofeNodeUniBEN.png',
+      students: '380+ Community Members',
+      focus: 'Web3 Product Design & Governance'
+    },
+    {
+      name: 'FPNO Node',
+      institution: 'Federal Polytechnic Nekede',
+      loc: 'Owerri, Imo State',
+      img: '/images/Nodes/SofeNodeFPNO.png',
+      students: '260+ Enrolled Learners',
+      focus: 'Front-End dApps & Community Building'
+    },
+    {
+      name: 'DSPG Node',
+      institution: 'Delta State Polytechnic',
+      loc: 'Ogwashi-Uku, Delta State',
+      img: '/images/Nodes/SofeNodeDSPG.png',
+      students: '210+ Registered Sofians',
+      focus: 'AI & On-Chain Data Analytics'
+    },
   ];
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNodeSlide((prev) => (prev + 1) % nodes.length);
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [nodes.length]);
 
   return (
     <>
@@ -62,7 +106,7 @@ export default function AboutClient() {
             <Link href="/login" className="btn-primary">
               Join Our Community
             </Link>
-            <Link href="/services/partners" className="btn-outline">
+            <Link href="/ecosystem" className="btn-outline">
               Scale With Us
             </Link>
           </div>
@@ -133,6 +177,198 @@ export default function AboutClient() {
         </div>
       </section>
 
+      {/* ── CAMPUS INFRASTRUCTURE (Directly under Our Principles) ── */}
+      <section style={{ padding: '5.5rem 5vw', background: 'rgba(8,14,26,0.7)', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '4rem', alignItems: 'center' }}>
+          {/* Left Column: Infrastructure Info */}
+          <div>
+            <div className="section-tag" style={{ color: 'var(--blue)', fontWeight: 700, textTransform: 'uppercase', fontSize: '.75rem', marginBottom: '.5rem' }}>
+              Campus Infrastructure
+            </div>
+            <h2 style={{ fontSize: '2.2rem', fontWeight: 800, lineHeight: 1.2, marginBottom: '1.2rem' }}>
+              How Our <span style={{ color: 'var(--blue)' }}>Nodes</span> Work Across Africa
+            </h2>
+            <p className="body-text" style={{ color: 'var(--muted)', lineHeight: 1.75, marginBottom: '1.2rem' }}>
+              Each campus chapter is a live, operational node in our distribution network. Sofe Node coordinates and routes value across higher institutions — conducting IRL developer bootcamps, student talent validation, protocol market entry, and Web3 activations.
+            </p>
+            <p className="body-text" style={{ color: 'var(--muted)', lineHeight: 1.75, marginBottom: '2rem' }}>
+              From Lagos to Nsukka and Jos, our campus node leads manage on-the-ground communities, ensuring continuous onboarding, active trading education, and career acceleration.
+            </p>
+
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '.6rem', marginBottom: '2.2rem' }}>
+              <span style={{ background: 'rgba(20,40,255,.12)', color: '#6b8cff', padding: '.35rem .85rem', borderRadius: '6px', fontSize: '.75rem', fontWeight: 600 }}>Campus Activation</span>
+              <span style={{ background: 'rgba(20,40,255,.12)', color: '#6b8cff', padding: '.35rem .85rem', borderRadius: '6px', fontSize: '.75rem', fontWeight: 600 }}>Trading Bootcamps</span>
+              <span style={{ background: 'rgba(20,40,255,.12)', color: '#6b8cff', padding: '.35rem .85rem', borderRadius: '6px', fontSize: '.75rem', fontWeight: 600 }}>User Acquisition</span>
+              <span style={{ background: 'rgba(20,40,255,.12)', color: '#6b8cff', padding: '.35rem .85rem', borderRadius: '6px', fontSize: '.75rem', fontWeight: 600 }}>Community Retention</span>
+              <span style={{ background: 'rgba(255,138,0,.12)', color: 'var(--orange)', padding: '.35rem .85rem', borderRadius: '6px', fontSize: '.75rem', fontWeight: 600 }}>Talent Validation</span>
+            </div>
+
+            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+              <Link href="/for-talents" className="btn-primary" style={{ textDecoration: 'none' }}>
+                Join a Campus Node
+              </Link>
+              <Link href="/ecosystem" className="btn-outline" style={{ textDecoration: 'none' }}>
+                Deploy to Campuses &rarr;
+              </Link>
+            </div>
+          </div>
+
+          {/* Right Column: Interactive Nodes Slideshow */}
+          <div style={{ position: 'relative' }}>
+            <div style={{
+              background: 'var(--panel)',
+              border: '1px solid rgba(20,40,255,0.3)',
+              borderRadius: '16px',
+              padding: '2.5rem',
+              boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+              position: 'relative',
+              overflow: 'hidden'
+            }}>
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: '3px',
+                background: 'linear-gradient(90deg, var(--blue), var(--orange))'
+              }} />
+
+              {/* Header inside card */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.8rem' }}>
+                <span style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.12em', color: 'var(--orange)' }}>
+                  Active Node {nodeSlide + 1} of {nodes.length}
+                </span>
+                <span style={{
+                  background: 'rgba(16,185,129,0.15)',
+                  color: '#10b981',
+                  border: '1px solid rgba(16,185,129,0.3)',
+                  padding: '.2rem .6rem',
+                  borderRadius: 100,
+                  fontSize: '.65rem',
+                  fontWeight: 700
+                }}>
+                  ● Live Node
+                </span>
+              </div>
+
+              {/* Active Slide Content */}
+              <div style={{ textAlign: 'center', padding: '1rem 0' }}>
+                <div style={{
+                  width: '120px',
+                  height: '120px',
+                  margin: '0 auto 1.5rem',
+                  borderRadius: '50%',
+                  background: 'rgba(20,40,255,0.08)',
+                  border: '2px solid rgba(20,40,255,0.25)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '12px'
+                }}>
+                  <img
+                    src={nodes[nodeSlide].img}
+                    alt={nodes[nodeSlide].name}
+                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                  />
+                </div>
+
+                <h3 style={{ fontSize: '1.45rem', fontWeight: 800, color: 'var(--white)', marginBottom: '.3rem' }}>
+                  {nodes[nodeSlide].name}
+                </h3>
+                <div style={{ fontSize: '0.92rem', color: 'var(--blue)', fontWeight: 600, marginBottom: '.4rem' }}>
+                  {nodes[nodeSlide].institution}
+                </div>
+                <div style={{ fontSize: '0.78rem', color: 'var(--muted)', marginBottom: '1.5rem' }}>
+                  📍 {nodes[nodeSlide].loc}
+                </div>
+
+                <div style={{
+                  background: 'var(--deep)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '8px',
+                  padding: '1rem',
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: '0.8rem',
+                  textAlign: 'left'
+                }}>
+                  <div>
+                    <div style={{ fontSize: '0.62rem', color: 'var(--muted)', textTransform: 'uppercase', fontWeight: 600 }}>Active Talent</div>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--orange)', fontWeight: 700, marginTop: '2px' }}>
+                      {nodes[nodeSlide].students}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.62rem', color: 'var(--muted)', textTransform: 'uppercase', fontWeight: 600 }}>Core Track Focus</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--white)', fontWeight: 600, marginTop: '2px', lineHeight: 1.3 }}>
+                      {nodes[nodeSlide].focus}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Slideshow Controls */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.8rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
+                <button
+                  type="button"
+                  onClick={() => setNodeSlide((prev) => (prev - 1 + nodes.length) % nodes.length)}
+                  style={{
+                    background: 'var(--deep)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '6px',
+                    color: 'var(--white)',
+                    padding: '.4rem .8rem',
+                    cursor: 'pointer',
+                    fontSize: '0.8rem',
+                    fontWeight: 700
+                  }}
+                >
+                  &larr; Prev
+                </button>
+
+                {/* Dots indicator */}
+                <div style={{ display: 'flex', gap: '.4rem' }}>
+                  {nodes.map((_, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setNodeSlide(idx)}
+                      style={{
+                        width: nodeSlide === idx ? '20px' : '8px',
+                        height: '8px',
+                        borderRadius: '4px',
+                        background: nodeSlide === idx ? 'var(--blue)' : 'rgba(255,255,255,0.2)',
+                        border: 'none',
+                        cursor: 'pointer',
+                        transition: 'all .25s'
+                      }}
+                      aria-label={`Slide ${idx + 1}`}
+                    />
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setNodeSlide((prev) => (prev + 1) % nodes.length)}
+                  style={{
+                    background: 'var(--deep)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '6px',
+                    color: 'var(--white)',
+                    padding: '.4rem .8rem',
+                    cursor: 'pointer',
+                    fontSize: '0.8rem',
+                    fontWeight: 700
+                  }}
+                >
+                  Next &rarr;
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ── UN SDGS ── */}
       <section style={{ padding: '5rem 5vw' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
@@ -169,28 +405,6 @@ export default function AboutClient() {
                 </div>
                 <div style={{ fontWeight: 700, fontSize: '.95rem', color: 'var(--white)' }}>{m.name}</div>
                 <div style={{ fontSize: '.75rem', color: 'var(--orange)', marginTop: '.2rem' }}>{m.role}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── CAMPUS NODES ── */}
-      <section style={{ padding: '5rem 5vw' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
-            <div style={{ color: 'var(--blue)', fontWeight: 700, textTransform: 'uppercase', fontSize: '.75rem', marginBottom: '.5rem' }}>Campus Infrastructure</div>
-            <h2 style={{ fontSize: '2.2rem', fontWeight: 800 }}>Our Campus <span style={{ color: 'var(--blue)' }}>Nodes</span></h2>
-            <p style={{ color: 'var(--muted)', maxWidth: '600px', margin: '.5rem auto 0' }}>Physical nodes on top Nigerian university campuses powering talent onboarding and protocol activations.</p>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem' }}>
-            {nodes.map((node, idx) => (
-              <div key={idx} style={{ background: 'var(--deep)', border: '1px solid var(--border)', borderRadius: '10px', padding: '1.5rem', textAlign: 'center' }}>
-                <div style={{ width: '60px', height: '60px', margin: '0 auto 1rem' }}>
-                  <img src={node.img} alt={node.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                </div>
-                <div style={{ fontWeight: 700, color: 'var(--white)' }}>{node.name}</div>
-                <div style={{ fontSize: '.75rem', color: 'var(--muted)', marginTop: '.3rem' }}>{node.loc}</div>
               </div>
             ))}
           </div>

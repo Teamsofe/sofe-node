@@ -18,6 +18,16 @@ export default function Nav() {
   const [profileOpen, setProfileOpen] = useState(false);
 
   useEffect(() => {
+    try {
+      const savedTheme = localStorage.getItem('sofe_theme');
+      if (savedTheme === 'light' || document.body.classList.contains('light')) {
+        setIsLight(true);
+        document.body.classList.add('light');
+        const canvas = document.getElementById('hexCanvas');
+        if (canvas) canvas.style.opacity = '0.18';
+      }
+    } catch (_) {}
+
     const onScroll = () => setScrolled(window.scrollY > 40);
     const onDocClick = (e) => {
       if (!e.target.closest('.nav-dropdown')) {
@@ -26,6 +36,9 @@ export default function Nav() {
       }
       if (!e.target.closest('.nav-right')) {
         setProfileOpen(false);
+      }
+      if (!e.target.closest('#mobileMenu') && !e.target.closest('#hamburger')) {
+        setMenuOpen(false);
       }
     };
     window.addEventListener('scroll', onScroll);
@@ -57,6 +70,9 @@ export default function Nav() {
     const next = !isLight;
     setIsLight(next);
     document.body.classList.toggle('light', next);
+    try {
+      localStorage.setItem('sofe_theme', next ? 'light' : 'dark');
+    } catch (_) {}
     const canvas = document.getElementById('hexCanvas');
     if (canvas) canvas.style.opacity = next ? '0.18' : '1';
   }
@@ -77,14 +93,13 @@ export default function Nav() {
     <>
       <nav id="nav">
         <div className="nav-inner">
-          <Link href="/" className="nav-logo" aria-label="Sofe Node">
+          <Link href="/" className="nav-logo" aria-label="Sofe Node" data-intro-target style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
             <img
               src="/images/Nodes/SofeLogoHome.png"
-            className="logo-img"
-            alt="Sofe Node"
-            style={{ height: '38px', width: 'auto', objectFit: 'contain' }}
-          />
-        </Link>
+              className="logo-img"
+              alt="Sofe Node"
+            />
+          </Link>
 
         <ul className="nav-links">
           <li>
@@ -105,7 +120,7 @@ export default function Nav() {
           <li className={`nav-dropdown${desktopServOpen ? ' open' : ''}`}>
             <a
               href="/services"
-              className={isLinkActive('/services') ? 'active-pill' : ''}
+              className={isLinkActive('/services') || isLinkActive('/ecosystem') ? 'active-pill' : ''}
               onClick={(e) => {
                 e.preventDefault();
                 setDesktopServOpen((v) => !v);
@@ -121,9 +136,9 @@ export default function Nav() {
                   <span>For Talent</span>
                 </Link>
                 <div className="dd-sep" />
-                <Link href="/services/partners" onClick={() => setDesktopServOpen(false)}>
+                <Link href="/ecosystem" onClick={() => setDesktopServOpen(false)}>
                   <span className="dd-icon">🌍</span>
-                  <span>For Partners</span>
+                  <span>For Ecosystems</span>
                 </Link>
               </div>
             </div>
@@ -176,46 +191,35 @@ export default function Nav() {
             {isLight ? '🌙' : '☀️'}
           </button>
           {user ? (
-            <div style={{ position: 'relative' }}>
+            <div style={{ position: 'relative', flexShrink: 0 }}>
               <button
                 onClick={() => setProfileOpen(!profileOpen)}
                 style={{
                   background: 'linear-gradient(135deg, #1428FF, #FF8A00)',
                   border: '2px solid rgba(255,255,255,0.2)',
                   borderRadius: '50%',
-                  width: 36,
-                  height: 36,
+                  width: 32,
+                  height: 32,
                   color: '#fff',
                   fontWeight: 700,
+                  fontSize: '0.85rem',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  textTransform: 'uppercase'
+                  textTransform: 'uppercase',
+                  flexShrink: 0
                 }}
               >
                 {user.email ? user.email.charAt(0) : 'U'}
               </button>
               {profileOpen && (
-                <div style={{
-                  position: 'absolute',
-                  top: '120%',
-                  right: 0,
-                  background: 'rgba(8,14,26,0.95)',
-                  border: '1px solid rgba(20,40,255,0.2)',
-                  borderRadius: 12,
-                  padding: '0.5rem 0',
-                  minWidth: 160,
-                  backdropFilter: 'blur(10px)',
-                  boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-                  zIndex: 999
-                }}>
-                  <Link href="/dashboard" style={{ display: 'block', padding: '0.6rem 1.2rem', color: '#fff', textDecoration: 'none', fontSize: '0.85rem' }} onClick={() => setProfileOpen(false)}>Dashboard</Link>
-                  <Link href="/dashboard?tab=profile" style={{ display: 'block', padding: '0.6rem 1.2rem', color: '#fff', textDecoration: 'none', fontSize: '0.85rem' }} onClick={() => setProfileOpen(false)}>Profile</Link>
-                  <Link href="/dashboard?tab=settings" style={{ display: 'block', padding: '0.6rem 1.2rem', color: '#fff', textDecoration: 'none', fontSize: '0.85rem' }} onClick={() => setProfileOpen(false)}>Settings</Link>
-
-                  <div style={{ height: 1, background: 'rgba(255,255,255,0.1)', margin: '4px 0' }} />
-                  <button onClick={() => { signOut(auth); setProfileOpen(false); }} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '0.6rem 1.2rem', color: '#FF4444', textDecoration: 'none', fontSize: '0.85rem', background: 'transparent', border: 'none', cursor: 'pointer' }}>Logout</button>
+                <div className="nav-profile-menu">
+                  <Link href="/dashboard" className="nav-profile-item" onClick={() => setProfileOpen(false)}>Dashboard</Link>
+                  <Link href="/dashboard?tab=profile" className="nav-profile-item" onClick={() => setProfileOpen(false)}>Profile</Link>
+                  <Link href="/dashboard?tab=settings" className="nav-profile-item" onClick={() => setProfileOpen(false)}>Settings</Link>
+                  <div className="nav-profile-sep" />
+                  <button className="nav-profile-logout" onClick={() => { signOut(auth); setProfileOpen(false); }}>Logout</button>
                 </div>
               )}
             </div>
@@ -237,12 +241,12 @@ export default function Nav() {
       {/* MOBILE MENU */}
       <div id="mobileMenu" className={menuOpen ? 'open' : ''}>
         <ul className="mob-links">
-          <li><Link href="/" onClick={closeMenu}>Home</Link></li>
-          <li><Link href="/academy" onClick={closeMenu}>Academy</Link></li>
-          <li><Link href="/cbie" onClick={closeMenu}>CBIE</Link></li>
+          <li><Link href="/" onClick={closeMenu} className={pathname === '/' ? 'active-pill' : ''}>Home</Link></li>
+          <li><Link href="/academy" onClick={closeMenu} className={isLinkActive('/academy') ? 'active-pill' : ''}>Academy</Link></li>
+          <li><Link href="/cbie" onClick={closeMenu} className={isLinkActive('/cbie') ? 'active-pill' : ''}>CBIE</Link></li>
           <li>
             <a
-              className={`mob-services-toggle${mobServOpen ? ' open' : ''}`}
+              className={`mob-services-toggle${mobServOpen ? ' open' : ''}${isLinkActive('/services') || isLinkActive('/ecosystem') ? ' active-pill' : ''}`}
               onClick={(e) => { e.preventDefault(); setMobServOpen((v) => !v); }}
               href="#"
             >
@@ -251,13 +255,13 @@ export default function Nav() {
             {mobServOpen && (
               <ul className="mob-sub">
                 <li>
-                  <Link href="/services/talent" onClick={closeMenu}>
+                  <Link href="/services/talent" onClick={closeMenu} className={isLinkActive('/services/talent') ? 'active-pill' : ''}>
                     <span className="dd-icon">🎓</span>For Talent
                   </Link>
                 </li>
                 <li>
-                  <Link href="/services/partners" onClick={closeMenu}>
-                    <span className="dd-icon">🌍</span>For Partners
+                  <Link href="/ecosystem" onClick={closeMenu} className={isLinkActive('/ecosystem') ? 'active-pill' : ''}>
+                    <span className="dd-icon">🌍</span>For Ecosystems
                   </Link>
                 </li>
               </ul>
@@ -265,7 +269,7 @@ export default function Nav() {
           </li>
           <li>
             <a
-              className={`mob-services-toggle${mobResOpen ? ' open' : ''}`}
+              className={`mob-services-toggle${mobResOpen ? ' open' : ''}${isLinkActive('/blog') || isLinkActive('/events') || isLinkActive('/about') ? ' active-pill' : ''}`}
               onClick={(e) => { e.preventDefault(); setMobResOpen((v) => !v); }}
               href="#"
             >
@@ -274,24 +278,24 @@ export default function Nav() {
             {mobResOpen && (
               <ul className="mob-sub">
                 <li>
-                  <Link href="/blog" onClick={closeMenu}>
+                  <Link href="/blog" onClick={closeMenu} className={isLinkActive('/blog') ? 'active-pill' : ''}>
                     <span className="dd-icon">📝</span>Blog
                   </Link>
                 </li>
                 <li>
-                  <Link href="/events" onClick={closeMenu}>
+                  <Link href="/events" onClick={closeMenu} className={isLinkActive('/events') ? 'active-pill' : ''}>
                     <span className="dd-icon">📅</span>Events
                   </Link>
                 </li>
                 <li>
-                  <Link href="/about" onClick={closeMenu}>
+                  <Link href="/about" onClick={closeMenu} className={isLinkActive('/about') ? 'active-pill' : ''}>
                     <span className="dd-icon">ℹ️</span>About Us
                   </Link>
                 </li>
               </ul>
             )}
           </li>
-          <li><Link href="/bounties" onClick={closeMenu}>Bounties</Link></li>
+          <li><Link href="/bounties" onClick={closeMenu} className={isLinkActive('/bounties') ? 'active-pill' : ''}>Bounties</Link></li>
         </ul>
         <div className="mob-bottom">
           {user ? (

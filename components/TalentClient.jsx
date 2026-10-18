@@ -68,7 +68,7 @@ export default function TalentClient() {
 
         <div className="courses-grid">
           {/* Course 1 */}
-          <div className="course-card reveal">
+          <div className="course-card visible" style={{ opacity: 1, transform: 'none' }}>
             <span className="course-badge">Most Popular</span>
             <div className="course-card-top">
               <div className="course-level beginner">
@@ -113,7 +113,7 @@ export default function TalentClient() {
           </div>
 
           {/* Course 2 */}
-          <div className="course-card reveal">
+          <div className="course-card visible" style={{ opacity: 1, transform: 'none' }}>
             <span className="course-badge" style={{ background: 'var(--blue)' }}>Professional</span>
             <div className="course-card-top">
               <div className="course-level professional">&#128188; Professional Track</div>
@@ -123,38 +123,53 @@ export default function TalentClient() {
               </p>
             </div>
             <div className="course-card-body">
-              <div style={{ marginBottom: '1.2rem' }}>
-                <div style={{ fontFamily: 'Poppins,sans-serif', fontSize: '.68rem', fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: '.7rem' }}>
-                  Choose Your Specialisation
+              <div className="track-table-label">Select Your Track &mdash; Core Focus</div>
+              <div className="track-table">
+                <div className="track-row">
+                  <div className="track-name">&#128187; Development</div>
+                  <div className="track-desc">Web, Mobile App &amp; Smart Contract Architecture (Solana/Rust &amp; EVM/Solidity)</div>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.5rem' }}>
-                  {[
-                    'Technical Writing',
-                    'Product Management',
-                    'Graphic Design & Branding',
-                    'DeFi & Research Analyst',
-                    'Smart Contract Development',
-                    'Community & DevRel'
-                  ].map((track) => (
-                    <div key={track} style={{ background: 'var(--deep)', padding: '.5rem .7rem', borderRadius: 4, fontSize: '.75rem', color: 'var(--white)' }}>
-                      &bull; {track}
-                    </div>
-                  ))}
+                <div className="track-row">
+                  <div className="track-name">&#128202; Data Analysis</div>
+                  <div className="track-desc">AI &amp; Automation, Prompt Engineering for Web3 workflows &amp; productivity</div>
+                </div>
+                <div className="track-row">
+                  <div className="track-name">&#129302; AI &amp; Automation</div>
+                  <div className="track-desc">On-chain forensic analysis, Dune Analytics &amp; SQL for Web3 decision-making</div>
+                </div>
+                <div className="track-row">
+                  <div className="track-name">&#127912; Product &amp; Design</div>
+                  <div className="track-desc">Web3 UI/UX (Figma), Product Design &amp; dApp user-journey mapping</div>
+                </div>
+                <div className="track-row">
+                  <div className="track-name">&#128203; Management</div>
+                  <div className="track-desc">Web3 Project Management (Agile/Scrum), DAO Governance &amp; Tokenomics Strategy</div>
+                </div>
+                <div className="track-row" style={{ borderBottom: 'none' }}>
+                  <div className="track-name">&#128227; Growth &amp; Media</div>
+                  <div className="track-desc">Content Creation, Digital Marketing (KOL/Ambassador Management) &amp; Community Building</div>
                 </div>
               </div>
-              <div className="course-meta">
-                <div className="course-meta-item"><span className="icon">&#128197;</span> 12 Weeks</div>
-                <div className="course-meta-item"><span className="icon">&#127760;</span> Hybrid / Virtual</div>
+
+              <div className="course-meta" style={{ marginTop: '1.4rem' }}>
+                <div className="course-meta-item"><span className="icon">&#128197;</span> 3–4 Months</div>
+                <div className="course-meta-item"><span className="icon">&#127760;</span> Virtual</div>
                 <div className="course-meta-item"><span className="icon">&#128188;</span> Internship Track</div>
                 <div className="course-meta-item"><span className="icon">&#128640;</span> Accelerator Access</div>
               </div>
               <div className="cert-note">
-                &#127891; Includes career coaching, portfolio building, and protocol partner referrals
+                &#128279; Certificate verifiable on the blockchain &mdash; shareable directly to LinkedIn
               </div>
-              <div className="dual-cta" style={{ display: 'flex', gap: '.8rem', marginTop: '1.2rem' }}>
-                <Link href="/cbie-application?course=cbie" className="btn-primary" style={{ width: '100%', textAlign: 'center', background: 'var(--blue)' }}>
-                  Apply for Career Track &rarr;
-                </Link>
+
+              {/* LOCKED CTA — unlocks after Foundation cert */}
+              <div className="locked-cta">
+                <div className="locked-cta-inner">
+                  <span>&#128274;</span>
+                  <p>Complete the <strong>Blockchain &amp; Cryptocurrency Bootcamp</strong> to enrol</p>
+                  <Link href="/academy" className="btn-primary orange" style={{ textDecoration: 'none' }}>
+                    Start Bootcamp &rarr;
+                  </Link>
+                </div>
               </div>
             </div>
           </div>
@@ -287,7 +302,7 @@ export default function TalentClient() {
             <div className="section-tag" style={{ marginBottom: '1rem' }}>XP Tiers</div>
             <div className="xp-tiers">
               {[
-                { emoji: '🌱', name: 'Genesis Node', sub: '0 – 499 XP — Earned on signup', pts: '0 XP' },
+                { emoji: '🌱', name: 'Genesis Scout', sub: '0 – 499 XP — Earned on signup', pts: '0 XP' },
                 { emoji: '⚡', name: 'Validator', sub: '500 – 1,499 XP — Complete Foundation', pts: '500 XP' },
                 { emoji: '⚔️', name: 'Crypto Knight', sub: '1,500 – 3,999 XP', pts: '1,500 XP' },
                 { emoji: '🔥', name: 'Chain Architect', sub: '4,000 – 7,999 XP', pts: '4,000 XP' },
@@ -349,7 +364,7 @@ export default function TalentClient() {
 
         <div className="badges-grid">
           {[
-            { emoji: '🌱', title: 'Genesis Node', desc: 'Create your Sofe Node account. Welcome to the network — your journey begins here.', status: 'Earned on Signup', earned: true },
+            { emoji: '🌱', title: 'Genesis Scout', desc: 'Create your Sofe Node account. Welcome to the network — your journey begins here.', status: 'Earned on Signup', earned: true },
             { emoji: '⚡', title: 'Validator', desc: 'Complete the Foundation Course & pass the exam. Earn 500 XP and unlock the full platform.', status: 'Unlockable', earned: false },
             { emoji: '⚔️', title: 'Crypto Knight', desc: 'Complete 5 Academy modules across the platform. Requires Foundation cert.', status: 'Unlockable', earned: false },
             { emoji: '🔥', title: 'Chain Architect', desc: 'Complete the full Career Track programme. Mastery recognised on-chain.', status: 'Unlockable', earned: false },
@@ -416,7 +431,7 @@ export default function TalentClient() {
         <div className="cta-btns">
           <Link href="/academy" className="btn-primary orange">&#127891; Join the Next Cohort</Link>
           <Link href="/dashboard" className="btn-primary">View Your Dashboard &rarr;</Link>
-          <Link href="/services/partners" className="btn-outline">Are You a Web3 Ecosystem? &rarr;</Link>
+          <Link href="/ecosystem" className="btn-outline">Are You a Web3 Ecosystem? &rarr;</Link>
         </div>
       </section>
     </>

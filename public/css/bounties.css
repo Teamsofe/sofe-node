@@ -8,7 +8,7 @@
     --orange: #FF8A00;
     --orange-dim: rgba(255,138,0,0.12);
     --white: #EEF4FF;
-    --muted: #EEF4FF;
+    --muted: rgba(200,215,240,0.65);
   }
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -39,11 +39,10 @@ body{font-family:'Poppins',sans-serif;background:var(--bg);color:var(--white);mi
     --panel: #FFFFFF;
     --border: rgba(20,40,255,0.14);
     --white: #0A0F24;
-    --muted: #04080F;
+    --muted: rgba(20,30,70,0.65);
     --blue-dim: rgba(20,40,255,0.08);
     --orange-dim: rgba(255,138,0,0.10);
   }
-  body.light nav { background: rgba(230,236,255,0.95) !important; }
   body.light footer { background: #E4EAFF; }
   body.light #trust { background: rgba(210,220,255,0.85); border-color: rgba(20,40,255,0.15); }
   body.light .trust-label { color: rgba(10,15,36,0.6); }
@@ -131,11 +130,10 @@ body{font-family:'Poppins',sans-serif;background:var(--bg);color:var(--white);mi
     --panel: #FFFFFF;
     --border: rgba(20,40,255,0.14);
     --white: #0A0F24;
-    --muted: #04080F;
+    --muted: rgba(20,30,70,0.65);
     --blue-dim: rgba(20,40,255,0.08);
     --orange-dim: rgba(255,138,0,0.10);
   }
-  body.light nav { background: rgba(230,236,255,0.95) !important; }
   body.light footer { background: #E4EAFF; }
   body.light #trust { background: rgba(210,220,255,0.85); border-color: rgba(20,40,255,0.15); }
   body.light .trust-label { color: rgba(10,15,36,0.6); }
@@ -214,7 +212,7 @@ body{font-family:'Poppins',sans-serif;background:var(--bg);color:var(--white);mi
 
 .bounty-hero{padding:9rem 5vw 4rem;max-width:1100px;margin:0 auto;}
 .bounty-hero h1{font-size:2rem;font-weight:900;color:var(--white);margin-bottom:.5rem;}
-.bounty-hero p{font-size:.9rem;color:var(--muted);max-width:520px;line-height:1.7;}
+.bounty-hero p{font-size:1rem;color:#ffffff;max-width:680px;line-height:1.7;text-align:center;margin:0 auto 2rem;}
 .bounty-tag { font-family: 'Poppins', sans-serif; font-size: .62rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--blue); display: inline-flex; align-items: center; gap: .6rem; border: 1px solid var(--border); border-radius: 3px; padding: .35rem .85rem; margin-bottom: 1.5rem; background: var(--blue-dim); }
 .bounty-tag::before { content: ''; width: 6px; height: 6px; background: var(--orange); border-radius: 50%; box-shadow: 0 0 8px var(--orange); }
 
@@ -467,4 +465,94 @@ body{font-family:'Poppins',sans-serif;background:var(--bg);color:var(--white);mi
     .hero-sub {
     font-size: 0.7rem; 
   }
+}
+
+/* ── LIGHT MODE STYLES FOR BOUNTY PAGES ── */
+body.light .bounties-page-root,
+body.light .bounty-detail-page-root {
+  background: #F0F4FF !important;
+  color: #0A0F24 !important;
+}
+
+body.light .bounty-hero h1 {
+  color: #0A0F24 !important;
+}
+
+body.light .bounty-hero p {
+  color: rgba(20,30,70,0.7) !important;
+}
+
+body.light .bounty-card,
+body.light .bounty-detail-card,
+body.light .modal {
+  background: #FFFFFF !important;
+  border-color: rgba(20,40,255,0.14) !important;
+  box-shadow: 0 4px 20px rgba(20,40,120,0.05);
+}
+
+body.light .bounty-card h3,
+body.light .modal-title {
+  color: #0A0F24 !important;
+}
+
+body.light .bounty-card-desc,
+body.light .modal-desc,
+body.light .bounty-applicants {
+  color: rgba(20,30,70,0.65) !important;
+}
+
+body.light .bounty-card-footer {
+  border-color: rgba(20,40,255,0.1) !important;
+}
+
+body.light .prize-xp,
+body.light .deadline-label {
+  color: rgba(20,30,70,0.6) !important;
+}
+
+body.light .deadline-date {
+  color: #0A0F24 !important;
+}
+
+body.light .cat-btn:not(.active),
+body.light .bounty-cat-btn:not(.active) {
+  background: #FFFFFF !important;
+  border: 1px solid rgba(20,40,255,0.18) !important;
+  color: #0A0F24 !important;
+}
+
+body.light .cat-btn:not(.active):hover,
+body.light .bounty-cat-btn:not(.active):hover {
+  border-color: var(--blue) !important;
+  color: var(--blue) !important;
+}
+
+body.light .cat-btn.active,
+body.light .bounty-cat-btn.active {
+  background: var(--blue) !important;
+  border-color: var(--blue) !important;
+  color: #ffffff !important;
+}
+
+body.light .bounty-search-input {
+  background: #FFFFFF !important;
+  border: 1px solid rgba(20,40,255,0.2) !important;
+  color: #0A0F24 !important;
+}
+
+body.light .bounty-search-input::placeholder {
+  color: rgba(20,30,70,0.5) !important;
+}
+
+body.light .form-input,
+body.light .form-textarea,
+body.light .bounty-input {
+  background: #F0F4FF !important;
+  border: 1px solid rgba(20,40,255,0.2) !important;
+  color: #0A0F24 !important;
+}
+
+body.light .form-label,
+body.light .form-hint {
+  color: rgba(20,30,70,0.65) !important;
 }

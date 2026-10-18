@@ -76,22 +76,22 @@ export default function BlogClient() {
   const filtered = activeCat === 'all' ? posts : posts.filter((p) => p.category === activeCat);
 
   return (
-    <div style={{ background: '#040810', color: '#c8d7f0', minHeight: '100vh', fontFamily: 'Poppins, sans-serif' }}>
+    <div className="blog-page-root" style={{ background: 'var(--black)', color: 'var(--white)', minHeight: '100vh', fontFamily: 'Poppins, sans-serif' }}>
       <link rel="stylesheet" href="/css/blog.css" />
 
       {/* HEADER */}
-      <section style={{
-        padding: '8.5rem 1.5rem 2.5rem',
+      <section className="blog-hero" style={{
+        padding: '9.5rem 1.5rem 2.5rem',
         textAlign: 'center',
         background: 'radial-gradient(circle at 50% 20%, rgba(20,40,255,.12), transparent 60%)'
       }}>
-        <div style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#FF8A00', marginBottom: '0.8rem' }}>
+        <div style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: 'var(--orange)', marginBottom: '0.8rem' }}>
           Sofe Node Blog
         </div>
-        <h1 style={{ fontSize: 'clamp(2rem, 5vw, 3rem)', fontWeight: 800, color: '#fff', marginBottom: '0.8rem' }}>
-          Web3 Insights for <span style={{ color: '#FF8A00' }}>Africa</span>
+        <h1 style={{ fontSize: 'clamp(2rem, 5vw, 3rem)', fontWeight: 800, color: 'var(--white)', marginBottom: '0.8rem' }}>
+          Web3 Insights for <span style={{ color: 'var(--orange)' }}>Africa</span>
         </h1>
-        <p style={{ fontSize: '0.92rem', color: 'rgba(200,215,240,0.65)', maxWidth: 580, margin: '0 auto 2rem', lineHeight: 1.6 }}>
+        <p style={{ fontSize: '0.92rem', color: 'var(--muted)', maxWidth: 580, margin: '0 auto 2rem', lineHeight: 1.6 }}>
           Education, industry news, career guides and on-chain analysis — written for the next generation of African blockchain talent.
         </p>
 
@@ -107,15 +107,17 @@ export default function BlogClient() {
             <button
               key={cat.id}
               onClick={() => setActiveCat(cat.id)}
+              className={`blog-cat-btn ${activeCat === cat.id ? 'active' : ''}`}
               style={{
-                background: activeCat === cat.id ? '#1428FF' : '#0a1628',
-                border: '1px solid rgba(200,215,240,0.15)',
-                color: activeCat === cat.id ? '#fff' : 'rgba(200,215,240,0.65)',
+                background: activeCat === cat.id ? 'var(--blue)' : 'var(--panel)',
+                border: activeCat === cat.id ? '1px solid var(--blue)' : '1px solid var(--border)',
+                color: activeCat === cat.id ? '#ffffff' : 'var(--white)',
                 borderRadius: 50,
                 padding: '0.45rem 1.1rem',
                 fontSize: '0.74rem',
                 fontWeight: 600,
-                cursor: 'pointer'
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
               }}
             >
               {cat.label}
@@ -130,23 +132,26 @@ export default function BlogClient() {
           {filtered.map((p) => (
             <article
               key={p.id}
+              className="blog-card"
               style={{
-                background: '#0a1628',
-                border: '1px solid rgba(200,215,240,0.12)',
+                background: 'var(--panel)',
+                border: '1px solid var(--border)',
                 borderRadius: 12,
                 padding: '1.5rem',
                 display: 'flex',
                 flexDirection: 'column',
-                justifyContent: 'space-between'
+                justifyContent: 'space-between',
+                transition: 'border-color 0.2s, transform 0.2s'
               }}
             >
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem' }}>
                   <span style={{ fontSize: '1.4rem' }}>{p.emoji}</span>
                   <span style={{
-                    background: 'rgba(20,40,255,0.15)',
-                    color: '#6b8cff',
-                    padding: '0.2rem 0.5rem',
+                    background: 'rgba(20,40,255,0.12)',
+                    color: 'var(--blue)',
+                    border: '1px solid rgba(20,40,255,0.25)',
+                    padding: '0.2rem 0.55rem',
                     borderRadius: 4,
                     fontSize: '0.66rem',
                     fontWeight: 700,
@@ -156,18 +161,18 @@ export default function BlogClient() {
                   </span>
                 </div>
 
-                <h2 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#fff', marginBottom: '0.5rem', lineHeight: 1.4 }}>
+                <h2 style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--white)', marginBottom: '0.5rem', lineHeight: 1.4 }}>
                   {p.title}
                 </h2>
 
-                <p style={{ fontSize: '0.78rem', color: 'rgba(200,215,240,0.65)', lineHeight: 1.6, marginBottom: '1.25rem' }}>
+                <p style={{ fontSize: '0.78rem', color: 'var(--muted)', lineHeight: 1.6, marginBottom: '1.25rem' }}>
                   {p.snippet}
                 </p>
               </div>
 
-              <div style={{ borderTop: '1px solid rgba(200,215,240,0.08)', paddingTop: '0.8rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.72rem', color: 'rgba(200,215,240,0.5)' }}>
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: '0.8rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.72rem', color: 'var(--muted)' }}>
                 <div>
-                  <strong>{p.author}</strong> • {p.date}
+                  <strong style={{ color: 'var(--white)' }}>{p.author}</strong> • {p.date}
                 </div>
                 <span>{p.readTime}</span>
               </div>

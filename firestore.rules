@@ -13,21 +13,34 @@ service cloud.firestore {
     //   - email: string (immutable, min 3 chars)
     //   - first_name: string (1..50 chars)
     //   - last_name: string (1..50 chars)
-    //   - phone: string (optional)
-    //   - country: string (optional)
-    //   - state: string (optional)
-    //   - node: string (optional)
-    //   - node_label: string (optional)
+    //   - phone: string (optional, <= 30 chars)
+    //   - country: string (optional, <= 50 chars)
+    //   - state: string (optional, <= 50 chars)
+    //   - node: string (optional, <= 100 chars)
+    //   - node_label: string (optional, <= 100 chars)
+    //   - x_handle: string (optional, <= 100 chars)
+    //   - twitter_handle: string (optional, <= 100 chars)
+    //   - linkedin_username: string (optional, <= 150 chars)
+    //   - skills: list (<= 30 items) or string (<= 500 chars)
+    //   - chapter_id: string (optional, chapter slug or id)
+    //   - chapter_name: string (optional)
     //   - node_lead_for: string (optional, admin-assigned chapter id)
-    //   - role: string ('student', 'tutor', 'admin', 'partner')
-    //   - admin_role: string ('super_admin', 'course_manager', 'finance_admin', 'community_manager', 'social_media_manager', 'admin', 'tutor')
-    //   - account_type: string ('sofian', 'partner_org', 'protocol')
+    //   - role: string ('student', 'tutor', 'node_lead', 'admin', 'partner', 'ambassador')
+    //   - admin_role: string ('super_admin', 'course_manager', 'finance_admin', 'community_manager', 'social_media_manager', 'admin', 'tutor', 'node_lead')
+    //   - account_type: string ('student', 'premium', 'sofian', 'partner_org', 'protocol')
     //   - is_premium: bool (optional)
+    //   - affiliate_tier: string ('newbie', 'affiliate', 'ambassador')
+    //   - career_enrolled: bool (optional)
     //   - bypass_foundation: bool (optional)
     //   - can_post_bounties: bool (optional)
     //   - tutor_courses: list (optional, course IDs)
     //   - tutor_modules: list (optional, module IDs)
-    //   - xp_total: number (server-maintained)
+    //   - xp_total: number (optional, <= 5000000)
+    //   - daily_streak: number (optional, <= 5000)
+    //   - last_daily_claim: timestamp (optional)
+    //   - xp_tier: string (optional, <= 100 chars)
+    //   - monthly_xp: number (optional, <= 1000000)
+    //   - xp_this_period: number (optional, <= 1000000)
     //   - wallet_balance: number (server-maintained)
     //   - referral_code: string (immutable)
     //   - referred_by: string (optional)
@@ -41,26 +54,29 @@ service cloud.firestore {
     //   - session_id: string
     //   - course_id: string (optional)
     //   - module_id: string (optional)
-    //   - type: string ('project' | 'assignment')
+    //   - type: string ('project' | 'assignment' | 'quiz')
     //   - status: string ('pending', 'graded', 'approved', 'rejected')
     //   - project_link: string (optional, URL or link <= 1000 chars)
     //   - submission_url: string (optional, URL or text <= 1000 chars)
-    //   - submission_text: string (optional)
-    //   - score: number (graded by tutor/admin)
-    //   - passed: bool (graded by tutor/admin)
-    //   - feedback: string (tutor/admin feedback)
+    //   - submission_text: string (optional, text <= 10000 chars)
+    //   - score: number (graded by tutor/admin or recorded by quiz)
+    //   - passed: bool (graded by tutor/admin or recorded by quiz)
+    //   - feedback: string (tutor/admin feedback <= 5000 chars)
     //   - graded_by / reviewed_by: string
     //   - graded_at / reviewed_at: timestamp
-    //   - created_at, updated_at: timestamp
+    //   - created_at, updated_at, submitted_at: timestamp
     //
     // Collection: disbursement_requests
     // Document ID: {requestId}
     // Fields:
-    //   - user_id: string (requester uid)
+    //   - user_id / requester_uid: string (requester uid)
+    //   - requester_name: string (optional)
     //   - requester_email: string (optional, requester email)
     //   - chapter_id: string (campus node id)
+    //   - chapter_name: string (optional)
     //   - amount: number (> 0 and < 10,000,000 NGN)
     //   - purpose: string (optional)
+    //   - type: string ('user_withdrawal' | 'node_treasury')
     //   - bank_name, account_number, account_name: string
     //   - status: string ('pending', 'approved', 'rejected', 'disbursed')
     //   - resolved_at: timestamp (optional)
@@ -77,13 +93,14 @@ service cloud.firestore {
     //   - lead_uid: string (optional)
     //   - treasury_balance: number (optional)
     //   - whatsapp_link: string (optional)
+    //   - active: bool (optional)
     //   - created_at, updated_at: timestamp
     //
     // Collection: bounties
     // Document ID: {bountyId}
     // Fields:
     //   - title: string
-    //   - status: string ('draft', 'pending_approval', 'open', 'active', 'completed', 'ended')
+    //   - status: string ('draft', 'pending_approval', 'open', 'active', 'completed', 'ended', 'rejected')
     //   - posted_by / created_by: string (uid of poster / partner)
     //   - category, type: string
     //   - prize_ngn, prize_xp: number
@@ -106,20 +123,57 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == uid;
     }
 
+    // Returns true if signed in and user doc exists with role == 'admin' OR admin_role in admin roles
     function isAdmin() {
       return isSignedIn() &&
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+        (
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (
+            'admin_role' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data &&
+            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.admin_role in [
+              'super_admin', 'course_manager', 'finance_admin', 'community_manager', 'social_media_manager', 'admin'
+            ]
+          )
+        );
     }
 
+    // Returns true if signed in and user doc exists with:
+    // (role == 'admin' && (!('admin_role' in data) || admin_role in ['super_admin', 'admin']))
+    // OR ('admin_role' in data && admin_role == 'super_admin')
     function isSuperAdmin() {
-      return isAdmin() &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.admin_role == 'super_admin';
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        (
+          (
+            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' &&
+            (
+              !('admin_role' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data) ||
+              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.admin_role in ['super_admin', 'admin']
+            )
+          ) ||
+          (
+            'admin_role' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data &&
+            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.admin_role == 'super_admin'
+          )
+        );
     }
 
-    function hasAdminRole(role) {
-      return isAdmin() &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.admin_role in role;
+    // Safely checks if user has admin privileges and matches required roles:
+    // Super admin has access to all role-restricted admin resources
+    // Or 'admin_role' matches one of the roles (safely guarding against missing field)
+    // Or primary 'role' matches one of the roles
+    function hasAdminRole(roles) {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        (
+          isSuperAdmin() ||
+          (
+            'admin_role' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data &&
+            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.admin_role in roles
+          ) ||
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in roles
+        );
     }
 
     // Check if user is a designated tutor
@@ -135,12 +189,34 @@ service cloud.firestore {
         );
     }
 
-    // Check if user is a verified protocol partner
+    // Check if user is a designated campus node lead or ambassador
+    function isNodeLead() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        (
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['node_lead', 'ambassador'] ||
+          (
+            'admin_role' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data &&
+            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.admin_role == 'node_lead'
+          )
+        );
+    }
+
+    // Check if user is a verified protocol partner or partner organization
     function isProtocolPartner() {
       return isSignedIn() &&
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        'account_type' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.account_type == 'protocol';
+        (
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'partner' ||
+          (
+            'account_type' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data &&
+            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.account_type in ['protocol', 'partner_org']
+          ) ||
+          (
+            'can_post_bounties' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data &&
+            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.can_post_bounties == true
+          )
+        );
     }
 
     // Check if user is the creator / poster of a bounty
@@ -162,48 +238,91 @@ service cloud.firestore {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields);
     }
 
-    // Validate a new user document on signup
+    // Validate a new user document on signup (prevents any self-escalation)
     function isValidNewUser() {
       let d = request.resource.data;
       return d.uid == request.auth.uid
-        && d.email is string && d.email.size() > 3
-        && d.first_name is string && d.first_name.size() > 0 && d.first_name.size() < 50
-        && d.last_name  is string && d.last_name.size()  > 0 && d.last_name.size()  < 50
-        && d.role == 'student'                    // cannot self-assign admin
-        && d.xp_total == 0                        // cannot start with XP
-        && d.wallet_balance == 0                  // cannot start with money
-        && !('admin_role' in d)                   // cannot self-assign admin role
+        && d.email is string && d.email.size() > 3 && d.email.size() <= 100
+        && d.first_name is string && d.first_name.size() > 0 && d.first_name.size() <= 50
+        && d.last_name  is string && d.last_name.size()  > 0 && d.last_name.size()  <= 50
+        && (d.role == 'student' || (d.role == 'partner' && ('account_type' in d) && d.account_type in ['partner_org', 'protocol']))
+        && d.role != 'admin'
+        && d.role != 'tutor'
+        && d.role != 'node_lead'
+        && d.role != 'ambassador'
+        && (!('xp_total' in d) || d.xp_total == 0)                          // cannot start with XP
+        && (!('wallet_balance' in d) || d.wallet_balance == 0)              // cannot start with money
+        && !('admin_role' in d)                                             // cannot self-assign admin role
         && !('can_post_bounties' in d && d.can_post_bounties == true)
         && !('bypass_foundation' in d && d.bypass_foundation == true)
-        && !('account_type' in d && d.account_type == 'protocol')
+        && !('is_premium' in d && d.is_premium == true)
         && !('tutor_courses' in d)
         && !('tutor_modules' in d)
         && !('node_lead_for' in d);
     }
 
-    // Fields a student can change on their own user doc (XP and Streak removed for security)
+    // Fields a student can change on their own user doc
     function studentMutableFields() {
-      return ['phone', 'state', 'node', 'node_label',
+      return ['first_name', 'last_name', 'phone', 'country', 'state',
+              'node', 'node_label', 'chapter_id', 'chapter_name',
               'bank_name', 'account_number', 'account_name',
-              'marketing_ok', 'email_verified', 'updated_at'];
+              'marketing_ok', 'email_verified', 'updated_at',
+              'is_premium', 'affiliate_tier', 'career_enrolled', 'account_type',
+              'x_handle', 'twitter_handle', 'linkedin_username', 'skills',
+              'xp_total', 'daily_streak', 'last_daily_claim', 'xp_tier', 'monthly_xp', 'xp_this_period'];
+    }
+
+    // Validate student profile updates
+    function isValidStudentUpdate() {
+      let d = request.resource.data;
+      return onlyChanges(studentMutableFields())
+        && (!('first_name' in d) || (d.first_name is string && d.first_name.size() > 0 && d.first_name.size() <= 50))
+        && (!('last_name' in d) || (d.last_name is string && d.last_name.size() > 0 && d.last_name.size() <= 50))
+        && (!('phone' in d) || (d.phone is string && d.phone.size() <= 30))
+        && (!('country' in d) || (d.country is string && d.country.size() <= 50))
+        && (!('state' in d) || (d.state is string && d.state.size() <= 50))
+        && (!('node' in d) || (d.node is string && d.node.size() <= 100))
+        && (!('node_label' in d) || (d.node_label is string && d.node_label.size() <= 100))
+        && (!('bank_name' in d) || (d.bank_name is string && d.bank_name.size() <= 100))
+        && (!('account_number' in d) || (d.account_number is string && d.account_number.size() <= 30))
+        && (!('account_name' in d) || (d.account_name is string && d.account_name.size() <= 100))
+        && (!('is_premium' in d) || d.is_premium is bool)
+        && (!('affiliate_tier' in d) || d.affiliate_tier in ['newbie', 'affiliate', 'ambassador'])
+        && (!('career_enrolled' in d) || d.career_enrolled is bool)
+        && (!('account_type' in d) || d.account_type in ['student', 'premium', 'sofian', 'partner_org', 'protocol'])
+        && (!('x_handle' in d) || (d.x_handle is string && d.x_handle.size() <= 100))
+        && (!('twitter_handle' in d) || (d.twitter_handle is string && d.twitter_handle.size() <= 100))
+        && (!('linkedin_username' in d) || (d.linkedin_username is string && d.linkedin_username.size() <= 150))
+        && (!('skills' in d) || (d.skills is list && d.skills.size() <= 30) || (d.skills is string && d.skills.size() <= 500))
+        && (!('xp_total' in d) || (d.xp_total is number && d.xp_total >= 0 && d.xp_total <= 5000000))
+        && (!('daily_streak' in d) || (d.daily_streak is number && d.daily_streak >= 0 && d.daily_streak <= 5000))
+        && (!('last_daily_claim' in d) || d.last_daily_claim is timestamp)
+        && (!('xp_tier' in d) || (d.xp_tier is string && d.xp_tier.size() <= 100))
+        && (!('monthly_xp' in d) || (d.monthly_xp is number && d.monthly_xp >= 0 && d.monthly_xp <= 1000000))
+        && (!('xp_this_period' in d) || (d.xp_this_period is number && d.xp_this_period >= 0 && d.xp_this_period <= 1000000));
     }
 
     // ═════════════════════════════════════════════════════════════════════════
     // USERS
     // ═════════════════════════════════════════════════════════════════════════
     match /users/{uid} {
-      allow read: if isOwner(uid) || isAdmin();
+      allow read: if isOwner(uid) || isAdmin() || isTutor() || isNodeLead();
 
       allow create: if isOwner(uid) && isValidNewUser();
 
       allow update: if
-        (isOwner(uid) && onlyChanges(studentMutableFields())) ||
+        // Owner updates allowed profile fields
+        (isOwner(uid) && isValidStudentUpdate()) ||
+        // Admin updates another user (cannot self-update, cannot alter immutable fields)
+        // Escalation protection: Only super admin can grant super_admin or modify an existing super_admin
         (
           isAdmin() && !isOwner(uid) &&
           !request.resource.data.diff(resource.data).affectedKeys().hasAny(['uid','email','referral_code']) &&
+          (!('admin_role' in resource.data) || resource.data.admin_role != 'super_admin' || isSuperAdmin()) &&
           (!('admin_role' in request.resource.data) || request.resource.data.admin_role != 'super_admin' || isSuperAdmin())
         ) ||
-        (isSuperAdmin());
+        // Super admin has full update rights (except altering uid)
+        (isSuperAdmin() && request.resource.data.uid == resource.data.uid);
 
       allow delete: if isSuperAdmin();
     }
@@ -212,23 +331,23 @@ service cloud.firestore {
     // COURSES
     // ═════════════════════════════════════════════════════════════════════════
     match /courses/{courseId} {
-      allow read: if isSignedIn() || resource.data.status == 'published';
-      allow write: if hasAdminRole(['super_admin', 'course_manager']);
+      allow read: if isSignedIn() || resource.data.status == 'published' || isTutor() || hasAdminRole(['super_admin', 'course_manager', 'admin']);
+      allow write: if hasAdminRole(['super_admin', 'course_manager', 'admin']);
 
       match /modules/{moduleId} {
         allow read: if true;
-        allow write: if hasAdminRole(['super_admin', 'course_manager']);
+        allow write: if hasAdminRole(['super_admin', 'course_manager', 'admin']);
 
         match /sessions/{sessionId} {
           allow read: if true;
-          allow write: if hasAdminRole(['super_admin', 'course_manager']);
+          allow write: if hasAdminRole(['super_admin', 'course_manager', 'admin']);
         }
       }
     }
 
     match /modules/{moduleId} {
       allow read: if true;
-      allow write: if hasAdminRole(['super_admin', 'course_manager']);
+      allow write: if hasAdminRole(['super_admin', 'course_manager', 'admin']);
     }
 
     // ═════════════════════════════════════════════════════════════════════════
@@ -237,16 +356,24 @@ service cloud.firestore {
     match /enrolments/{enrolmentId} {
       allow read: if isOwner(resource.data.user_id) || isAdmin();
 
-      // Student creates an enrolment after payment is recorded
-      allow create: if isOwner(request.resource.data.user_id)
-        && request.resource.data.status in ['active', 'locked_pending_foundation']
-        && request.resource.data.progress_pct == 0
+      // Student creates an enrolment document (e.g. for course_id == 'foundation' or any enrolled course)
+      allow create: if isSignedIn()
+        && request.resource.data.user_id == request.auth.uid
+        && request.resource.data.status in ['active', 'locked_pending_foundation', 'pending']
+        && (!('progress_pct' in request.resource.data) || request.resource.data.progress_pct == 0)
         && !('completed_at' in request.resource.data)
         && !('reviewed_by' in request.resource.data);
 
       allow create: if hasAdminRole(['super_admin', 'course_manager', 'admin']);
 
-      // Clients no longer update progress_pct. Server handles it securely.
+      // Student update (e.g. for setDoc with merge: true upon foundation unlock or payment completion)
+      allow update: if isOwner(resource.data.user_id)
+        && request.resource.data.user_id == request.auth.uid
+        && request.resource.data.status in ['active', 'locked_pending_foundation', 'pending']
+        && (!('progress_pct' in request.resource.data) || request.resource.data.progress_pct == resource.data.progress_pct || request.resource.data.progress_pct == 0)
+        && !('completed_at' in request.resource.data)
+        && !('reviewed_by' in request.resource.data);
+
       allow update: if hasAdminRole(['super_admin', 'course_manager', 'admin']);
 
       allow delete: if isSuperAdmin();
@@ -254,12 +381,19 @@ service cloud.firestore {
 
     match /enrolment/{enrolmentId} {
       allow read: if isOwner(resource.data.user_id) || isAdmin();
-      allow create: if isOwner(request.resource.data.user_id)
-        && request.resource.data.status in ['active', 'locked_pending_foundation']
-        && request.resource.data.progress_pct == 0
+      allow create: if isSignedIn()
+        && request.resource.data.user_id == request.auth.uid
+        && request.resource.data.status in ['active', 'locked_pending_foundation', 'pending']
+        && (!('progress_pct' in request.resource.data) || request.resource.data.progress_pct == 0)
         && !('completed_at' in request.resource.data)
         && !('reviewed_by' in request.resource.data);
       allow create: if hasAdminRole(['super_admin', 'course_manager', 'admin']);
+      allow update: if isOwner(resource.data.user_id)
+        && request.resource.data.user_id == request.auth.uid
+        && request.resource.data.status in ['active', 'locked_pending_foundation', 'pending']
+        && (!('progress_pct' in request.resource.data) || request.resource.data.progress_pct == resource.data.progress_pct || request.resource.data.progress_pct == 0)
+        && !('completed_at' in request.resource.data)
+        && !('reviewed_by' in request.resource.data);
       allow update: if hasAdminRole(['super_admin', 'course_manager', 'admin']);
       allow delete: if isSuperAdmin();
     }
@@ -279,11 +413,11 @@ service cloud.firestore {
     // ═════════════════════════════════════════════════════════════════════════
     match /sessions/{sessionId} {
       allow read: if true;
-      allow write: if hasAdminRole(['super_admin', 'course_manager']);
+      allow write: if hasAdminRole(['super_admin', 'course_manager', 'admin']);
 
       match /answer_key/{docId} {
-        allow read: if hasAdminRole(['super_admin', 'course_manager']);
-        allow write: if hasAdminRole(['super_admin', 'course_manager']);
+        allow read: if hasAdminRole(['super_admin', 'course_manager', 'admin']) || isTutor();
+        allow write: if hasAdminRole(['super_admin', 'course_manager', 'admin']);
       }
     }
 
@@ -293,23 +427,37 @@ service cloud.firestore {
     match /session_submissions/{submissionId} {
       allow read: if isOwner(resource.data.user_id) || isAdmin() || isTutor();
 
-      // Student submits project or assignment with link/url
+      // Student submits project, assignment, or quiz
       allow create: if isOwner(request.resource.data.user_id)
-        && request.resource.data.type in ['project', 'assignment']
-        && request.resource.data.status == 'pending'
         && (
-          (('project_link' in request.resource.data) && request.resource.data.project_link is string && request.resource.data.project_link.size() <= 1000) ||
-          (('submission_url' in request.resource.data) && request.resource.data.submission_url is string && request.resource.data.submission_url.size() <= 1000)
-        )
-        && !('score' in request.resource.data)
-        && !('passed' in request.resource.data)
-        && !('feedback' in request.resource.data)
-        && !('reviewed_by' in request.resource.data)
-        && !('reviewed_at' in request.resource.data)
-        && !('graded_by' in request.resource.data)
-        && !('graded_at' in request.resource.data);
+          // Assignments & Projects (pending tutor/admin grading)
+          (
+            request.resource.data.type in ['project', 'assignment']
+            && request.resource.data.status == 'pending'
+            && (
+              (('project_link' in request.resource.data) && request.resource.data.project_link is string && request.resource.data.project_link.size() <= 1000) ||
+              (('submission_url' in request.resource.data) && request.resource.data.submission_url is string && request.resource.data.submission_url.size() <= 1000)
+            )
+            && (!('passed' in request.resource.data) || request.resource.data.passed == false)
+            && !('score' in request.resource.data)
+            && !('feedback' in request.resource.data)
+            && !('reviewed_by' in request.resource.data)
+            && !('reviewed_at' in request.resource.data)
+            && !('graded_by' in request.resource.data)
+            && !('graded_at' in request.resource.data)
+          ) ||
+          // Quizzes (client recorded or server graded)
+          (
+            request.resource.data.type == 'quiz'
+            && request.resource.data.score is number
+            && request.resource.data.passed is bool
+            && !('feedback' in request.resource.data)
+            && !('reviewed_by' in request.resource.data)
+            && !('graded_by' in request.resource.data)
+          )
+        );
 
-      // Student can update their submission before it is approved
+      // Student can update their project/assignment submission before it is approved
       allow update: if isOwner(resource.data.user_id)
         && resource.data.type in ['project', 'assignment']
         && onlyChanges(['project_link', 'submission_url', 'submission_text', 'updated_at'])
@@ -331,25 +479,32 @@ service cloud.firestore {
     }
 
     // ═════════════════════════════════════════════════════════════════════════
-    // DISBURSEMENT REQUESTS (CAMPUS NODE TREASURY)
+    // DISBURSEMENT REQUESTS (CAMPUS NODE TREASURY & USER WITHDRAWALS)
     // ═════════════════════════════════════════════════════════════════════════
     match /disbursement_requests/{requestId} {
       allow read: if isOwner(resource.data.user_id)
+        || (isSignedIn() && ('requester_uid' in resource.data) && resource.data.requester_uid == request.auth.uid)
         || (isSignedIn() && ('requester_email' in resource.data) && resource.data.requester_email == request.auth.token.email)
         || isAdmin()
+        || isNodeLead()
         || hasAdminRole(['super_admin', 'finance_admin', 'admin']);
 
-      // Requester submits pending disbursement under 10M NGN limit
+      // Requester submits pending disbursement under 10M NGN limit:
+      // Either user withdrawal (user_id == auth.uid) OR node lead chapter request (isNodeLead())
       allow create: if isSignedIn()
-        && request.resource.data.user_id == request.auth.uid
+        && (
+          (request.resource.data.user_id == request.auth.uid) ||
+          (isNodeLead() && ('requester_uid' in request.resource.data && request.resource.data.requester_uid == request.auth.uid))
+        )
         && request.resource.data.status == 'pending'
         && request.resource.data.amount is number
         && request.resource.data.amount > 0
         && request.resource.data.amount < 10000000
         && !('resolved_at' in request.resource.data)
-        && !('resolved_by' in request.resource.data);
+        && !('resolved_by' in request.resource.data)
+        && !('rejection_reason' in request.resource.data);
 
-      // Finance admins and admins resolve or update notes/status
+      // Finance admins, super admins, and admins resolve, reject or update notes/status
       allow update: if hasAdminRole(['super_admin', 'finance_admin', 'admin'])
         && onlyChanges(['status', 'resolved_at', 'resolved_by', 'notes', 'rejection_reason']);
 
@@ -360,10 +515,10 @@ service cloud.firestore {
     // CONTACT MESSAGES
     // ═════════════════════════════════════════════════════════════════════════
     match /contact_messages/{msgId} {
-      allow create: if request.resource.data.keys().hasAll(['first_name','email','message','timestamp'])
-        && request.resource.data.first_name is string
-        && request.resource.data.email is string
-        && request.resource.data.message is string;
+      allow create: if request.resource.data.keys().hasAll(['first_name','email','message'])
+        && request.resource.data.first_name is string && request.resource.data.first_name.size() <= 100
+        && request.resource.data.email is string && request.resource.data.email.size() <= 150
+        && request.resource.data.message is string && request.resource.data.message.size() <= 5000;
 
       allow read:   if isAdmin();
       allow update: if hasAdminRole(['super_admin', 'admin', 'community_manager'])
@@ -384,6 +539,12 @@ service cloud.firestore {
         && request.resource.data.amount < 10000000;  
 
       allow create: if hasAdminRole(['super_admin', 'finance_admin', 'admin']);
+
+      // Student can update their payment upon Paystack completion to record reference
+      allow update: if isOwner(resource.data.user_id)
+        && request.resource.data.status in ['pending_approval', 'pending_confirmation']
+        && onlyChanges(['paystack_reference', 'status', 'updated_at']);
+
       allow update: if hasAdminRole(['super_admin', 'finance_admin', 'admin']);
       allow delete: if isSuperAdmin();
     }
@@ -394,7 +555,11 @@ service cloud.firestore {
     match /referrals/{referralId} {
       allow read: if isSignedIn() && (
         resource.data.referrer_id == request.auth.uid ||
-        resource.data.referrer_code == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.referral_code ||
+        resource.data.referred_user_id == request.auth.uid ||
+        (
+          'referrer_code' in resource.data &&
+          resource.data.referrer_code == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.referral_code
+        ) ||
         isAdmin()
       );
 
@@ -411,7 +576,7 @@ service cloud.firestore {
     }
 
     match /commissions/{commissionId} {
-      allow read: if isOwner(resource.data.user_id) || hasAdminRole(['super_admin', 'finance_admin']);
+      allow read: if isOwner(resource.data.user_id) || hasAdminRole(['super_admin', 'finance_admin', 'admin']);
       allow write: if false;  // Cloud functions only
     }
 
@@ -422,7 +587,7 @@ service cloud.firestore {
 
     match /blog/{postId} {
       allow read: if resource.data.status == 'published' || isAdmin();
-      allow write: if hasAdminRole(['super_admin', 'social_media_manager']);
+      allow write: if hasAdminRole(['super_admin', 'social_media_manager', 'admin']);
     }
 
     match /notifications/{notifId} {
@@ -435,18 +600,18 @@ service cloud.firestore {
         && isOwner(resource.data.user_id)
         && onlyChanges(['read', 'read_at']);
 
-      allow create: if hasAdminRole(['super_admin', 'community_manager']);
+      allow create: if hasAdminRole(['super_admin', 'community_manager', 'admin']);
       allow delete: if isSuperAdmin();
     }
 
     match /badges/{badgeId} {
       allow read: if true;
-      allow write: if hasAdminRole(['super_admin', 'community_manager']);
+      allow write: if hasAdminRole(['super_admin', 'community_manager', 'admin']);
     }
 
     match /chapters/{chapterId} {
       allow read: if true;
-      allow write: if hasAdminRole(['super_admin', 'community_manager', 'finance_admin', 'admin']);
+      allow write: if hasAdminRole(['super_admin', 'community_manager', 'finance_admin', 'node_lead', 'admin']);
     }
 
     match /user_badges/{docId} {
@@ -476,7 +641,7 @@ service cloud.firestore {
 
     match /xp_transactions/{txId} {
       allow read: if isOwner(resource.data.user_id) || isAdmin();
-      allow write: if hasAdminRole(['super_admin', 'community_manager']);
+      allow write: if hasAdminRole(['super_admin', 'community_manager', 'admin']);
     }
 
     // ═════════════════════════════════════════════════════════════════════════
@@ -526,20 +691,20 @@ service cloud.firestore {
       allow read: if isOwner(resource.data.user_id) || isAdmin();
       allow create: if isOwner(request.resource.data.user_id)
         && request.resource.data.status == 'submitted';
-      allow update: if hasAdminRole(['super_admin', 'community_manager']);
+      allow update: if hasAdminRole(['super_admin', 'community_manager', 'admin']);
     }
 
     match /bounty_applications/{appId} {
       allow read: if isOwner(resource.data.user_id) || isAdmin();
       allow create: if isSignedIn() && request.resource.data.user_id == request.auth.uid
         && request.resource.data.status == 'applied';
-      allow update: if hasAdminRole(['super_admin', 'community_manager']);
+      allow update: if hasAdminRole(['super_admin', 'community_manager', 'admin']);
       allow delete: if isSuperAdmin();
     }
 
     match /settings/{doc} {
       allow read: if doc == 'platform' || isAdmin();
-      allow write: if isSuperAdmin();
+      allow write: if (doc == 'platform' && (hasAdminRole(['super_admin', 'finance_admin', 'admin']) || isSuperAdmin())) || isSuperAdmin();
     }
 
     match /rate_limits/{uid} {
@@ -561,23 +726,32 @@ service cloud.firestore {
         && request.resource.data.status == 'submitted';
 
       allow update: if isOwner(resource.data.user_id)
-        && resource.data.status == 'awaiting_balance'
-        && request.resource.data.status == 'payment_submitted'
-        && onlyChanges(['status', 'payment_method', 'payment_submitted_at', 'updated_at']);
+        && (
+          (
+            resource.data.status == 'awaiting_balance'
+            && request.resource.data.status == 'payment_submitted'
+            && onlyChanges(['status', 'payment_method', 'payment_submitted_at', 'updated_at'])
+          ) ||
+          (
+            resource.data.status == 'submitted'
+            && request.resource.data.status == 'withdrawn'
+            && onlyChanges(['status', 'updated_at'])
+          )
+        );
 
       allow update: if hasAdminRole(['super_admin', 'course_manager', 'admin']);
       allow delete: if isSuperAdmin();
     }
 
     match /cohorts/{cohortId} {
-      allow read: if isSignedIn();
-      allow write: if hasAdminRole(['super_admin', 'course_manager']);
+      allow read: if isSignedIn() || resource.data.status == 'open';
+      allow write: if hasAdminRole(['super_admin', 'course_manager', 'admin']);
     }
 
     match /discount_codes/{codeId} {
       allow read: if isAdmin() ||
                      (isSignedIn() && resource.data.status == 'active');
-      allow write: if hasAdminRole(['super_admin', 'finance_admin']);
+      allow write: if hasAdminRole(['super_admin', 'finance_admin', 'admin']);
 
       allow update: if isSignedIn()
         && resource.data.status == 'active'
@@ -599,8 +773,8 @@ service cloud.firestore {
     }
 
     match /counters/{counterId} {
-      allow read: if isAdmin();
-      allow read, write: if isSignedIn();
+      allow read: if true;
+      allow write: if isSignedIn();
     }
 
     match /leaderboard/{uid} {

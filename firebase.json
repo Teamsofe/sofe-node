@@ -1,6 +1,6 @@
 {
   "hosting": {
-    "public": "public",
+    "public": "out",
     "cleanUrls": true,
     "redirects": [
       {
@@ -15,8 +15,12 @@
         "function": "joinChapterRedirect"
       },
       {
-        "source": "**",
-        "destination": "/index.html"
+        "source": "/bounties/**",
+        "destination": "/bounties/default.html"
+      },
+      {
+        "source": "/courses/**",
+        "destination": "/courses/general.html"
       }
     ],
     "ignore": [

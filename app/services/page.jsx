@@ -92,7 +92,7 @@ export default function ServicesPage() {
               </ul>
             </div>
             <Link
-              href="/services/partners"
+              href="/ecosystem"
               style={{
                 display: 'inline-block',
                 textAlign: 'center',

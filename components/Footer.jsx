@@ -7,27 +7,38 @@ export default function Footer() {
 
   if (
     pathname?.startsWith('/admin') ||
-    pathname?.startsWith('/dashboard') ||
-    pathname?.startsWith('/course-view') ||
     pathname === '/login' ||
     pathname === '/signup'
   ) {
     return null;
   }
+
+  const isDashboard = pathname?.startsWith('/dashboard');
+
   return (
-    <footer>
+    <footer style={isDashboard ? { paddingBottom: '95px' } : undefined}>
       <div className="footer-grid">
         <div className="footer-brand">
           <Link href="/" className="nav-logo" style={{ marginBottom: '.6rem' }} aria-label="Sofe Node">
-            <img src="/images/Nodes/SofeLogoHome.png" className="logo-img" alt="Sofe Node" style={{ height: '36px', width: 'auto' }} />
+            <img src="/images/Nodes/SofeLogoHome.png" className="logo-img" alt="Sofe Node" style={{ height: '34px', width: 'auto', objectFit: 'contain' }} />
           </Link>
           <p>A Sofe Group company. Empowering the next generation to lead Africa&apos;s tech revolution.</p>
-          <div className="social-row">
-            <a className="social-btn" href="https://twitter.com/sofenode" target="_blank" rel="noopener noreferrer" title="X/Twitter">&#x1D54F;</a>
-            <a className="social-btn" href="https://linkedin.com/company/sofe-group" target="_blank" rel="noopener noreferrer" title="LinkedIn">in</a>
-            <a className="social-btn" href="https://youtube.com/@sofegroupofficial" target="_blank" rel="noopener noreferrer" title="YouTube">&#9654;</a>
-            <a className="social-btn" href="https://facebook.com" target="_blank" rel="noopener noreferrer" title="Facebook">f</a>
-            <a className="social-btn" href="https://t.me/sofegroupofficial" target="_blank" rel="noopener noreferrer" title="Telegram">&#9992;</a>
+          <div className="social-row" style={{ display: 'flex', gap: '0.6rem', marginTop: '0.8rem', flexWrap: 'wrap' }}>
+            <a className="social-btn" href="https://x.com/sofenode" target="_blank" rel="noopener noreferrer" title="X/Twitter">
+              <img src="/images/Social/SofeNodeX(twitter).png" alt="X/Twitter" style={{ width: '18px', height: '18px', maxWidth: '18px', maxHeight: '18px', objectFit: 'contain', display: 'block' }} />
+            </a>
+            <a className="social-btn" href="https://linkedin.com/company/sofe-group" target="_blank" rel="noopener noreferrer" title="LinkedIn">
+              <img src="/images/Social/SofeNodeLInkedIn.png" alt="LinkedIn" style={{ width: '18px', height: '18px', maxWidth: '18px', maxHeight: '18px', objectFit: 'contain', display: 'block' }} />
+            </a>
+            <a className="social-btn" href="https://youtube.com/@sofegroupofficial" target="_blank" rel="noopener noreferrer" title="YouTube">
+              <img src="/images/Social/SofeNodeYoutubelogo.png" alt="YouTube" style={{ width: '18px', height: '18px', maxWidth: '18px', maxHeight: '18px', objectFit: 'contain', display: 'block' }} />
+            </a>
+            <a className="social-btn" href="https://facebook.com/profile.php?id=100063995682203&mibextid=ZbWKwL" target="_blank" rel="noopener noreferrer" title="Facebook">
+              <img src="/images/Social/SofeNodeFacebooklogo.png" alt="Facebook" style={{ width: '18px', height: '18px', maxWidth: '18px', maxHeight: '18px', objectFit: 'contain', display: 'block' }} />
+            </a>
+            <a className="social-btn" href="https://t.me/sofegroupofficial" target="_blank" rel="noopener noreferrer" title="Telegram">
+              <img src="/images/Social/SofeNodeTelegram.png" alt="Telegram" style={{ width: '18px', height: '18px', maxWidth: '18px', maxHeight: '18px', objectFit: 'contain', display: 'block' }} />
+            </a>
           </div>
         </div>
 
@@ -35,7 +46,8 @@ export default function Footer() {
           <h4>Quick Links</h4>
           <ul>
             <li><Link href="/about">About Us</Link></li>
-            <li><Link href="/services">Services</Link></li>
+            <li><Link href="/ecosystem">For Ecosystems</Link></li>
+            <li><Link href="/services/talent">For Talent</Link></li>
             <li><Link href="/academy">Academy</Link></li>
             <li><Link href="/bce">BCE Tour</Link></li>
             <li><Link href="/dashboard">Dashboard</Link></li>

@@ -1,5 +1,16 @@
 import JoinRedirectClient from '@/components/JoinRedirectClient';
 
+export function generateStaticParams() {
+  return [
+    { slug: 'futo' },
+    { slug: 'unilag' },
+    { slug: 'oau' },
+    { slug: 'unn' },
+    { slug: 'ui' },
+    { slug: 'default' }
+  ];
+}
+
 export function generateMetadata({ params }) {
   return {
     title: `Join ${params.slug.toUpperCase()} Node | Sofe Node`,

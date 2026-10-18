@@ -105,7 +105,7 @@ function xp_tier(int $xp): string {
     if ($xp >= 4000)  return 'Chain Architect';
     if ($xp >= 1500)  return 'Crypto Knight';
     if ($xp >= 500)   return 'Validator';
-    return 'Genesis Node';
+    return 'Genesis Scout';
 }
 
 function award_xp(int $user_id, int $xp): int {

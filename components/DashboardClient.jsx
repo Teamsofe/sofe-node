@@ -29,7 +29,7 @@ import {
 } from '@/lib/firebase';
 
 const XP_TIERS = [
-  { name: 'Genesis Node', min: 0, icon: '🌱' },
+  { name: 'Genesis Scout', min: 0, icon: '🌱' },
   { name: 'Validator', min: 500, icon: '⚡' },
   { name: 'Crypto Knight', min: 1500, icon: '⚔️' },
   { name: 'Chain Architect', min: 4000, icon: '🔥' },
@@ -116,7 +116,6 @@ export default function DashboardClient() {
   const [unpaidCommissions, setUnpaidCommissions] = useState(0);
   const [bountyEarned, setBountyEarned] = useState(0);
   const [transactions, setTransactions] = useState([]);
-  const [copyFeedback, setCopyFeedback] = useState(false);
 
   // Notifications
   const [notifications, setNotifications] = useState([]);
@@ -130,11 +129,17 @@ export default function DashboardClient() {
   // Leaderboard
   const [lbTab, setLbTab] = useState('xp');
   const [leaderboardRows, setLeaderboardRows] = useState([]);
+  const [userRankInfo, setUserRankInfo] = useState(null);
   const [lbLoading, setLbLoading] = useState(false);
+
+  // Premium Banner Daily Dismissal & Copy Feedback
+  const [premiumBannerDismissed, setPremiumBannerDismissed] = useState(false);
+  const [copyFeedback, setCopyFeedback] = useState(null);
 
   // Chapter & Settings
   const [chapters, setChapters] = useState([]);
   const [myChapter, setMyChapter] = useState(null);
+  const [showCustomCampusInput, setShowCustomCampusInput] = useState(false);
   const [settingsForm, setSettingsForm] = useState({
     firstName: '',
     lastName: '',
@@ -145,7 +150,10 @@ export default function DashboardClient() {
     nodeLabel: '',
     bankName: '',
     accNumber: '',
-    accName: ''
+    accName: '',
+    xHandle: '',
+    linkedinUsername: '',
+    skills: ''
   });
   const [savingSettings, setSavingSettings] = useState(false);
   const [settingsMsg, setSettingsMsg] = useState(null);
@@ -164,7 +172,18 @@ export default function DashboardClient() {
   const [payoutToast, setPayoutToast] = useState(null);
 
   // VIP Admin WhatsApp link
-  const VIP_ADMIN_WA = 'https://wa.me/2348123456789?text=Hello%20Admin,%20I%20have%20completed%20my%20Sofe%20Node%20Premium%20Membership%20payment%20and%20would%20like%20to%20be%20added%20to%20the%20VIP%20executive%20group.';
+  const VIP_ADMIN_WA = 'https://wa.me/2349034201114?text=Hello%20Admin,%20I%20have%20completed%20my%20Sofe%20Node%20Premium%20Membership%20payment%20and%20would%20like%20to%20be%20added%20to%20the%20VIP%20executive%20group.';
+
+  // Check Daily Premium Banner Dismissal
+  useEffect(() => {
+    try {
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const dismissedDate = localStorage.getItem('sofe_premium_banner_dismissed_date');
+      if (dismissedDate === todayStr) {
+        setPremiumBannerDismissed(true);
+      }
+    } catch (e) {}
+  }, []);
 
   // Auth Listener
   useEffect(() => {
@@ -217,7 +236,10 @@ export default function DashboardClient() {
         nodeLabel: u.node_label || u.chapter_name || u.node || '',
         bankName: u.bank_name || '',
         accNumber: u.account_number || '',
-        accName: u.account_name || `${u.first_name || ''} ${u.last_name || ''}`.trim()
+        accName: u.account_name || `${u.first_name || ''} ${u.last_name || ''}`.trim(),
+        xHandle: u.x_handle || u.twitter_handle || u.twitter || '',
+        linkedinUsername: u.linkedin_username || u.linkedin_url || u.linkedin || '',
+        skills: Array.isArray(u.skills) ? u.skills.join(', ') : (u.skills || '')
       });
 
       // Chapter lookup
@@ -232,8 +254,19 @@ export default function DashboardClient() {
         }
       }
 
+      // Auto-upgrade premium users to Level 2 — Affiliate if not already upgraded
+      if (u.is_premium && u.affiliate_tier !== 'affiliate' && u.affiliate_tier !== 'ambassador' && u.role !== 'admin') {
+        try {
+          await updateDoc(doc(db, 'users', user.uid), {
+            affiliate_tier: 'affiliate',
+            updated_at: serverTimestamp()
+          });
+          u.affiliate_tier = 'affiliate';
+        } catch (e) {}
+      }
+
       // Load Enrolments
-      await loadEnrolments(user.uid);
+      await loadEnrolments(user.uid, u);
 
       // Load Referrals & Commissions
       await loadReferralsAndCommissions(user.uid, u.referral_code);
@@ -245,7 +278,7 @@ export default function DashboardClient() {
       await loadCertificates(user.uid);
 
       // Load Chapters for dropdown
-      loadAllChapters();
+      loadAllChapters(u);
 
       // Workspace context restore & initial data load
       const availableWorkspaces = computeWorkspaces(u);
@@ -279,14 +312,21 @@ export default function DashboardClient() {
     }
   };
 
-  const loadAllChapters = async () => {
+  const loadAllChapters = async (uObj = userData) => {
     try {
       const snap = await getDocs(collection(db, 'chapters'));
-      setChapters(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      setChapters(list);
+      const userNode = uObj?.node_label || uObj?.chapter_name || uObj?.node || '';
+      const userChapId = uObj?.chapter_id;
+      const matched = list.find((c) => (userChapId && c.id === userChapId) || (userNode && c.name?.toLowerCase().trim() === userNode.toLowerCase().trim()));
+      if (matched) {
+        setMyChapter(matched);
+      }
     } catch (e) {}
   };
 
-  const loadEnrolments = async (uid) => {
+  const loadEnrolments = async (uid, uObj) => {
     try {
       const es = await getDocs(query(collection(db, 'enrolments'), where('user_id', '==', uid)));
       let allEnrols = es.docs.map((d) => ({ id: d.id, ...d.data() }));
@@ -297,8 +337,9 @@ export default function DashboardClient() {
       setFoundationDone(isDone);
       const hasAnyEnrolment = allEnrols.length > 0;
       const hasFoundation = allEnrols.some((e) => e.course_id === 'foundation' || !e.course_id);
+      const isPrem = !!(uObj?.is_premium || userData?.is_premium);
 
-      if (hasAnyEnrolment && !hasFoundation) {
+      if ((hasAnyEnrolment || isPrem) && !hasFoundation) {
         allEnrols = [
           {
             id: '__foundation_synthetic__',
@@ -310,6 +351,21 @@ export default function DashboardClient() {
           },
           ...allEnrols
         ];
+
+        // Also persist foundation enrolment in Firestore for premium user if missing
+        if (isPrem) {
+          try {
+            await setDoc(doc(db, 'enrolments', `${uid}_foundation`), {
+              user_id: uid,
+              user_email: uObj?.email || currentUser?.email || '',
+              course_id: 'foundation',
+              course_title: 'Blockchain & Cryptocurrency Foundation',
+              status: 'active',
+              progress_pct: 0,
+              enrolled_at: serverTimestamp()
+            }, { merge: true });
+          } catch (e) {}
+        }
       }
 
       setEnrolments(allEnrols);
@@ -403,27 +459,27 @@ export default function DashboardClient() {
     } catch (e) {}
   };
 
-  const loadLeaderboardData = async (type) => {
-    setLbLoading(true);
+  const handleCopyText = (text, label) => {
+    if (!text) return;
     try {
-      const snap = await getDocs(collection(db, 'leaderboard'));
-      let rows = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-
-      if (type === 'xp') {
-        rows.sort((a, b) => (Number(b.xp_this_period) || 0) - (Number(a.xp_this_period) || 0));
-      } else if (type === 'commission') {
-        rows = rows.filter((r) => (Number(r.commission_this_period) || 0) > 0);
-        rows.sort((a, b) => (Number(b.commission_this_period) || 0) - (Number(a.commission_this_period) || 0));
-      } else if (type === 'referral') {
-        rows = rows.filter((r) => (Number(r.validated_referrals_this_period) || 0) > 0);
-        rows.sort((a, b) => (Number(b.validated_referrals_this_period) || 0) - (Number(a.validated_referrals_this_period) || 0));
-      }
-      setLeaderboardRows(rows.slice(0, 20));
+      navigator.clipboard.writeText(text);
+      setCopyFeedback(label);
+      setPayoutToast(`✓ Copied ${label}!`);
+      setTimeout(() => {
+        setCopyFeedback(null);
+        setPayoutToast(null);
+      }, 2500);
     } catch (e) {
-      console.error('Error loading leaderboard:', e);
-    } finally {
-      setLbLoading(false);
+      alert(`Could not copy: ${text}`);
     }
+  };
+
+  // Copy Referral Link
+  const handleCopyRef = () => {
+    const code = userData?.referral_code || '';
+    if (!code) return;
+    const url = `${window.location.origin}/signup?ref=${code}`;
+    handleCopyText(url, 'Referral Link');
   };
 
   // Daily Streak Claim
@@ -433,16 +489,27 @@ export default function DashboardClient() {
       const newStreak = dailyStreak + 1;
       const bonus = newStreak % 7 === 0 ? 10 : 2;
       const newTotal = xpTotal + bonus;
+      const currentPeriodXp = Number(userData?.xp_this_period ?? userData?.monthly_xp ?? 0);
+      const newPeriodXp = currentPeriodXp + bonus;
 
       await updateDoc(doc(db, 'users', currentUser.uid), {
         xp_total: newTotal,
         daily_streak: newStreak,
-        last_daily_claim: serverTimestamp()
+        last_daily_claim: serverTimestamp(),
+        xp_this_period: newPeriodXp,
+        monthly_xp: newPeriodXp
       });
 
       setXpTotal(newTotal);
       setDailyStreak(newStreak);
       setClaimedToday(true);
+      setUserData((prev) => prev ? {
+        ...prev,
+        xp_total: newTotal,
+        daily_streak: newStreak,
+        xp_this_period: newPeriodXp,
+        monthly_xp: newPeriodXp
+      } : prev);
       setPayoutToast(`⚡ +${bonus} XP claimed! Streak: ${newStreak} days.`);
       setTimeout(() => setPayoutToast(null), 4000);
     } catch (e) {
@@ -450,15 +517,119 @@ export default function DashboardClient() {
     }
   };
 
-  // Copy Referral Link
-  const handleCopyRef = () => {
-    const code = userData?.referral_code || '';
-    if (!code) return;
-    const url = `${window.location.origin}/signup?ref=${code}`;
-    navigator.clipboard.writeText(url);
-    setCopyFeedback(true);
-    setTimeout(() => setCopyFeedback(false), 2500);
+  const loadLeaderboardData = async (type = 'xp') => {
+    setLbLoading(true);
+    try {
+      const snap = await getDocs(collection(db, 'leaderboard'));
+      const sanitizeTier = (t) => (!t || t === 'Genesis Node') ? 'Genesis Scout' : t;
+
+      let rows = snap.docs.map((d) => {
+        const data = d.data();
+        return {
+          id: d.id,
+          ...data,
+          tier: sanitizeTier(data.tier)
+        };
+      });
+
+      // If empty in database, seed with benchmark entries from original design
+      if (rows.length === 0) {
+        rows = [
+          { id: 'u1', first_name: 'Joy', last_initial: 'S.', tier: 'Genesis Scout', xp_total: 50, xp_this_period: 50, commission_this_period: 45000, validated_referrals_this_period: 14 },
+          { id: 'u2', first_name: 'CONFIDENCE', last_initial: 'J.', tier: 'Genesis Scout', xp_total: 36, xp_this_period: 36, commission_this_period: 32000, validated_referrals_this_period: 10 },
+          { id: 'u3', first_name: 'Shedrack', last_initial: 'E.', tier: 'Genesis Scout', xp_total: 36, xp_this_period: 36, commission_this_period: 28000, validated_referrals_this_period: 8 },
+          { id: 'u4', first_name: 'Izuchukwu', last_initial: 'E.', tier: 'Genesis Scout', xp_total: 36, xp_this_period: 36, commission_this_period: 21000, validated_referrals_this_period: 6 },
+          { id: 'u5', first_name: 'Super', last_initial: 'A.', tier: 'Genesis Scout', xp_total: 15, xp_this_period: 15, commission_this_period: 15000, validated_referrals_this_period: 3 }
+        ];
+      }
+
+      const uid = currentUser?.uid;
+      const myTierName = sanitizeTier(currentTier?.name);
+      // Strictly use actual monthly XP, actual commission, actual referrals - NEVER hardcoded fake defaults
+      const myXpPeriod = Number(userData?.xp_this_period ?? userData?.monthly_xp ?? 0);
+      const myComm = Number(userData?.commission_this_period ?? walletBalance ?? 0);
+      const myRefs = Number(userData?.validated_referrals_this_period ?? validatedRefs ?? 0);
+
+      // Safe name extraction without TDZ references
+      const displayNameStr = `${userData?.first_name || ''} ${userData?.last_name || ''}`.trim() || currentUser?.displayName || 'Sofian';
+      const myFirstName = userData?.first_name || displayNameStr.split(' ')[0] || 'Sofian';
+      const myLastName = userData?.last_name || (displayNameStr.split(' ').length > 1 ? displayNameStr.split(' ').slice(1).join(' ') : '');
+
+      // Check if current user is present
+      const myIndex = rows.findIndex((r) => r.id === uid || r.uid === uid);
+
+      if (myIndex === -1 && uid) {
+        rows.push({
+          id: uid,
+          uid: uid,
+          first_name: myFirstName,
+          last_initial: myLastName ? (myLastName.charAt(0).toUpperCase() + '.') : '',
+          tier: myTierName,
+          xp_total: xpTotal,
+          xp_this_period: myXpPeriod,
+          commission_this_period: myComm,
+          validated_referrals_this_period: myRefs
+        });
+      } else if (myIndex !== -1) {
+        // Sync current user's entry with actual state
+        rows[myIndex] = {
+          ...rows[myIndex],
+          id: uid || rows[myIndex].id,
+          uid: uid || rows[myIndex].uid,
+          first_name: myFirstName,
+          last_initial: myLastName ? (myLastName.charAt(0).toUpperCase() + '.') : '',
+          tier: myTierName,
+          xp_total: xpTotal,
+          xp_this_period: myXpPeriod,
+          commission_this_period: myComm,
+          validated_referrals_this_period: myRefs
+        };
+      }
+
+      // Sort based on type
+      if (type === 'xp') {
+        rows.sort((a, b) => (Number(b.xp_this_period) || 0) - (Number(a.xp_this_period) || 0));
+      } else if (type === 'commission') {
+        rows.sort((a, b) => (Number(b.commission_this_period) || 0) - (Number(a.commission_this_period) || 0));
+      } else if (type === 'referral') {
+        rows.sort((a, b) => (Number(b.validated_referrals_this_period) || 0) - (Number(a.validated_referrals_this_period) || 0));
+      }
+
+      // Find user rank
+      const foundRank = rows.findIndex((r) => r.id === uid || r.uid === uid) + 1;
+      const myRank = foundRank > 0 ? foundRank : rows.length;
+      const pct = Math.max(5, Math.ceil((myRank / Math.max(rows.length, 1)) * 100));
+
+      let scoreStr = '';
+      if (type === 'xp') {
+        scoreStr = `${myXpPeriod.toLocaleString()} XP this month`;
+      } else if (type === 'commission') {
+        scoreStr = `₦${myComm.toLocaleString('en-NG')} this month`;
+      } else {
+        scoreStr = `${myRefs} validated referrals this month`;
+      }
+
+      setUserRankInfo({
+        rank: myRank,
+        percentile: pct,
+        scoreStr,
+        tier: myTierName,
+        icon: currentTier?.icon || '🌱'
+      });
+
+      setLeaderboardRows(rows);
+    } catch (e) {
+      console.error('Error loading leaderboard:', e);
+    } finally {
+      setLbLoading(false);
+    }
   };
+
+  useEffect(() => {
+    if (currentUser) {
+      loadLeaderboardData(lbTab);
+    }
+  }, [currentUser, lbTab]);
 
   // Save Settings
   const handleSaveSettings = async (e) => {
@@ -466,33 +637,71 @@ export default function DashboardClient() {
     setSavingSettings(true);
     setSettingsMsg(null);
     try {
+      const fixedAccountName = `${userData?.first_name || ''} ${userData?.last_name || ''}`.trim().toUpperCase();
+      const matchedChapter = chapters.find(
+        (c) => c.name?.toLowerCase().trim() === settingsForm.nodeLabel?.toLowerCase().trim()
+      );
+      const resolvedChapterId = matchedChapter ? matchedChapter.id : null;
+
+      const skillsArray = typeof settingsForm.skills === 'string'
+        ? settingsForm.skills.split(',').map((s) => s.trim()).filter(Boolean)
+        : Array.isArray(settingsForm.skills) ? settingsForm.skills : [];
+
       await updateDoc(doc(db, 'users', currentUser.uid), {
-        first_name: settingsForm.firstName,
-        last_name: settingsForm.lastName,
+        phone: settingsForm.phone || '',
+        country: settingsForm.country || 'Nigeria',
+        state: settingsForm.state || '',
+        node_label: settingsForm.nodeLabel || '',
+        chapter_id: resolvedChapterId,
+        bank_name: settingsForm.bankName || '',
+        account_number: settingsForm.accNumber || '',
+        account_name: fixedAccountName,
+        x_handle: settingsForm.xHandle ? settingsForm.xHandle.trim() : '',
+        twitter_handle: settingsForm.xHandle ? settingsForm.xHandle.trim() : '',
+        linkedin_username: settingsForm.linkedinUsername ? settingsForm.linkedinUsername.trim() : '',
+        skills: skillsArray,
+        updated_at: serverTimestamp()
+      });
+
+      if (matchedChapter) {
+        setMyChapter(matchedChapter);
+      }
+
+      setSettingsMsg({ type: 'success', text: 'Settings & profile updated successfully!' });
+      setUserData((prev) => ({
+        ...prev,
         phone: settingsForm.phone,
         country: settingsForm.country,
         state: settingsForm.state,
         node_label: settingsForm.nodeLabel,
+        chapter_id: resolvedChapterId,
         bank_name: settingsForm.bankName,
         account_number: settingsForm.accNumber,
-        account_name: settingsForm.accName,
-        updated_at: serverTimestamp()
-      });
-      setSettingsMsg({ type: 'success', text: 'Profile updated successfully!' });
-      setUserData((prev) => ({
-        ...prev,
-        first_name: settingsForm.firstName,
-        last_name: settingsForm.lastName,
-        phone: settingsForm.phone,
-        node_label: settingsForm.nodeLabel,
-        bank_name: settingsForm.bankName,
-        account_number: settingsForm.accNumber,
-        account_name: settingsForm.accName
+        account_name: fixedAccountName,
+        x_handle: settingsForm.xHandle ? settingsForm.xHandle.trim() : '',
+        twitter_handle: settingsForm.xHandle ? settingsForm.xHandle.trim() : '',
+        linkedin_username: settingsForm.linkedinUsername ? settingsForm.linkedinUsername.trim() : '',
+        skills: skillsArray
       }));
     } catch (err) {
       setSettingsMsg({ type: 'error', text: err.message });
     } finally {
       setSavingSettings(false);
+    }
+  };
+
+  // Send Password Reset / Setup Link
+  const handleSendPasswordReset = async () => {
+    if (!currentUser?.email) return;
+    setPwdLoading(true);
+    setPwdMsg(null);
+    try {
+      await sendPasswordResetEmail(auth, currentUser.email);
+      setPwdMsg({ type: 'success', text: `A password reset / setup link has been sent to ${currentUser.email}. Check your inbox!` });
+    } catch (err) {
+      setPwdMsg({ type: 'error', text: err.message });
+    } finally {
+      setPwdLoading(false);
     }
   };
 
@@ -525,6 +734,33 @@ export default function DashboardClient() {
       setPwdMsg({ type: 'error', text: msg });
     } finally {
       setPwdLoading(false);
+    }
+  };
+
+  // Handle Account Deletion Request
+  const handleDeleteAccount = async () => {
+    const confirmDelete = window.confirm(
+      '⚠️ Are you sure you want to delete your account? This action is permanent and cannot be undone. All your course progress, certificates, and earnings will be permanently deleted.'
+    );
+    if (!confirmDelete) return;
+
+    const typed = window.prompt('To confirm deletion, type DELETE in the box below:');
+    if (typed !== 'DELETE') {
+      alert('Account deletion was not confirmed.');
+      return;
+    }
+
+    try {
+      await addDoc(collection(db, 'deletion_requests'), {
+        user_id: currentUser.uid,
+        email: currentUser.email,
+        full_name: `${userData?.first_name || ''} ${userData?.last_name || ''}`.trim(),
+        requested_at: serverTimestamp(),
+        status: 'pending'
+      });
+      alert('Your account deletion request has been submitted. Our team will review and permanently remove your data within 48 hours.');
+    } catch (e) {
+      alert('Your deletion request has been noted. Please contact info@node.sofegroup.com to complete account deletion.');
     }
   };
 
@@ -891,6 +1127,7 @@ export default function DashboardClient() {
     return [
       { id: 'classroom', icon: '📚', label: 'Courses' },
       { id: 'business', icon: '💼', label: 'Business' },
+      { id: 'leaderboard', icon: '🏆', label: 'Rank' },
       { id: 'wallet', icon: '💰', label: 'Wallet' },
       { id: 'certificates', icon: '🎓', label: 'Certs' },
       { id: 'settings', icon: '⚙️', label: 'Settings' }
@@ -933,11 +1170,11 @@ export default function DashboardClient() {
 
   // Determine active affiliate tier
   const isAmbassador = userData?.affiliate_tier === 'ambassador' || userData?.role === 'ambassador' || isNodeLead || userData?.role === 'admin';
-  const isAffiliate = isAmbassador || qualifiedCount >= 10 || userData?.affiliate_tier === 'affiliate';
+  const isAffiliate = isAmbassador || qualifiedCount >= 10 || userData?.affiliate_tier === 'affiliate' || isPremium;
   const activeAffiliateLevel = isAmbassador ? 'ambassador' : (isAffiliate ? 'affiliate' : 'newbie');
 
   return (
-    <div style={{ background: '#04080F', color: '#EEF4FF', minHeight: '100vh', fontFamily: 'Poppins, sans-serif' }}>
+    <div className="dash-root-wrapper" style={{ minHeight: '100vh', fontFamily: 'Poppins, sans-serif' }}>
       <link rel="stylesheet" href="/css/dashboard.css" />
 
       {/* TOAST MESSAGE */}
@@ -963,22 +1200,32 @@ export default function DashboardClient() {
       
 
       {/* DASHBOARD LAYOUT */}
-      <div style={{ display: 'flex', minHeight: '100vh', paddingTop: '85px', width: '100%', overflowX: 'hidden' }}>
+      <div className="dash-layout-container" style={{ display: 'flex', minHeight: '100vh', paddingTop: '85px', width: '100%', overflowX: 'hidden' }}>
         {/* SIDEBAR NAVIGATION */}
-        <aside className="dash-desktop-sidebar" style={{
-          display: activeWorkspace === 'admin' ? 'none' : 'flex',
-          width: sidebarOpen ? 240 : 70,
-          background: '#080E1A',
-          borderRight: '1px solid rgba(20,40,255,0.15)',
-          padding: '1.2rem 0.6rem',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-          transition: 'width 0.25s ease'
-        }}>
+        <aside
+          className={`dash-desktop-sidebar ${sidebarOpen ? 'open' : 'collapsed'}`}
+          style={{
+            display: activeWorkspace === 'admin' ? 'none' : 'flex',
+            width: sidebarOpen ? 240 : 70,
+            background: '#080E1A',
+            borderRight: '1px solid rgba(20,40,255,0.15)',
+            padding: '1.2rem 0.6rem',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            transition: 'width 0.25s ease',
+            position: 'sticky',
+            top: '85px',
+            height: 'calc(100vh - 85px)',
+            overflowY: sidebarOpen ? 'auto' : 'visible',
+            flexShrink: 0,
+            zIndex: 90
+          }}
+        >
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: sidebarOpen ? 'space-between' : 'center', marginBottom: '1rem' }}>
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
+                title={sidebarOpen ? 'Collapse sidebar' : 'Expand sidebar'}
                 style={{ background: 'rgba(20,40,255,0.1)', border: '1px solid rgba(20,40,255,0.25)', color: '#fff', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
               >
                 <span>☰</span>
@@ -1082,6 +1329,8 @@ export default function DashboardClient() {
                     setActiveTab(tab.id);
                     if (tab.id === 'leaderboard') loadLeaderboardData(lbTab);
                   }}
+                  title={!sidebarOpen ? tab.label : undefined}
+                  data-tooltip={tab.label}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -1096,8 +1345,9 @@ export default function DashboardClient() {
                     cursor: 'pointer',
                     textAlign: 'left',
                     width: '100%',
-                    overflow: 'hidden',
-                    whiteSpace: 'nowrap'
+                    overflow: sidebarOpen ? 'hidden' : 'visible',
+                    whiteSpace: 'nowrap',
+                    position: 'relative'
                   }}
                 >
                   <span style={{ fontSize: '1.1rem' }}>{tab.icon}</span>
@@ -1109,6 +1359,8 @@ export default function DashboardClient() {
             {activeWorkspace === 'learner' && (
               <Link
                 href="/bounties"
+                title={!sidebarOpen ? 'Bounties Board' : undefined}
+                data-tooltip="Bounties Board"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -1120,8 +1372,9 @@ export default function DashboardClient() {
                   fontSize: '0.8rem',
                   textDecoration: 'none',
                   width: '100%',
-                  overflow: 'hidden',
-                  whiteSpace: 'nowrap'
+                  overflow: sidebarOpen ? 'hidden' : 'visible',
+                  whiteSpace: 'nowrap',
+                  position: 'relative'
                 }}
               >
                 <span style={{ fontSize: '1.1rem' }}>🎯</span>
@@ -1135,6 +1388,8 @@ export default function DashboardClient() {
           <div style={{ borderTop: '1px solid rgba(200,215,240,0.1)', paddingTop: '0.8rem' }}>
             <button
               onClick={handleLogout}
+              title={!sidebarOpen ? 'Logout' : undefined}
+              data-tooltip="Logout"
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -1147,7 +1402,9 @@ export default function DashboardClient() {
                 fontSize: '0.8rem',
                 cursor: 'pointer',
                 width: '100%',
-                textAlign: 'left'
+                textAlign: 'left',
+                overflow: sidebarOpen ? 'hidden' : 'visible',
+                position: 'relative'
               }}
             >
               <span>↩</span>
@@ -1158,10 +1415,10 @@ export default function DashboardClient() {
 
         {/* MAIN BODY AREA */}
         <main className="dash-content" style={{ flex: 1, padding: '2rem', overflowX: 'hidden' }}>
-          {activeWorkspace !== 'admin' && (
+          {activeWorkspace !== 'admin' && activeTab === 'classroom' && (
             <>
               {/* WELCOME / HERO STRIP */}
-              <div style={{
+              <div className="dash-hero-card" style={{
                 background: 'linear-gradient(135deg, rgba(20,40,255,0.15), rgba(8,14,26,0.9))',
                 border: '1px solid rgba(20,40,255,0.25)',
                 borderRadius: 12,
@@ -1169,130 +1426,355 @@ export default function DashboardClient() {
                 marginBottom: '2rem',
                 display: 'flex',
                 justifyContent: 'space-between',
-                alignItems: 'center',
+                alignItems: 'stretch',
                 flexWrap: 'wrap',
-                gap: '1rem'
+                gap: '1.5rem'
               }}>
-                <div>
-                  <div style={{ fontSize: '0.78rem', color: '#FF8A00', fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-                    Sofian Success Portal
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-                    <h1 style={{ fontSize: '1.45rem', fontWeight: 800, margin: 0 }}>
-                      Welcome Back, <span style={{ color: '#FF8A00' }}>{fullName}</span>!
-                    </h1>
-                    {userData?.is_premium && <span style={{ background: 'linear-gradient(135deg, #FF8A00, #E07800)', padding: '0.2rem 0.6rem', borderRadius: 12, fontSize: '0.65rem', fontWeight: 700, color: '#fff' }}>Premium VIP</span>}
-                    {userData?.account_type === 'protocol' && <span style={{ background: '#1428FF', padding: '0.2rem 0.6rem', borderRadius: 12, fontSize: '0.65rem', fontWeight: 700, color: '#fff' }}>Protocol Partner</span>}
-                    {isNodeLead && <span style={{ background: '#10b981', padding: '0.2rem 0.6rem', borderRadius: 12, fontSize: '0.65rem', fontWeight: 700, color: '#fff' }}>Node Lead</span>}
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', marginTop: '0.4rem', fontSize: '0.78rem', color: 'rgba(200,215,240,0.7)' }}>
-                    <span>{currentTier?.icon} {currentTier?.name} ({xpTotal.toLocaleString()} XP)</span>
-                    <span>•</span>
-                    <span>ID: {userData?.sofian_id || currentUser.uid.slice(0, 8)}</span>
-                    {myChapter && (
-                      <>
-                        <span>•</span>
-                        <span>🏛 Campus Node: <strong>{myChapter.name}</strong></span>
-                      </>
-                    )}
+                <div style={{
+                  flex: '1 1 360px',
+                  minWidth: 280,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between'
+                }}>
+                  <div>
+                    <div style={{ fontSize: '0.75rem', color: '#FF8A00', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                      Sofian Potal
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap', marginTop: '0.2rem' }}>
+                      <h1 style={{ fontSize: '1.45rem', fontWeight: 800, margin: 0 }}>
+                        Welcome Back, <span style={{ color: '#FF8A00' }}>{fullName}</span>!
+                      </h1>
+                      {userData?.is_premium && <span style={{ background: 'linear-gradient(135deg, #FF8A00, #E07800)', padding: '0.2rem 0.6rem', borderRadius: 12, fontSize: '0.65rem', fontWeight: 700, color: '#fff' }}>Premium VIP</span>}
+                      {userData?.account_type === 'protocol' && <span style={{ background: '#1428FF', padding: '0.2rem 0.6rem', borderRadius: 12, fontSize: '0.65rem', fontWeight: 700, color: '#fff' }}>Protocol Partner</span>}
+                      {isNodeLead && <span style={{ background: '#10b981', padding: '0.2rem 0.6rem', borderRadius: 12, fontSize: '0.65rem', fontWeight: 700, color: '#fff' }}>Node Lead</span>}
+                    </div>
+                    <div style={{ fontSize: '0.74rem', color: 'rgba(200,215,240,0.6)', marginTop: '0.2rem' }}>
+                      {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                    </div>
+
+                    {/* Below Welcome Back: Sofian ID, Referral Code & Copy Link Button */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginTop: '0.85rem', flexWrap: 'wrap' }}>
+                      <div style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.4rem',
+                        background: 'rgba(20,40,255,0.1)',
+                        border: '1px solid rgba(20,40,255,0.25)',
+                        borderRadius: 6,
+                        padding: '0.35rem 0.65rem',
+                        fontSize: '0.74rem'
+                      }}>
+                        <span style={{ color: 'rgba(200,215,240,0.65)' }}>Sofian ID:</span>
+                        <strong style={{ color: 'var(--white, #fff)', fontFamily: 'monospace' }}>
+                          {userData?.sofian_id || currentUser.uid.slice(0, 8).toUpperCase()}
+                        </strong>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyText(userData?.sofian_id || currentUser.uid.slice(0, 8).toUpperCase(), 'Sofian ID')}
+                          title="Copy Sofian ID"
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.82rem', padding: '0 2px', lineHeight: 1 }}
+                        >
+                          📋
+                        </button>
+                      </div>
+
+                      {userData?.referral_code && (
+                        <div style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.4rem',
+                          background: 'rgba(255,138,0,0.1)',
+                          border: '1px solid rgba(255,138,0,0.25)',
+                          borderRadius: 6,
+                          padding: '0.35rem 0.65rem',
+                          fontSize: '0.74rem'
+                        }}>
+                          <span style={{ color: 'rgba(200,215,240,0.65)' }}>Referral Code:</span>
+                          <strong style={{ color: '#FFB800', fontFamily: 'monospace' }}>
+                            {userData.referral_code}
+                          </strong>
+                          <button
+                            type="button"
+                            onClick={() => handleCopyText(userData.referral_code, 'Referral Code')}
+                            title="Copy Referral Code"
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.82rem', padding: '0 2px', lineHeight: 1 }}
+                          >
+                            📋
+                          </button>
+                        </div>
+                      )}
+
+                      {userData?.referral_code && (
+                        <button
+                          type="button"
+                          onClick={handleCopyRef}
+                          style={{
+                            background: '#1428FF',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: 6,
+                            padding: '0.38rem 0.85rem',
+                            fontSize: '0.74rem',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.35rem',
+                            boxShadow: '0 2px 10px rgba(20,40,255,0.3)'
+                          }}
+                        >
+                          🔗 {copyFeedback === 'Referral Link' ? '✓ Link Copied!' : 'Copy Link'}
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Under Sofian ID line: Total Balance */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginTop: '0.9rem', flexWrap: 'wrap' }}>
+                      <div style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.6rem',
+                        background: 'rgba(0,200,100,0.08)',
+                        border: '1px solid rgba(0,200,100,0.25)',
+                        borderRadius: 8,
+                        padding: '0.45rem 0.95rem',
+                        fontSize: '0.78rem'
+                      }}>
+                        <span style={{ color: 'rgba(200,215,240,0.7)', fontWeight: 600, textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: '0.04em' }}>
+                          Total Balance:
+                        </span>
+                        <strong style={{ color: '#00c864', fontSize: '1.2rem', fontWeight: 800 }}>
+                          ₦{walletBalance.toLocaleString('en-NG')}
+                        </strong>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('wallet')}
+                        style={{
+                          background: 'rgba(200,215,240,0.06)',
+                          border: '1px solid rgba(200,215,240,0.18)',
+                          borderRadius: 8,
+                          padding: '0.45rem 0.85rem',
+                          color: 'rgba(200,215,240,0.85)',
+                          fontSize: '0.74rem',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.35rem',
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        <span>💰</span> View Wallet →
+                      </button>
+                    </div>
                   </div>
                 </div>
 
-                {/* Quick Stats Badges & Actions */}
-                <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                  <button
-                    onClick={handleDailyClaim}
-                    disabled={claimedToday}
-                    style={{
-                      background: claimedToday ? 'rgba(0,200,100,0.12)' : 'linear-gradient(135deg, #FF8A00, #E07800)',
-                      border: claimedToday ? '1px solid rgba(0,200,100,0.3)' : 'none',
-                      color: claimedToday ? '#00c864' : '#fff',
-                      borderRadius: 20,
-                      padding: '0.4rem 1rem',
-                      fontSize: '0.75rem',
-                      fontWeight: 700,
-                      cursor: claimedToday ? 'default' : 'pointer',
+                {/* Right Side: XP Claiming & Streak Card */}
+                <div style={{ display: 'flex', alignItems: 'stretch', flex: '0 0 auto', maxWidth: '100%' }}>
+                  <div className="dash-xp-claim-card" style={{
+                    background: '#0D1526',
+                    border: '1px solid rgba(20,40,255,0.22)',
+                    borderRadius: 10,
+                    padding: '0.95rem 1.05rem',
+                    position: 'relative',
+                    width: 390,
+                    maxWidth: '100%',
+                    boxSizing: 'border-box',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    height: '100%'
+                  }}>
+                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: 'linear-gradient(90deg, #FF8A00, #FFB800)', borderTopLeftRadius: 10, borderTopRightRadius: 10 }}></div>
+
+                    {/* Sub-row 1: Tier + Total XP (Left) & Claim Button (Right) */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.65rem' }}>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#FF8A00', background: 'rgba(255,138,0,0.1)', padding: '0.15rem 0.45rem', borderRadius: 4, marginBottom: '0.25rem' }}>
+                          <span>{currentTier?.icon || '🌱'}</span>
+                          <span>{(!currentTier?.name || currentTier?.name === 'Genesis Node') ? 'Genesis Scout' : currentTier?.name}</span>
+                        </div>
+                        <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--white, #fff)', lineHeight: 1, display: 'flex', alignItems: 'baseline', gap: '0.25rem' }}>
+                          <span>{xpTotal.toLocaleString()}</span>
+                          <span style={{ fontSize: '0.65rem', fontWeight: 600, color: 'var(--muted, #94a3b8)', textTransform: 'uppercase' }}>XP</span>
+                        </div>
+                      </div>
+
+                      <div>
+                        <button
+                          type="button"
+                          onClick={handleDailyClaim}
+                          disabled={claimedToday}
+                          style={{
+                            background: claimedToday ? 'rgba(0,200,100,0.15)' : 'linear-gradient(135deg, #FF8A00, #E07800)',
+                            border: claimedToday ? '1px solid rgba(0,200,100,0.3)' : 'none',
+                            color: claimedToday ? '#00c864' : '#fff',
+                            borderRadius: 6,
+                            padding: '0.45rem 0.85rem',
+                            fontSize: '0.74rem',
+                            fontWeight: 800,
+                            cursor: claimedToday ? 'default' : 'pointer',
+                            whiteSpace: 'nowrap',
+                            boxShadow: claimedToday ? 'none' : '0 2px 10px rgba(255,138,0,0.3)',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.3rem'
+                          }}
+                        >
+                          {claimedToday ? '✓ CLAIMED' : '⚡ CLAIM +2 XP'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Sub-row 2: Progress to next tier & Streak Counter */}
+                    <div style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '0.4rem',
-                      boxShadow: claimedToday ? 'none' : '0 4px 15px rgba(255,138,0,0.3)'
-                    }}
-                  >
-                    <span>{claimedToday ? '✓' : '⚡'}</span>
-                    <span>{claimedToday ? `Streak: ${dailyStreak}d` : 'Claim +2 XP'}</span>
-                  </button>
+                      gap: '0.85rem',
+                      background: 'rgba(200,215,240,0.03)',
+                      border: '1px solid rgba(200,215,240,0.08)',
+                      borderRadius: 8,
+                      padding: '0.5rem 0.65rem',
+                      marginBottom: '0.65rem'
+                    }}>
+                      {/* Progress Bar */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.62rem', color: 'rgba(200,215,240,0.7)', marginBottom: 4 }}>
+                          <span style={{ fontWeight: 600 }}>to {nextTier?.name || 'Validator'}</span>
+                          <span style={{ fontWeight: 700, color: '#FF8A00' }}>
+                            {nextTier ? Math.min(100, Math.max(0, Math.round(((xpTotal - currentTier.min) / (nextTier.min - currentTier.min)) * 100))) : 100}%
+                          </span>
+                        </div>
+                        <div style={{ height: 5, background: 'rgba(200,215,240,0.12)', borderRadius: 3, overflow: 'hidden' }}>
+                          <div style={{
+                            height: '100%',
+                            background: 'linear-gradient(90deg, #1428FF, #6b8cff)',
+                            borderRadius: 3,
+                            width: `${nextTier ? Math.min(100, Math.max(0, Math.round(((xpTotal - currentTier.min) / (nextTier.min - currentTier.min)) * 100))) : 100}%`,
+                            transition: 'width 0.8s ease'
+                          }}></div>
+                        </div>
+                      </div>
 
-                  {userData?.referral_code && (
-                    <button
-                      onClick={handleCopyRef}
-                      style={{
-                        background: 'rgba(20,40,255,0.12)',
-                        border: '1px solid rgba(20,40,255,0.3)',
-                        color: '#6b8cff',
-                        borderRadius: 20,
-                        padding: '0.4rem 1rem',
-                        fontSize: '0.75rem',
-                        fontWeight: 600,
-                        cursor: 'pointer',
+                      {/* Streak Counter */}
+                      <div style={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '0.4rem'
+                        gap: '0.35rem',
+                        borderLeft: '1px solid rgba(200,215,240,0.12)',
+                        paddingLeft: '0.75rem',
+                        flexShrink: 0
+                      }} title="Daily Claim Streak">
+                        <span style={{ fontSize: '1.05rem' }}>🔥</span>
+                        <div>
+                          <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#FF8A00', lineHeight: 1 }}>{dailyStreak}</div>
+                          <div style={{ fontSize: '0.5rem', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'rgba(200,215,240,0.65)' }}>STREAK</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* XP Streak Tiers */}
+                    <div>
+                      <div style={{ fontSize: '0.58rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(200,215,240,0.7)', marginBottom: '0.35rem' }}>
+                        XP streak Tiers
+                      </div>
+                      <div className="dash-streak-tiers-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.35rem' }}>
+                        <div style={{ background: 'rgba(200,215,240,0.04)', border: '1px solid rgba(200,215,240,0.12)', borderRadius: 6, padding: '0.4rem 0.25rem', textAlign: 'center' }}>
+                          <div style={{ fontSize: '0.52rem', fontWeight: 700, textTransform: 'uppercase', color: 'rgba(200,215,240,0.6)' }}>DAY 1–6</div>
+                          <div style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--white, #fff)', lineHeight: 1.1, marginTop: 2 }}>+2 XP</div>
+                          <div style={{ fontSize: '0.5rem', color: 'rgba(200,215,240,0.5)', marginTop: 2 }}>Daily base</div>
+                        </div>
+                        <div style={{ background: 'rgba(200,215,240,0.04)', border: '1px solid rgba(200,215,240,0.12)', borderRadius: 6, padding: '0.4rem 0.25rem', textAlign: 'center' }}>
+                          <div style={{ fontSize: '0.52rem', fontWeight: 700, textTransform: 'uppercase', color: 'rgba(200,215,240,0.6)' }}>7-DAY</div>
+                          <div style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--white, #fff)', lineHeight: 1.1, marginTop: 2 }}>+12 XP</div>
+                          <div style={{ fontSize: '0.5rem', color: '#FF8A00', marginTop: 2 }}>+10 bonus</div>
+                        </div>
+                        <div style={{ background: 'rgba(200,215,240,0.04)', border: '1px solid rgba(200,215,240,0.12)', borderRadius: 6, padding: '0.4rem 0.25rem', textAlign: 'center' }}>
+                          <div style={{ fontSize: '0.52rem', fontWeight: 700, textTransform: 'uppercase', color: 'rgba(200,215,240,0.6)' }}>30-DAY</div>
+                          <div style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--white, #fff)', lineHeight: 1.1, marginTop: 2 }}>+27 XP</div>
+                          <div style={{ fontSize: '0.5rem', color: '#FF8A00', marginTop: 2 }}>+25 bonus</div>
+                        </div>
+                        <div style={{ background: 'rgba(200,215,240,0.04)', border: '1px solid rgba(200,215,240,0.12)', borderRadius: 6, padding: '0.4rem 0.25rem', textAlign: 'center' }}>
+                          <div style={{ fontSize: '0.52rem', fontWeight: 700, textTransform: 'uppercase', color: 'rgba(200,215,240,0.6)' }}>100-DAY</div>
+                          <div style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--white, #fff)', lineHeight: 1.1, marginTop: 2 }}>+52 XP</div>
+                          <div style={{ fontSize: '0.5rem', color: '#FF8A00', marginTop: 2 }}>+50 bonus</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 💎 $100 PREMIUM MEMBERSHIP BANNER (Closable & appears daily) */}
+              {!isPremium ? (
+                !premiumBannerDismissed && (
+                  <div className="dash-premium-banner" style={{
+                    background: 'linear-gradient(135deg, rgba(255,138,0,0.12), rgba(20,40,255,0.12))',
+                    border: '1px solid rgba(255,138,0,0.4)',
+                    borderRadius: 12,
+                    padding: '1.25rem 2.8rem 1.25rem 1.5rem',
+                    marginBottom: '2rem',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '1rem',
+                    position: 'relative'
+                  }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const todayStr = new Date().toISOString().slice(0, 10);
+                        try { localStorage.setItem('sofe_premium_banner_dismissed_date', todayStr); } catch (e) {}
+                        setPremiumBannerDismissed(true);
+                      }}
+                      title="Dismiss for today"
+                      aria-label="Close premium banner"
+                      style={{
+                        position: 'absolute',
+                        top: 10,
+                        right: 12,
+                        background: 'transparent',
+                        border: 'none',
+                        color: 'rgba(200,215,240,0.6)',
+                        fontSize: '1.15rem',
+                        cursor: 'pointer',
+                        padding: '0.2rem 0.45rem',
+                        borderRadius: 4,
+                        lineHeight: 1
                       }}
                     >
-                      {copyFeedback ? '✓ Copied!' : '🔗 Copy Ref Link'}
+                      ✕
                     </button>
-                  )}
-
-                  <div style={{ background: 'rgba(8,14,26,0.8)', border: '1px solid rgba(200,215,240,0.15)', borderRadius: 8, padding: '0.6rem 1rem', textAlign: 'center' }}>
-                    <div style={{ fontSize: '0.68rem', color: 'rgba(200,215,240,0.6)' }}>Wallet Balance</div>
-                    <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#00c864' }}>₦{walletBalance.toLocaleString('en-NG')}</div>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, fontSize: '0.95rem', color: '#FFB800' }}>
+                        <span>💎</span> Become a Sofe Node Premium Member ($100 One-time)
+                      </div>
+                      <p className="dash-premium-subtext" style={{ fontSize: '0.78rem', color: 'rgba(200,215,240,0.8)', marginTop: '0.3rem', maxWidth: 720, lineHeight: 1.6 }}>
+                        Elevate your standing in the ecosystem. As a Premium Member, you receive unlimited investment opportunies and market insight from our research team, a VIP badge, Premium WhatsApp community, Foundational Course Access and 10% affiliate commision. (Note: Foundation course completion is still required to earn referral commissions).
+                      </p>
+                    </div>
+                    <Link
+                      href="/payment-flow?tier=premium&amount=100"
+                      style={{
+                        background: 'linear-gradient(135deg, #FF8A00, #E07800)',
+                        color: '#fff',
+                        padding: '0.6rem 1.4rem',
+                        borderRadius: 8,
+                        fontSize: '0.8rem',
+                        fontWeight: 700,
+                        textDecoration: 'none'
+                      }}
+                    >
+                      Upgrade to Premium ($100) →
+                    </Link>
                   </div>
-                  <div style={{ background: 'rgba(8,14,26,0.8)', border: '1px solid rgba(200,215,240,0.15)', borderRadius: 8, padding: '0.6rem 1rem', textAlign: 'center' }}>
-                    <div style={{ fontSize: '0.68rem', color: 'rgba(200,215,240,0.6)' }}>Validated Referrals</div>
-                    <div style={{ fontSize: '1.15rem', fontWeight: 800, color: '#FF8A00' }}>{validatedRefs}</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* 💎 $100 PREMIUM MEMBERSHIP BANNER */}
-              {!isPremium ? (
-                <div style={{
-                  background: 'linear-gradient(135deg, rgba(255,138,0,0.12), rgba(20,40,255,0.12))',
-                  border: '1px solid rgba(255,138,0,0.4)',
-              borderRadius: 12,
-              padding: '1.25rem 1.5rem',
-              marginBottom: '2rem',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              flexWrap: 'wrap',
-              gap: '1rem'
-            }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, fontSize: '0.95rem', color: '#FFB800' }}>
-                  <span>💎</span> Become a Sofe Node Premium Member ($100 One-time)
-                </div>
-                <p style={{ fontSize: '0.78rem', color: 'rgba(200,215,240,0.8)', marginTop: '0.3rem', maxWidth: 680 }}>
-                  Elevate your standing in the ecosystem. As a Premium Member, you receive a VIP badge, direct access to the executive WhatsApp leadership group, and priority career matching.
-                  <em> (Note: Foundation course completion is still required to earn referral commissions).</em>
-                </p>
-              </div>
-              <Link
-                href="/payment-flow?tier=premium&amount=100"
-                style={{
-                  background: 'linear-gradient(135deg, #FF8A00, #E07800)',
-                  color: '#fff',
-                  padding: '0.6rem 1.4rem',
-                  borderRadius: 8,
-                  fontSize: '0.8rem',
-                  fontWeight: 700,
-                  textDecoration: 'none'
-                }}
-              >
-                Upgrade to Premium ($100) →
-              </Link>
-            </div>
-          ) : (
+                )
+              ) : (
             <div style={{
               background: 'linear-gradient(135deg, rgba(0,200,100,0.08), rgba(20,40,255,0.08))',
               border: '1px solid rgba(0,200,100,0.3)',
@@ -1311,7 +1793,7 @@ export default function DashboardClient() {
                   <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#00c864' }}>
                     Active Sofe Node Premium Member
                   </div>
-                  <div style={{ fontSize: '0.74rem', color: 'rgba(200,215,240,0.7)' }}>
+                  <div className="dash-premium-subtext" style={{ fontSize: '0.74rem', color: 'rgba(200,215,240,0.7)' }}>
                     Your $100 VIP membership is active. Connect directly with administrators for executive group entry.
                   </div>
                 </div>
@@ -1405,6 +1887,7 @@ export default function DashboardClient() {
                     return (
                       <div
                         key={enrol.id}
+                        className="dash-card dash-table-card"
                         style={{
                           background: '#0D1526',
                           border: '1px solid rgba(20,40,255,0.2)',
@@ -1430,13 +1913,13 @@ export default function DashboardClient() {
                             {isDone && <span style={{ color: '#00c864', fontSize: '0.7rem', fontWeight: 700 }}>✓ Completed</span>}
                           </div>
                           <h3 style={{ fontSize: '0.98rem', fontWeight: 700, margin: '0.4rem 0' }}>{title}</h3>
-                          <p style={{ color: 'rgba(200,215,240,0.65)', fontSize: '0.74rem', marginBottom: '1rem' }}>
+                          <p className="dash-course-desc" style={{ color: 'rgba(200,215,240,0.65)', fontSize: '0.74rem', marginBottom: '1rem' }}>
                             {c.description ? c.description.slice(0, 90) + '...' : 'Comprehensive training curriculum.'}
                           </p>
                         </div>
 
                         <div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)', marginBottom: '0.3rem' }}>
+                          <div className="dash-card-progress" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)', marginBottom: '0.3rem' }}>
                             <span>Progress</span>
                             <strong>{pct}%</strong>
                           </div>
@@ -1445,6 +1928,7 @@ export default function DashboardClient() {
                           </div>
                           <Link
                             href={`/course-view?course=${cid}`}
+                            className="dash-continue-btn"
                             style={{
                               display: 'block',
                               textAlign: 'center',
@@ -1542,32 +2026,32 @@ export default function DashboardClient() {
 
               {/* 4-Stat Metric Cards */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-                <div style={{ background: '#0D1526', border: '1px solid rgba(200,215,240,0.1)', borderRadius: 8, padding: '1rem' }}>
-                  <div style={{ fontSize: '0.68rem', color: 'rgba(200,215,240,0.6)' }}>Total Signups</div>
-                  <div style={{ fontSize: '1.4rem', fontWeight: 800, marginTop: '0.3rem' }}>{totalSignups}</div>
-                  <div style={{ fontSize: '0.64rem', color: 'rgba(200,215,240,0.5)', marginTop: '0.2rem' }}>
+                <div className="dash-card affiliate-stat-card" style={{ background: '#0D1526', border: '1px solid rgba(200,215,240,0.1)', borderRadius: 8, padding: '1rem' }}>
+                  <div className="affiliate-stat-label" style={{ fontSize: '0.68rem', color: 'rgba(200,215,240,0.6)' }}>Total Signups</div>
+                  <div className="affiliate-stat-val" style={{ fontSize: '1.4rem', fontWeight: 800, marginTop: '0.3rem' }}>{totalSignups}</div>
+                  <div className="affiliate-stat-sub" style={{ fontSize: '0.64rem', color: 'rgba(200,215,240,0.5)', marginTop: '0.2rem' }}>
                     {verifiedRefs} email verified
                   </div>
                 </div>
 
-                <div style={{ background: '#0D1526', border: '1px solid rgba(200,215,240,0.1)', borderRadius: 8, padding: '1rem' }}>
-                  <div style={{ fontSize: '0.68rem', color: 'rgba(200,215,240,0.6)' }}>Validated (Foundation Done)</div>
-                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#10b981', marginTop: '0.3rem' }}>{validatedRefs}</div>
-                  <div style={{ fontSize: '0.64rem', color: 'rgba(200,215,240,0.5)', marginTop: '0.2rem' }}>
+                <div className="dash-card affiliate-stat-card" style={{ background: '#0D1526', border: '1px solid rgba(200,215,240,0.1)', borderRadius: 8, padding: '1rem' }}>
+                  <div className="affiliate-stat-label" style={{ fontSize: '0.68rem', color: 'rgba(200,215,240,0.6)' }}>Validated (Foundation Done)</div>
+                  <div className="affiliate-stat-val" style={{ fontSize: '1.4rem', fontWeight: 800, color: '#10b981', marginTop: '0.3rem' }}>{validatedRefs}</div>
+                  <div className="affiliate-stat-sub" style={{ fontSize: '0.64rem', color: 'rgba(200,215,240,0.5)', marginTop: '0.2rem' }}>
                     Eligible for commissions
                   </div>
                 </div>
 
-                <div style={{ background: '#0D1526', border: '1px solid rgba(200,215,240,0.1)', borderRadius: 8, padding: '1rem' }}>
-                  <div style={{ fontSize: '0.68rem', color: 'rgba(200,215,240,0.6)' }}>Total Commissions Earned</div>
-                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#FF8A00', marginTop: '0.3rem' }}>
+                <div className="dash-card affiliate-stat-card" style={{ background: '#0D1526', border: '1px solid rgba(200,215,240,0.1)', borderRadius: 8, padding: '1rem' }}>
+                  <div className="affiliate-stat-label" style={{ fontSize: '0.68rem', color: 'rgba(200,215,240,0.6)' }}>Total Commissions Earned</div>
+                  <div className="affiliate-stat-val" style={{ fontSize: '1.4rem', fontWeight: 800, color: '#FF8A00', marginTop: '0.3rem' }}>
                     ₦{totalEarned.toLocaleString('en-NG')}
                   </div>
                 </div>
 
-                <div style={{ background: '#0D1526', border: '1px solid rgba(200,215,240,0.1)', borderRadius: 8, padding: '1rem' }}>
-                  <div style={{ fontSize: '0.68rem', color: 'rgba(200,215,240,0.6)' }}>Unpaid Commissions</div>
-                  <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#6b8cff', marginTop: '0.3rem' }}>
+                <div className="dash-card affiliate-stat-card" style={{ background: '#0D1526', border: '1px solid rgba(200,215,240,0.1)', borderRadius: 8, padding: '1rem' }}>
+                  <div className="affiliate-stat-label" style={{ fontSize: '0.68rem', color: 'rgba(200,215,240,0.6)' }}>Unpaid Commissions</div>
+                  <div className="affiliate-stat-val" style={{ fontSize: '1.4rem', fontWeight: 800, color: '#6b8cff', marginTop: '0.3rem' }}>
                     ₦{unpaidCommissions.toLocaleString('en-NG')}
                   </div>
                 </div>
@@ -1575,11 +2059,10 @@ export default function DashboardClient() {
 
               {/* ── AFFILIATE LEVELS (from design) ── */}
               <div style={{ marginBottom: '2rem' }}>
-                <h3 style={{
+                <h3 className="affiliate-section-heading" style={{
                   fontSize: '0.85rem',
                   fontWeight: 800,
                   marginBottom: '1rem',
-                  color: '#fff',
                   textTransform: 'uppercase',
                   letterSpacing: '0.06em'
                 }}>
@@ -1592,7 +2075,7 @@ export default function DashboardClient() {
                   gap: '1.25rem'
                 }}>
                   {/* Level 1: Newbie */}
-                  <div style={{
+                  <div className={`dash-card affiliate-tier-card ${activeAffiliateLevel === 'newbie' ? 'active' : ''}`} style={{
                     background: activeAffiliateLevel === 'newbie'
                       ? 'linear-gradient(135deg, rgba(255,138,0,0.08), rgba(20,40,255,0.05))'
                       : '#0D1526',
@@ -1621,22 +2104,22 @@ export default function DashboardClient() {
                         ✓ Active
                       </span>
                     )}
-                    <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#fff', marginBottom: '0.6rem' }}>
+                    <div className="affiliate-tier-title" style={{ fontSize: '0.88rem', fontWeight: 700, marginBottom: '0.6rem' }}>
                       ⭐ Level 1 — Newbie
                     </div>
                     <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#FF8A00', lineHeight: 1 }}>
                       5%
                     </div>
-                    <div style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)', marginTop: '0.25rem', marginBottom: '1rem' }}>
+                    <div className="affiliate-tier-sub" style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)', marginTop: '0.25rem', marginBottom: '1rem' }}>
                       Direct referral
                     </div>
-                    <p style={{ fontSize: '0.76rem', color: 'rgba(200,215,240,0.8)', lineHeight: 1.6 }}>
+                    <p className="affiliate-tier-desc" style={{ fontSize: '0.76rem', color: 'rgba(200,215,240,0.8)', lineHeight: 1.6 }}>
                       Everyone starts here. You earn 5% commission on every successful referral — but you must <strong style={{ color: '#FF8A00' }}>complete the Foundation Course</strong> to receive payouts.
                     </p>
                   </div>
 
                   {/* Level 2: Affiliate */}
-                  <div style={{
+                  <div className={`dash-card affiliate-tier-card ${activeAffiliateLevel === 'affiliate' ? 'active' : ''}`} style={{
                     background: activeAffiliateLevel === 'affiliate'
                       ? 'linear-gradient(135deg, rgba(255,138,0,0.08), rgba(20,40,255,0.05))'
                       : '#0D1526',
@@ -1665,22 +2148,22 @@ export default function DashboardClient() {
                         ✓ Active
                       </span>
                     )}
-                    <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#fff', marginBottom: '0.6rem' }}>
+                    <div className="affiliate-tier-title" style={{ fontSize: '0.88rem', fontWeight: 700, marginBottom: '0.6rem' }}>
                       🎯 Level 2 — Affiliate
                     </div>
                     <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#FF8A00', lineHeight: 1 }}>
                       10%
                     </div>
-                    <div style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)', marginTop: '0.25rem', marginBottom: '1rem' }}>
+                    <div className="affiliate-tier-sub" style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)', marginTop: '0.25rem', marginBottom: '1rem' }}>
                       Direct referral
                     </div>
-                    <p style={{ fontSize: '0.76rem', color: 'rgba(200,215,240,0.8)', lineHeight: 1.6 }}>
-                      Refer <strong>10 people</strong> who complete the Foundation Course <strong>and</strong> enrol in at least one Career Track course. Commission rate doubles automatically once the milestone is reached. <strong style={{ color: '#FF8A00' }}>({qualifiedCount}/10 qualified)</strong>
+                    <p className="affiliate-tier-desc" style={{ fontSize: '0.76rem', color: 'rgba(200,215,240,0.8)', lineHeight: 1.6 }}>
+                      Refer <strong>10 people</strong> who complete the Foundation Course <strong>and</strong> enrol in at least one Career Track course, or upgrade to <strong>Premium Membership</strong>. Commission rate doubles automatically once the milestone is reached. <strong style={{ color: '#FF8A00' }}>({qualifiedCount}/10 qualified)</strong>
                     </p>
                   </div>
 
                   {/* Level 3: Ambassador */}
-                  <div style={{
+                  <div className={`dash-card affiliate-tier-card ${activeAffiliateLevel === 'ambassador' ? 'active' : ''}`} style={{
                     background: activeAffiliateLevel === 'ambassador'
                       ? 'linear-gradient(135deg, rgba(255,138,0,0.08), rgba(20,40,255,0.05))'
                       : '#0D1526',
@@ -1690,7 +2173,7 @@ export default function DashboardClient() {
                     borderRadius: 12,
                     padding: '1.5rem',
                     position: 'relative',
-                    opacity: activeAffiliateLevel === 'ambassador' ? 1 : 0.65,
+                    opacity: activeAffiliateLevel === 'ambassador' ? 1 : 0.75,
                     boxShadow: activeAffiliateLevel === 'ambassador' ? '0 4px 20px rgba(255,138,0,0.15)' : 'none'
                   }}>
                     <span style={{
@@ -1708,16 +2191,16 @@ export default function DashboardClient() {
                     }}>
                       {activeAffiliateLevel === 'ambassador' ? '✓ Active' : '🔒 Locked'}
                     </span>
-                    <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#fff', marginBottom: '0.6rem' }}>
+                    <div className="affiliate-tier-title" style={{ fontSize: '0.88rem', fontWeight: 700, marginBottom: '0.6rem' }}>
                       🏆 Level 3 — Ambassador
                     </div>
                     <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#FF8A00', lineHeight: 1 }}>
                       10% + 5%
                     </div>
-                    <div style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)', marginTop: '0.25rem', marginBottom: '1rem' }}>
+                    <div className="affiliate-tier-sub" style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)', marginTop: '0.25rem', marginBottom: '1rem' }}>
                       Direct + indirect
                     </div>
-                    <p style={{ fontSize: '0.76rem', color: 'rgba(200,215,240,0.8)', lineHeight: 1.6 }}>
+                    <p className="affiliate-tier-desc" style={{ fontSize: '0.76rem', color: 'rgba(200,215,240,0.8)', lineHeight: 1.6 }}>
                       For exceptional Sofians, Node Heads, and long-term contributors. <strong>By invitation only</strong> — activated by the Sofe Node team. Earn 10% on direct referrals and 5% on indirect (your referrals&apos; referrals).
                     </p>
                   </div>
@@ -1725,17 +2208,17 @@ export default function DashboardClient() {
               </div>
 
               {/* Commission Structure Explanation */}
-              <div style={{ background: '#0D1526', border: '1px solid rgba(20,40,255,0.18)', borderRadius: 10, padding: '1.25rem' }}>
-                <h3 style={{ fontSize: '0.92rem', fontWeight: 700, marginBottom: '0.8rem' }}>How 2-Tier Commissions Work</h3>
+              <div className="dash-card affiliate-info-card" style={{ background: '#0D1526', border: '1px solid rgba(20,40,255,0.18)', borderRadius: 10, padding: '1.25rem' }}>
+                <h3 className="affiliate-info-heading" style={{ fontSize: '0.92rem', fontWeight: 700, marginBottom: '0.8rem' }}>How 2-Tier Commissions Work</h3>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem', fontSize: '0.76rem', color: 'rgba(200,215,240,0.8)' }}>
-                  <div style={{ padding: '0.8rem', background: 'rgba(20,40,255,0.06)', borderRadius: 6, border: '1px solid rgba(20,40,255,0.15)' }}>
-                    <strong style={{ color: '#fff' }}>Direct Commissions</strong>
+                  <div className="affiliate-info-box" style={{ padding: '0.8rem', background: 'rgba(20,40,255,0.06)', borderRadius: 6, border: '1px solid rgba(20,40,255,0.15)' }}>
+                    <strong className="affiliate-info-title">Direct Commissions</strong>
                     <p style={{ marginTop: '0.3rem' }}>
                       Earn 5% (Newbie) or 10% (Affiliate / Ambassador) on the net amount paid by anyone who signs up directly using your referral link.
                     </p>
                   </div>
-                  <div style={{ padding: '0.8rem', background: 'rgba(255,138,0,0.06)', borderRadius: 6, border: '1px solid rgba(255,138,0,0.15)' }}>
-                    <strong style={{ color: '#fff' }}>Indirect Network Override (Ambassadors)</strong>
+                  <div className="affiliate-info-box" style={{ padding: '0.8rem', background: 'rgba(255,138,0,0.06)', borderRadius: 6, border: '1px solid rgba(255,138,0,0.15)' }}>
+                    <strong className="affiliate-info-title">Indirect Network Override (Ambassadors)</strong>
                     <p style={{ marginTop: '0.3rem' }}>
                       Ambassadors and Node Leads earn a 5% override on the net paid fees when their referrals refer other paying students.
                     </p>
@@ -1956,55 +2439,267 @@ export default function DashboardClient() {
                 ))}
               </div>
 
-              <div style={{ background: '#0D1526', border: '1px solid rgba(20,40,255,0.18)', borderRadius: 10, padding: '1rem', overflowX: 'auto' }}>
+              {/* Top "YOUR RANK" Card matching screenshot */}
+              <div className="lb-rank-card" style={{
+                background: 'linear-gradient(135deg, rgba(20,40,255,0.1), rgba(255,138,0,0.08))',
+                border: '1px solid rgba(200,215,240,0.18)',
+                borderRadius: 14,
+                padding: '1.25rem 1.5rem',
+                marginBottom: '1.5rem',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '1rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <div style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: '50%',
+                    background: 'rgba(255,138,0,0.14)',
+                    border: '1px solid rgba(255,138,0,0.3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '1.35rem',
+                    flexShrink: 0
+                  }}>
+                    {userRankInfo?.icon || '🌱'}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.65rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(200,215,240,0.65)' }}>
+                      YOUR RANK
+                    </div>
+                    <div style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--white, #fff)', marginTop: '0.15rem' }}>
+                      {xpTotal.toLocaleString()} Total XP
+                    </div>
+                    <div style={{ fontSize: '0.74rem', color: 'rgba(200,215,240,0.7)', marginTop: '0.2rem' }}>
+                      Rank #{userRankInfo?.rank || 1} this month · {userRankInfo?.scoreStr || `${(Number(userData?.xp_this_period ?? userData?.monthly_xp ?? 0)).toLocaleString()} XP this month`} · {(!userRankInfo?.tier || userRankInfo?.tier === 'Genesis Node') ? 'Genesis Scout' : userRankInfo?.tier}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{
+                  background: 'rgba(255,138,0,0.14)',
+                  border: '1px solid rgba(255,138,0,0.35)',
+                  color: '#FF8A00',
+                  padding: '0.4rem 0.95rem',
+                  borderRadius: 20,
+                  fontSize: '0.74rem',
+                  fontWeight: 800,
+                  letterSpacing: '0.04em'
+                }}>
+                  TOP {userRankInfo?.percentile || 15}%
+                </div>
+              </div>
+
+              {/* Main Leaderboard Table Card matching screenshot */}
+              <div className="dash-card lb-table-card" style={{ background: '#0D1526', border: '1px solid rgba(20,40,255,0.18)', borderRadius: 12, padding: '1.25rem 1.5rem', overflowX: 'auto' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                  <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--white, #fff)', margin: 0 }}>
+                    {lbTab === 'xp' ? 'Top Sofians by XP' : lbTab === 'commission' ? 'Top Sofians by Earnings' : 'Top Ambassadors by Referrals'}
+                  </h3>
+                  <span style={{ fontSize: '0.74rem', color: 'rgba(200,215,240,0.6)', fontWeight: 600 }}>Top 20</span>
+                </div>
+
                 {lbLoading ? (
-                  <div style={{ textAlign: 'center', padding: '2rem', color: 'rgba(200,215,240,0.5)', fontSize: '0.8rem' }}>
+                  <div style={{ textAlign: 'center', padding: '2.5rem', color: 'rgba(200,215,240,0.5)', fontSize: '0.8rem' }}>
                     Loading leaderboard...
                   </div>
                 ) : leaderboardRows.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '2rem', color: 'rgba(200,215,240,0.5)', fontSize: '0.8rem' }}>
+                  <div style={{ textAlign: 'center', padding: '2.5rem', color: 'rgba(200,215,240,0.5)', fontSize: '0.8rem' }}>
                     No leaderboard activity recorded yet this month.
                   </div>
                 ) : (
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
                     <thead>
-                      <tr style={{ borderBottom: '1px solid rgba(200,215,240,0.1)', textAlign: 'left', color: 'rgba(200,215,240,0.6)' }}>
-                        <th style={{ padding: '0.6rem' }}>#</th>
-                        <th style={{ padding: '0.6rem' }}>Sofian</th>
-                        <th style={{ padding: '0.6rem' }}>Tier</th>
-                        <th style={{ padding: '0.6rem', textAlign: 'right' }}>Score</th>
+                      <tr style={{ borderBottom: '1px solid rgba(200,215,240,0.12)', textAlign: 'left', color: 'rgba(200,215,240,0.65)', fontSize: '0.68rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                        <th style={{ padding: '0.75rem 0.6rem', width: 45 }}>#</th>
+                        <th style={{ padding: '0.75rem 0.6rem' }}>SOFIAN</th>
+                        <th style={{ padding: '0.75rem 0.6rem' }}>TIER</th>
+                        <th style={{ padding: '0.75rem 0.6rem', textAlign: 'right' }}>
+                          {lbTab === 'xp' ? 'XP THIS MONTH' : lbTab === 'commission' ? 'EARNINGS THIS MONTH' : 'VALIDATED REFERRALS'}
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
-                      {leaderboardRows.map((row, i) => {
-                        const isMe = row.id === currentUser?.uid;
-                        const rank = i + 1;
-                        const name = `${row.first_name || ''} ${row.last_initial || ''}`.trim() || 'Sofian';
+                      {(() => {
+                        const topRows = leaderboardRows.slice(0, 20);
+                        const myIndexInAll = leaderboardRows.findIndex((r) => r.id === currentUser?.uid || r.uid === currentUser?.uid);
+                        const userInTop = myIndexInAll >= 0 && myIndexInAll < 20;
+                        const userRow = myIndexInAll >= 0 ? leaderboardRows[myIndexInAll] : null;
+
                         return (
-                          <tr
-                            key={row.id}
-                            style={{
-                              borderBottom: '1px solid rgba(200,215,240,0.06)',
-                              background: isMe ? 'rgba(255,138,0,0.08)' : 'transparent'
-                            }}
-                          >
-                            <td style={{ padding: '0.6rem', fontWeight: 700 }}>
-                              {rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank}
-                            </td>
-                            <td style={{ padding: '0.6rem' }}>
-                              {name} {isMe && <span style={{ background: '#FF8A00', color: '#000', borderRadius: 4, padding: '1px 4px', fontSize: '0.6rem', marginLeft: 4 }}>YOU</span>}
-                            </td>
-                            <td style={{ padding: '0.6rem', color: 'rgba(200,215,240,0.7)' }}>{row.tier || 'Genesis Node'}</td>
-                            <td style={{ padding: '0.6rem', textAlign: 'right', fontWeight: 700, color: '#FF8A00' }}>
-                              {lbTab === 'xp'
-                                ? `${(Number(row.xp_this_period) || 0).toLocaleString()} XP`
-                                : lbTab === 'commission'
-                                ? `₦${(Number(row.commission_this_period) || 0).toLocaleString('en-NG')}`
-                                : `${Number(row.validated_referrals_this_period) || 0} refs`}
-                            </td>
-                          </tr>
+                          <>
+                            {topRows.map((row, i) => {
+                              const isMe = row.id === currentUser?.uid || row.uid === currentUser?.uid;
+                              const rank = i + 1;
+                              const name = `${row.first_name || ''} ${row.last_initial || ''}`.trim() || 'Sofian';
+                              const avatarLetters = (row.first_name || 'S').trim().slice(0, 2).toUpperCase();
+
+                              return (
+                                <tr
+                                  key={row.id || i}
+                                  style={{
+                                    borderBottom: '1px solid rgba(200,215,240,0.06)',
+                                    background: isMe ? 'rgba(255,138,0,0.08)' : 'transparent'
+                                  }}
+                                >
+                                  <td style={{ padding: '0.8rem 0.6rem', fontWeight: 700 }}>
+                                    {rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : (
+                                      <span style={{ color: '#FF8A00', fontWeight: 800 }}>{rank}</span>
+                                    )}
+                                  </td>
+                                  <td style={{ padding: '0.8rem 0.6rem' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                                      <div style={{
+                                        width: 32,
+                                        height: 32,
+                                        borderRadius: '50%',
+                                        background: 'rgba(20,40,255,0.12)',
+                                        border: '1px solid rgba(20,40,255,0.25)',
+                                        color: '#6B8CFF',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontSize: '0.72rem',
+                                        fontWeight: 700,
+                                        marginRight: '0.75rem',
+                                        flexShrink: 0
+                                      }}>
+                                        {avatarLetters}
+                                      </div>
+                                      <span style={{ fontWeight: isMe ? 700 : 500, color: 'var(--white, #fff)' }}>{name}</span>
+                                      {isMe && (
+                                        <span style={{
+                                          background: '#FF8A00',
+                                          color: '#fff',
+                                          borderRadius: 4,
+                                          padding: '2px 6px',
+                                          fontSize: '0.62rem',
+                                          fontWeight: 800,
+                                          marginLeft: 6,
+                                          letterSpacing: '0.04em'
+                                        }}>
+                                          YOU
+                                        </span>
+                                      )}
+                                    </div>
+                                  </td>
+                                  <td style={{ padding: '0.8rem 0.6rem' }}>
+                                    <span style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '0.3rem',
+                                      background: 'rgba(20,40,255,0.06)',
+                                      border: '1px solid rgba(20,40,255,0.22)',
+                                      color: '#6B8CFF',
+                                      padding: '0.22rem 0.65rem',
+                                      borderRadius: 6,
+                                      fontSize: '0.72rem',
+                                      fontWeight: 600
+                                    }}>
+                                      <span>⏳</span> {(!row.tier || row.tier === 'Genesis Node') ? 'Genesis Scout' : row.tier}
+                                    </span>
+                                  </td>
+                                  <td style={{ padding: '0.8rem 0.6rem', textAlign: 'right' }}>
+                                    <span style={{ color: '#FF8A00', fontWeight: 800, fontSize: '0.82rem' }}>
+                                      {lbTab === 'xp'
+                                        ? `${(Number(row.xp_this_period) || 0).toLocaleString()} XP`
+                                        : lbTab === 'commission'
+                                        ? `₦${(Number(row.commission_this_period) || 0).toLocaleString('en-NG')}`
+                                        : `${Number(row.validated_referrals_this_period) || 0} Refs`}
+                                    </span>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+
+                            {!userInTop && userRow && (
+                              <>
+                                <tr>
+                                  <td colSpan={4} style={{ textAlign: 'center', padding: '0.45rem', color: 'rgba(200,215,240,0.4)', fontSize: '0.85rem', letterSpacing: '0.2em' }}>
+                                    ••••••
+                                  </td>
+                                </tr>
+                                <tr
+                                  key={userRow.id || 'my-row'}
+                                  style={{
+                                    borderBottom: '1px solid rgba(200,215,240,0.06)',
+                                    background: 'rgba(255,138,0,0.08)'
+                                  }}
+                                >
+                                  <td style={{ padding: '0.8rem 0.6rem', fontWeight: 700 }}>
+                                    <span style={{ color: '#FF8A00', fontWeight: 800 }}>{myIndexInAll + 1}</span>
+                                  </td>
+                                  <td style={{ padding: '0.8rem 0.6rem' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                                      <div style={{
+                                        width: 32,
+                                        height: 32,
+                                        borderRadius: '50%',
+                                        background: 'rgba(20,40,255,0.12)',
+                                        border: '1px solid rgba(20,40,255,0.25)',
+                                        color: '#6B8CFF',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontSize: '0.72rem',
+                                        fontWeight: 700,
+                                        marginRight: '0.75rem',
+                                        flexShrink: 0
+                                      }}>
+                                        {(userRow.first_name || 'S').trim().slice(0, 2).toUpperCase()}
+                                      </div>
+                                      <span style={{ fontWeight: 700, color: 'var(--white, #fff)' }}>
+                                        {`${userRow.first_name || ''} ${userRow.last_initial || ''}`.trim() || 'Sofian'}
+                                      </span>
+                                      <span style={{
+                                        background: '#FF8A00',
+                                        color: '#fff',
+                                        borderRadius: 4,
+                                        padding: '2px 6px',
+                                        fontSize: '0.62rem',
+                                        fontWeight: 800,
+                                        marginLeft: 6,
+                                        letterSpacing: '0.04em'
+                                      }}>
+                                        YOU
+                                      </span>
+                                    </div>
+                                  </td>
+                                  <td style={{ padding: '0.8rem 0.6rem' }}>
+                                    <span style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '0.3rem',
+                                      background: 'rgba(20,40,255,0.06)',
+                                      border: '1px solid rgba(20,40,255,0.22)',
+                                      color: '#6B8CFF',
+                                      padding: '0.22rem 0.65rem',
+                                      borderRadius: 6,
+                                      fontSize: '0.72rem',
+                                      fontWeight: 600
+                                    }}>
+                                      <span>⏳</span> {(!userRow.tier || userRow.tier === 'Genesis Node') ? 'Genesis Scout' : userRow.tier}
+                                    </span>
+                                  </td>
+                                  <td style={{ padding: '0.8rem 0.6rem', textAlign: 'right' }}>
+                                    <span style={{ color: '#FF8A00', fontWeight: 800, fontSize: '0.82rem' }}>
+                                      {lbTab === 'xp'
+                                        ? `${(Number(userRow.xp_this_period) || 0).toLocaleString()} XP`
+                                        : lbTab === 'commission'
+                                        ? `₦${(Number(userRow.commission_this_period) || 0).toLocaleString('en-NG')}`
+                                        : `${Number(userRow.validated_referrals_this_period) || 0} Refs`}
+                                    </span>
+                                  </td>
+                                </tr>
+                              </>
+                            )}
+                          </>
                         );
-                      })}
+                      })()}
                     </tbody>
                   </table>
                 )}
@@ -2021,6 +2716,51 @@ export default function DashboardClient() {
                   Manage personal details, Nigerian bank settlement info, and security credentials.
                 </p>
               </div>
+
+              {/* Administrative Workspace Switcher Card (for Admins) */}
+              {availableWorkspaces.some((w) => w.id === 'admin') && (
+                <div style={{
+                  background: 'linear-gradient(135deg, rgba(20,40,255,0.12), rgba(255,138,0,0.12))',
+                  border: '1px solid rgba(255,138,0,0.35)',
+                  borderRadius: 10,
+                  padding: '1.25rem 1.5rem',
+                  marginBottom: '1.5rem',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: '1rem'
+                }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 800, fontSize: '0.95rem', color: '#FFB800' }}>
+                      <span>⚡</span> Admin Workspace Console
+                    </div>
+                    <p style={{ fontSize: '0.76rem', color: 'rgba(200,215,240,0.75)', marginTop: '0.25rem', margin: 0, lineHeight: 1.5 }}>
+                      You have administrator access. Switch to the Admin Console to manage students, courses, disbursements, and permissions.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleSwitchWorkspace('admin')}
+                    style={{
+                      background: 'linear-gradient(135deg, #FF8A00, #E07800)',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: 8,
+                      padding: '0.6rem 1.3rem',
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      boxShadow: '0 4px 15px rgba(255,138,0,0.35)'
+                    }}
+                  >
+                    <span>⚡</span> Switch to Admin Console →
+                  </button>
+                </div>
+              )}
 
               {settingsMsg && (
                 <div style={{
@@ -2051,29 +2791,61 @@ export default function DashboardClient() {
                   }}
                 >
                   <h3 style={{ fontSize: '0.95rem', fontWeight: 700, borderBottom: '1px solid rgba(200,215,240,0.1)', paddingBottom: '0.5rem' }}>
-                    Personal & Node Information
+                    Personal &amp; Location Information
                   </h3>
 
+                  {/* Registered Legal Name (Locked / Cannot be edited) */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
                     <div>
-                      <label style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)' }}>First Name</label>
+                      <label style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <span>First Name</span>
+                        <span style={{ fontSize: '0.65rem', color: 'rgba(200,215,240,0.5)' }}>🔒</span>
+                      </label>
                       <input
                         type="text"
-                        value={settingsForm.firstName}
-                        onChange={(e) => setSettingsForm({ ...settingsForm, firstName: e.target.value })}
-                        style={{ width: '100%', background: '#080E1A', border: '1px solid rgba(20,40,255,0.25)', borderRadius: 6, padding: '0.55rem', color: '#fff', fontSize: '0.78rem', marginTop: 4 }}
+                        value={userData?.first_name || settingsForm.firstName}
+                        disabled
+                        title="Registered legal name cannot be edited"
+                        style={{
+                          width: '100%',
+                          background: 'rgba(200,215,240,0.04)',
+                          border: '1px solid rgba(200,215,240,0.12)',
+                          borderRadius: 6,
+                          padding: '0.55rem',
+                          color: 'rgba(200,215,240,0.6)',
+                          fontSize: '0.78rem',
+                          marginTop: 4,
+                          cursor: 'not-allowed'
+                        }}
                       />
                     </div>
                     <div>
-                      <label style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)' }}>Last Name</label>
+                      <label style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <span>Last Name</span>
+                        <span style={{ fontSize: '0.65rem', color: 'rgba(200,215,240,0.5)' }}>🔒</span>
+                      </label>
                       <input
                         type="text"
-                        value={settingsForm.lastName}
-                        onChange={(e) => setSettingsForm({ ...settingsForm, lastName: e.target.value })}
-                        style={{ width: '100%', background: '#080E1A', border: '1px solid rgba(20,40,255,0.25)', borderRadius: 6, padding: '0.55rem', color: '#fff', fontSize: '0.78rem', marginTop: 4 }}
+                        value={userData?.last_name || settingsForm.lastName}
+                        disabled
+                        title="Registered legal name cannot be edited"
+                        style={{
+                          width: '100%',
+                          background: 'rgba(200,215,240,0.04)',
+                          border: '1px solid rgba(200,215,240,0.12)',
+                          borderRadius: 6,
+                          padding: '0.55rem',
+                          color: 'rgba(200,215,240,0.6)',
+                          fontSize: '0.78rem',
+                          marginTop: 4,
+                          cursor: 'not-allowed'
+                        }}
                       />
                     </div>
                   </div>
+                  <p style={{ fontSize: '0.68rem', color: 'rgba(200,215,240,0.55)', margin: '-0.3rem 0 0.2rem', lineHeight: 1.45 }}>
+                    🔒 Registered legal name cannot be edited after onboarding. Contact <a href="mailto:info@node.sofegroup.com" style={{ color: '#FF8A00', textDecoration: 'underline' }}>info@node.sofegroup.com</a> to update.
+                  </p>
 
                   <div>
                     <label style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)' }}>Phone Number</label>
@@ -2085,21 +2857,247 @@ export default function DashboardClient() {
                     />
                   </div>
 
+                  {/* Location Information: Country and State */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
+                    <div>
+                      <label style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)' }}>Country</label>
+                      <input
+                        type="text"
+                        value={settingsForm.country || 'Nigeria'}
+                        onChange={(e) => setSettingsForm({ ...settingsForm, country: e.target.value })}
+                        style={{ width: '100%', background: '#080E1A', border: '1px solid rgba(20,40,255,0.25)', borderRadius: 6, padding: '0.55rem', color: '#fff', fontSize: '0.78rem', marginTop: 4 }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)' }}>State / City</label>
+                      <input
+                        type="text"
+                        value={settingsForm.state || ''}
+                        placeholder="e.g. Lagos, Abuja, Enugu"
+                        onChange={(e) => setSettingsForm({ ...settingsForm, state: e.target.value })}
+                        style={{ width: '100%', background: '#080E1A', border: '1px solid rgba(20,40,255,0.25)', borderRadius: 6, padding: '0.55rem', color: '#fff', fontSize: '0.78rem', marginTop: 4 }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Campus Node (Selected during registration) with WhatsApp Community or Request Card */}
+                  {(() => {
+                    const matchedChapter = chapters.find(
+                      (c) =>
+                        (settingsForm.nodeLabel && c.name?.toLowerCase().trim() === settingsForm.nodeLabel?.toLowerCase().trim()) ||
+                        (myChapter && c.id === myChapter.id) ||
+                        (userData?.chapter_id && c.id === userData.chapter_id) ||
+                        (userData?.node_label && c.name?.toLowerCase().trim() === userData.node_label?.toLowerCase().trim())
+                    );
+                    return (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        <div>
+                          <label style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)', display: 'block', marginBottom: 4 }}>
+                            Campus Node / Institution
+                          </label>
+                          <select
+                            value={
+                              chapters.some((c) => c.name?.toLowerCase().trim() === settingsForm.nodeLabel?.toLowerCase().trim())
+                                ? settingsForm.nodeLabel
+                                : (showCustomCampusInput || (settingsForm.nodeLabel && settingsForm.nodeLabel !== 'online') ? '__custom__' : (settingsForm.nodeLabel === 'online' ? 'Online / Global Node' : ''))
+                            }
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val === '__custom__') {
+                                setShowCustomCampusInput(true);
+                                setSettingsForm({ ...settingsForm, nodeLabel: '' });
+                              } else {
+                                setShowCustomCampusInput(false);
+                                setSettingsForm({ ...settingsForm, nodeLabel: val });
+                                const matched = chapters.find((c) => c.name?.toLowerCase().trim() === val.toLowerCase().trim());
+                                if (matched) setMyChapter(matched);
+                              }
+                            }}
+                            style={{
+                              width: '100%',
+                              background: '#080E1A',
+                              border: '1px solid rgba(20,40,255,0.25)',
+                              borderRadius: 6,
+                              padding: '0.55rem',
+                              color: '#fff',
+                              fontSize: '0.78rem',
+                              marginTop: 4,
+                              cursor: 'pointer'
+                            }}
+                          >
+                            <option value="">-- Select Active Campus Node --</option>
+                            <option value="Online / Global Node">Online / Global Node (Virtual)</option>
+                            {chapters.filter((c) => c.active !== false).map((c) => (
+                              <option key={c.id} value={c.name}>
+                                {c.name} {c.state ? `(${c.state})` : ''}
+                              </option>
+                            ))}
+                            <option value="__custom__">➕ Other / Not Listed (Type campus name)</option>
+                          </select>
+
+                          {/* Custom campus input when 'Other' selected or custom node entered */}
+                          {(showCustomCampusInput || (settingsForm.nodeLabel && !chapters.some((c) => c.name?.toLowerCase().trim() === settingsForm.nodeLabel?.toLowerCase().trim()) && settingsForm.nodeLabel !== 'Online / Global Node' && settingsForm.nodeLabel !== 'online')) && (
+                            <div style={{ marginTop: '0.6rem' }}>
+                              <label style={{ fontSize: '0.7rem', color: '#FFB800', fontWeight: 600 }}>
+                                Enter Your Campus / Institution Name:
+                              </label>
+                              <input
+                                type="text"
+                                value={settingsForm.nodeLabel}
+                                onChange={(e) => setSettingsForm({ ...settingsForm, nodeLabel: e.target.value })}
+                                placeholder="e.g. University of Benin, Covenant University..."
+                                style={{
+                                  width: '100%',
+                                  background: '#080E1A',
+                                  border: '1px solid rgba(255,138,0,0.35)',
+                                  borderRadius: 6,
+                                  padding: '0.55rem',
+                                  color: '#fff',
+                                  fontSize: '0.78rem',
+                                  marginTop: 4
+                                }}
+                              />
+                            </div>
+                          )}
+                          <span style={{ fontSize: '0.66rem', color: 'rgba(200,215,240,0.5)', marginTop: 4, display: 'block' }}>
+                            Choose from existing verified chapters or type your campus to request a community chapter.
+                          </span>
+                        </div>
+
+                        {/* Campus Node WhatsApp Community or Request to Start a Node */}
+                        {matchedChapter && matchedChapter.whatsapp_link ? (
+                          <div style={{
+                            background: 'rgba(37,211,102,0.08)',
+                            border: '1px solid rgba(37,211,102,0.3)',
+                            borderRadius: 8,
+                            padding: '0.85rem 1rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            flexWrap: 'wrap',
+                            gap: '0.75rem'
+                          }}>
+                            <div>
+                              <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#25D366', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                <span>💬</span> {matchedChapter.name} WhatsApp Node
+                              </div>
+                              <p style={{ fontSize: '0.7rem', color: 'rgba(200,215,240,0.7)', margin: '0.2rem 0 0 0', lineHeight: 1.45 }}>
+                                Your official university campus chapter is active. Connect with local peers and attend events.
+                              </p>
+                            </div>
+                            <a
+                              href={matchedChapter.whatsapp_link}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                background: '#25D366',
+                                color: '#062f1a',
+                                fontWeight: 700,
+                                fontSize: '0.74rem',
+                                padding: '0.45rem 1rem',
+                                borderRadius: 20,
+                                textDecoration: 'none',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.35rem',
+                                boxShadow: '0 2px 10px rgba(37,211,102,0.3)'
+                              }}
+                            >
+                              <span>💬</span> Join WhatsApp Node →
+                            </a>
+                          </div>
+                        ) : (
+                          <div style={{
+                            background: 'rgba(255,138,0,0.08)',
+                            border: '1px solid rgba(255,138,0,0.25)',
+                            borderRadius: 8,
+                            padding: '0.85rem 1rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            flexWrap: 'wrap',
+                            gap: '0.75rem'
+                          }}>
+                            <div>
+                              <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#FFB800', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                <span>📢</span> No Active Node on Your Campus Yet?
+                              </div>
+                              <p style={{ fontSize: '0.7rem', color: 'rgba(200,215,240,0.7)', margin: '0.2rem 0 0 0', lineHeight: 1.45 }}>
+                                {settingsForm.nodeLabel && settingsForm.nodeLabel.toLowerCase() !== 'online' ? `No official chapter is registered for "${settingsForm.nodeLabel}" yet.` : 'No official chapter registered for your campus yet.'} You can apply to be a Campus Node Lead and pioneer your school's node!
+                              </p>
+                            </div>
+                            <a
+                              href={`https://wa.me/2349034201114?text=${encodeURIComponent(`Hello Sofe Admin, I would like to request to start a Sofe Node chapter at my campus: ${settingsForm.nodeLabel || 'my institution'}. My name is ${fullName}.`)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                background: 'linear-gradient(135deg, #FF8A00, #E07800)',
+                                color: '#fff',
+                                fontWeight: 700,
+                                fontSize: '0.74rem',
+                                padding: '0.45rem 1rem',
+                                borderRadius: 20,
+                                textDecoration: 'none',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.35rem',
+                                boxShadow: '0 2px 10px rgba(255,138,0,0.3)'
+                              }}
+                            >
+                              <span>🚀</span> Request to Start a Node →
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+
+                  {/* Social Profiles & Web3 Skills */}
+                  <h3 style={{ fontSize: '0.95rem', fontWeight: 700, borderBottom: '1px solid rgba(200,215,240,0.1)', paddingBottom: '0.5rem', marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <span>🌐</span> Social Profiles &amp; Web3 Skills
+                  </h3>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
+                    <div>
+                      <label style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <span style={{ fontWeight: 800 }}>𝕏</span> X (Twitter) Username
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="@username"
+                        value={settingsForm.xHandle || ''}
+                        onChange={(e) => setSettingsForm({ ...settingsForm, xHandle: e.target.value })}
+                        style={{ width: '100%', background: '#080E1A', border: '1px solid rgba(20,40,255,0.25)', borderRadius: 6, padding: '0.55rem', color: '#fff', fontSize: '0.78rem', marginTop: 4 }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <span>💼</span> LinkedIn Username / URL
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. username or in/username"
+                        value={settingsForm.linkedinUsername || ''}
+                        onChange={(e) => setSettingsForm({ ...settingsForm, linkedinUsername: e.target.value })}
+                        style={{ width: '100%', background: '#080E1A', border: '1px solid rgba(20,40,255,0.25)', borderRadius: 6, padding: '0.55rem', color: '#fff', fontSize: '0.78rem', marginTop: 4 }}
+                      />
+                    </div>
+                  </div>
+
                   <div>
-                    <label style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)' }}>Campus Node / Institution</label>
-                    <input
-                      type="text"
-                      value={settingsForm.nodeLabel}
-                      onChange={(e) => setSettingsForm({ ...settingsForm, nodeLabel: e.target.value })}
-                      list="chapterList"
-                      placeholder="e.g. UNILAG, UNN, FUTO, or Other"
-                      style={{ width: '100%', background: '#080E1A', border: '1px solid rgba(20,40,255,0.25)', borderRadius: 6, padding: '0.55rem', color: '#fff', fontSize: '0.78rem', marginTop: 4 }}
+                    <label style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <span>🛠️</span> Skills &amp; Areas of Expertise
+                    </label>
+                    <textarea
+                      rows={2}
+                      placeholder="e.g. Solidity, Smart Contract Auditing, Community Management, UI/UX Design, Rust, Technical Writing"
+                      value={settingsForm.skills || ''}
+                      onChange={(e) => setSettingsForm({ ...settingsForm, skills: e.target.value })}
+                      style={{ width: '100%', background: '#080E1A', border: '1px solid rgba(20,40,255,0.25)', borderRadius: 6, padding: '0.55rem', color: '#fff', fontSize: '0.78rem', marginTop: 4, resize: 'vertical' }}
                     />
-                    <datalist id="chapterList">
-                      {chapters.map((c) => (
-                        <option key={c.id} value={c.name} />
-                      ))}
-                    </datalist>
+                    <span style={{ fontSize: '0.66rem', color: 'rgba(200,215,240,0.5)', marginTop: 2, display: 'block' }}>
+                      Enter skills separated by commas. These will be highlighted on your verified certificates and talent profile.
+                    </span>
                   </div>
 
                   <h3 style={{ fontSize: '0.95rem', fontWeight: 700, borderBottom: '1px solid rgba(200,215,240,0.1)', paddingBottom: '0.5rem', marginTop: '0.5rem' }}>
@@ -2111,7 +3109,7 @@ export default function DashboardClient() {
                     <input
                       type="text"
                       value={settingsForm.bankName}
-                      placeholder="e.g. Access Bank, GTBank, Kuda"
+                      placeholder="e.g. Access Bank, GTBank, Kuda, OPay, PalmPay"
                       onChange={(e) => setSettingsForm({ ...settingsForm, bankName: e.target.value })}
                       style={{ width: '100%', background: '#080E1A', border: '1px solid rgba(20,40,255,0.25)', borderRadius: 6, padding: '0.55rem', color: '#fff', fontSize: '0.78rem', marginTop: 4 }}
                     />
@@ -2124,20 +3122,38 @@ export default function DashboardClient() {
                         type="text"
                         value={settingsForm.accNumber}
                         placeholder="10 digits"
+                        maxLength={10}
                         onChange={(e) => setSettingsForm({ ...settingsForm, accNumber: e.target.value })}
                         style={{ width: '100%', background: '#080E1A', border: '1px solid rgba(20,40,255,0.25)', borderRadius: 6, padding: '0.55rem', color: '#fff', fontSize: '0.78rem', marginTop: 4 }}
                       />
                     </div>
                     <div>
-                      <label style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)' }}>Account Name</label>
+                      <label style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                        <span>Account Name</span>
+                        <span style={{ fontSize: '0.65rem', color: 'rgba(200,215,240,0.5)' }}>🔒</span>
+                      </label>
                       <input
                         type="text"
-                        value={settingsForm.accName}
-                        onChange={(e) => setSettingsForm({ ...settingsForm, accName: e.target.value })}
-                        style={{ width: '100%', background: '#080E1A', border: '1px solid rgba(20,40,255,0.25)', borderRadius: 6, padding: '0.55rem', color: '#fff', fontSize: '0.78rem', marginTop: 4 }}
+                        value={fullName.toUpperCase() || 'REGISTERED ACCOUNT NAME'}
+                        disabled
+                        title="Auto-filled from your registered name — cannot be edited."
+                        style={{
+                          width: '100%',
+                          background: 'rgba(200,215,240,0.04)',
+                          border: '1px solid rgba(200,215,240,0.12)',
+                          borderRadius: 6,
+                          padding: '0.55rem',
+                          color: 'rgba(200,215,240,0.6)',
+                          fontSize: '0.78rem',
+                          marginTop: 4,
+                          cursor: 'not-allowed'
+                        }}
                       />
                     </div>
                   </div>
+                  <span style={{ fontSize: '0.66rem', color: 'rgba(200,215,240,0.5)', marginTop: -6, display: 'block' }}>
+                    Auto-filled from your registered name — cannot be edited.
+                  </span>
 
                   <button
                     type="submit"
@@ -2158,9 +3174,8 @@ export default function DashboardClient() {
                   </button>
                 </form>
 
-                {/* Password Change Form */}
-                <form
-                  onSubmit={handleUpdatePassword}
+                {/* Sign-in Methods & Password Form */}
+                <div
                   style={{
                     background: '#0D1526',
                     border: '1px solid rgba(20,40,255,0.2)',
@@ -2168,74 +3183,301 @@ export default function DashboardClient() {
                     padding: '1.5rem',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '1rem',
+                    gap: '1.15rem',
                     height: 'fit-content'
                   }}
                 >
-                  <h3 style={{ fontSize: '0.95rem', fontWeight: 700, borderBottom: '1px solid rgba(200,215,240,0.1)', paddingBottom: '0.5rem' }}>
-                    Security & Password
-                  </h3>
+                  <div>
+                    <h3 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0 }}>
+                      Sign-in Methods &amp; Security
+                    </h3>
+                    <p style={{ fontSize: '0.74rem', color: 'rgba(200,215,240,0.65)', marginTop: '0.3rem', lineHeight: 1.5 }}>
+                      Manage how you sign in to Sofe Node. Add backup methods so you always have access.
+                    </p>
+                  </div>
 
+                  {/* Connected Sign-In Options */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                    {/* Option 1: Google Sign-in */}
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '0.75rem 0.95rem',
+                      background: '#080E1A',
+                      border: '1px solid rgba(20,40,255,0.2)',
+                      borderRadius: 8
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <div style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: 8,
+                          background: 'rgba(255,255,255,0.06)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0
+                        }}>
+                          <svg width="18" height="18" viewBox="0 0 24 24">
+                            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                          </svg>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#fff' }}>Google Sign-In</div>
+                          <div style={{ fontSize: '0.7rem', color: 'rgba(200,215,240,0.6)' }}>
+                            {currentUser?.providerData?.find(p => p.providerId === 'google.com')?.email || (currentUser?.providerData?.some(p => p.providerId === 'google.com') ? currentUser?.email : 'Not connected')}
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        {currentUser?.providerData?.some(p => p.providerId === 'google.com') ? (
+                          <span style={{
+                            fontSize: '0.65rem',
+                            fontWeight: 700,
+                            padding: '0.22rem 0.55rem',
+                            borderRadius: 12,
+                            background: 'rgba(0,200,100,0.15)',
+                            border: '1px solid rgba(0,200,100,0.35)',
+                            color: '#00c864',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            ✓ Connected
+                          </span>
+                        ) : (
+                          <span style={{
+                            fontSize: '0.65rem',
+                            fontWeight: 600,
+                            padding: '0.22rem 0.55rem',
+                            borderRadius: 12,
+                            background: 'rgba(200,215,240,0.06)',
+                            color: 'rgba(200,215,240,0.5)',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            Not Linked
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Option 2: Email & Password */}
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '0.75rem 0.95rem',
+                      background: '#080E1A',
+                      border: '1px solid rgba(20,40,255,0.2)',
+                      borderRadius: 8
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                        <div style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: 8,
+                          background: 'rgba(20,40,255,0.12)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '1rem',
+                          flexShrink: 0
+                        }}>
+                          🔑
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#fff' }}>Email &amp; Password</div>
+                          <div style={{ fontSize: '0.7rem', color: 'rgba(200,215,240,0.6)' }}>
+                            {currentUser?.email}
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        {currentUser?.providerData?.some(p => p.providerId === 'password') ? (
+                          <span style={{
+                            fontSize: '0.65rem',
+                            fontWeight: 700,
+                            padding: '0.22rem 0.55rem',
+                            borderRadius: 12,
+                            background: 'rgba(0,200,100,0.15)',
+                            border: '1px solid rgba(0,200,100,0.35)',
+                            color: '#00c864',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            ✓ Active
+                          </span>
+                        ) : (
+                          <span style={{
+                            fontSize: '0.65rem',
+                            fontWeight: 600,
+                            padding: '0.22rem 0.55rem',
+                            borderRadius: 12,
+                            background: 'rgba(255,138,0,0.12)',
+                            border: '1px solid rgba(255,138,0,0.3)',
+                            color: '#FFB800',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            Not Set
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Password Feedback */}
                   {pwdMsg && (
                     <div style={{
-                      padding: '0.6rem 0.8rem',
+                      padding: '0.65rem 0.85rem',
                       borderRadius: 6,
                       fontSize: '0.74rem',
-                      background: pwdMsg.type === 'success' ? 'rgba(0,200,100,0.1)' : 'rgba(255,80,80,0.1)',
-                      color: pwdMsg.type === 'success' ? '#00c864' : '#ff7070'
+                      background: pwdMsg.type === 'success' ? 'rgba(0,200,100,0.12)' : 'rgba(255,80,80,0.12)',
+                      color: pwdMsg.type === 'success' ? '#00c864' : '#ff7070',
+                      border: `1px solid ${pwdMsg.type === 'success' ? 'rgba(0,200,100,0.3)' : 'rgba(255,80,80,0.3)'}`
                     }}>
                       {pwdMsg.text}
                     </div>
                   )}
 
-                  <div>
-                    <label style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)' }}>Current Password</label>
-                    <input
-                      type="password"
-                      value={pwdForm.oldPwd}
-                      onChange={(e) => setPwdForm({ ...pwdForm, oldPwd: e.target.value })}
-                      style={{ width: '100%', background: '#080E1A', border: '1px solid rgba(20,40,255,0.25)', borderRadius: 6, padding: '0.55rem', color: '#fff', fontSize: '0.78rem', marginTop: 4 }}
-                    />
-                  </div>
+                  {/* Password setup notice for Google-only users */}
+                  {!currentUser?.providerData?.some(p => p.providerId === 'password') && (
+                    <div style={{
+                      background: 'rgba(20,40,255,0.06)',
+                      border: '1px solid rgba(20,40,255,0.22)',
+                      borderRadius: 8,
+                      padding: '0.95rem'
+                    }}>
+                      <div style={{ fontWeight: 700, fontSize: '0.82rem', color: '#FFB800', marginBottom: '0.3rem' }}>
+                        ➕ Add a password to your account
+                      </div>
+                      <p style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)', lineHeight: 1.5, margin: 0 }}>
+                        Currently you sign in with Google. Set a password as a backup so you can access your account even if Google is unavailable.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={handleSendPasswordReset}
+                        disabled={pwdLoading}
+                        style={{
+                          marginTop: '0.75rem',
+                          background: '#1428FF',
+                          color: '#fff',
+                          border: 'none',
+                          borderRadius: 6,
+                          padding: '0.45rem 1rem',
+                          fontSize: '0.74rem',
+                          fontWeight: 700,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {pwdLoading ? 'Sending link...' : 'Send password setup link →'}
+                      </button>
+                    </div>
+                  )}
 
-                  <div>
-                    <label style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)' }}>New Password</label>
-                    <input
-                      type="password"
-                      value={pwdForm.newPwd}
-                      onChange={(e) => setPwdForm({ ...pwdForm, newPwd: e.target.value })}
-                      style={{ width: '100%', background: '#080E1A', border: '1px solid rgba(20,40,255,0.25)', borderRadius: 6, padding: '0.55rem', color: '#fff', fontSize: '0.78rem', marginTop: 4 }}
-                    />
-                  </div>
+                  {/* Change Password Form */}
+                  <form onSubmit={handleUpdatePassword} style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                    <div style={{ fontSize: '0.84rem', fontWeight: 700, borderTop: '1px solid rgba(200,215,240,0.1)', paddingTop: '0.85rem' }}>
+                      Change Account Password
+                    </div>
 
-                  <div>
-                    <label style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)' }}>Repeat New Password</label>
-                    <input
-                      type="password"
-                      value={pwdForm.repeatPwd}
-                      onChange={(e) => setPwdForm({ ...pwdForm, repeatPwd: e.target.value })}
-                      style={{ width: '100%', background: '#080E1A', border: '1px solid rgba(20,40,255,0.25)', borderRadius: 6, padding: '0.55rem', color: '#fff', fontSize: '0.78rem', marginTop: 4 }}
-                    />
-                  </div>
+                    <div>
+                      <label style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)' }}>Current Password</label>
+                      <input
+                        type="password"
+                        value={pwdForm.oldPwd}
+                        onChange={(e) => setPwdForm({ ...pwdForm, oldPwd: e.target.value })}
+                        placeholder="Enter current password"
+                        style={{ width: '100%', background: '#080E1A', border: '1px solid rgba(20,40,255,0.25)', borderRadius: 6, padding: '0.55rem', color: '#fff', fontSize: '0.78rem', marginTop: 4 }}
+                      />
+                    </div>
 
-                  <button
-                    type="submit"
-                    disabled={pwdLoading}
-                    style={{
-                      background: 'rgba(200,215,240,0.15)',
-                      border: '1px solid rgba(200,215,240,0.25)',
-                      color: '#fff',
-                      borderRadius: 6,
-                      padding: '0.65rem',
-                      fontSize: '0.8rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      marginTop: '0.5rem'
-                    }}
-                  >
-                    {pwdLoading ? 'Updating...' : 'Update Password'}
-                  </button>
-                </form>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.8rem' }}>
+                      <div>
+                        <label style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)' }}>New Password</label>
+                        <input
+                          type="password"
+                          value={pwdForm.newPwd}
+                          onChange={(e) => setPwdForm({ ...pwdForm, newPwd: e.target.value })}
+                          placeholder="Min 8 characters"
+                          style={{ width: '100%', background: '#080E1A', border: '1px solid rgba(20,40,255,0.25)', borderRadius: 6, padding: '0.55rem', color: '#fff', fontSize: '0.78rem', marginTop: 4 }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)' }}>Repeat Password</label>
+                        <input
+                          type="password"
+                          value={pwdForm.repeatPwd}
+                          onChange={(e) => setPwdForm({ ...pwdForm, repeatPwd: e.target.value })}
+                          placeholder="Repeat new password"
+                          style={{ width: '100%', background: '#080E1A', border: '1px solid rgba(20,40,255,0.25)', borderRadius: 6, padding: '0.55rem', color: '#fff', fontSize: '0.78rem', marginTop: 4 }}
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.3rem' }}>
+                      <button
+                        type="button"
+                        onClick={handleSendPasswordReset}
+                        disabled={pwdLoading}
+                        style={{ background: 'none', border: 'none', color: '#FF8A00', fontSize: '0.72rem', cursor: 'pointer', padding: 0, textDecoration: 'underline' }}
+                      >
+                        Forgot password? Send reset link →
+                      </button>
+
+                      <button
+                        type="submit"
+                        disabled={pwdLoading}
+                        style={{
+                          background: 'rgba(20,40,255,0.2)',
+                          border: '1px solid #1428FF',
+                          color: '#fff',
+                          borderRadius: 6,
+                          padding: '0.5rem 1rem',
+                          fontSize: '0.76rem',
+                          fontWeight: 700,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {pwdLoading ? 'Updating...' : 'Update Password'}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+
+              {/* Danger Zone (Delete Account - MUST BE LAST) */}
+              <div style={{
+                marginTop: '2rem',
+                background: 'rgba(255,60,60,0.05)',
+                border: '1px solid rgba(255,80,80,0.3)',
+                borderRadius: 10,
+                padding: '1.5rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#ff6060', fontWeight: 800, fontSize: '0.95rem' }}>
+                  <span>⚠️</span> Danger Zone
+                </div>
+                <p style={{ fontSize: '0.78rem', color: 'rgba(200,215,240,0.7)', marginTop: '0.4rem', lineHeight: 1.55 }}>
+                  Deleting your account is permanent and cannot be undone. All your course progress, certificates, rewards, and affiliate earnings will be permanently erased.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleDeleteAccount}
+                  style={{
+                    marginTop: '1rem',
+                    background: 'rgba(255,60,60,0.15)',
+                    border: '1px solid rgba(255,80,80,0.5)',
+                    color: '#ff7070',
+                    borderRadius: 6,
+                    padding: '0.55rem 1.25rem',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  🗑️ Delete My Account
+                </button>
               </div>
             </section>
           )}
@@ -2710,17 +3952,17 @@ export default function DashboardClient() {
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.75rem' }}>
-                <div style={{ background: '#0D1526', border: '1px solid rgba(0,200,100,0.25)', borderRadius: 10, padding: '1.2rem' }}>
+                <div className="dash-card dash-partner-stat-box" style={{ background: '#0D1526', border: '1px solid rgba(0,200,100,0.25)', borderRadius: 10, padding: '1.2rem' }}>
                   <div style={{ fontSize: '0.68rem', color: 'rgba(200,215,240,0.6)', textTransform: 'uppercase', fontWeight: 600 }}>Sponsored Scholars</div>
                   <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#fff', marginTop: '0.3rem' }}>{partnerStudents.length}</div>
                 </div>
-                <div style={{ background: '#0D1526', border: '1px solid rgba(0,200,100,0.25)', borderRadius: 10, padding: '1.2rem' }}>
+                <div className="dash-card dash-partner-stat-box" style={{ background: '#0D1526', border: '1px solid rgba(0,200,100,0.25)', borderRadius: 10, padding: '1.2rem' }}>
                   <div style={{ fontSize: '0.68rem', color: 'rgba(200,215,240,0.6)', textTransform: 'uppercase', fontWeight: 600 }}>Completion Rate</div>
                   <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#00c864', marginTop: '0.3rem' }}>
                     {partnerStudents.length > 0 ? Math.round((partnerStudents.filter((s) => s.foundation_complete).length / partnerStudents.length) * 100) : 0}%
                   </div>
                 </div>
-                <div style={{ background: '#0D1526', border: '1px solid rgba(0,200,100,0.25)', borderRadius: 10, padding: '1.2rem' }}>
+                <div className="dash-card dash-partner-stat-box" style={{ background: '#0D1526', border: '1px solid rgba(0,200,100,0.25)', borderRadius: 10, padding: '1.2rem' }}>
                   <div style={{ fontSize: '0.68rem', color: 'rgba(200,215,240,0.6)', textTransform: 'uppercase', fontWeight: 600 }}>Career Placements</div>
                   <div style={{ fontSize: '1.5rem', fontWeight: 800, color: '#FFB800', marginTop: '0.3rem' }}>
                     {partnerStudents.filter((s) => s.career_enrolled).length}
@@ -2739,7 +3981,7 @@ export default function DashboardClient() {
                 </div>
                 <h2 style={{ fontSize: '1.3rem', fontWeight: 800, marginTop: '0.2rem' }}>Sponsored Learners Directory</h2>
               </div>
-              <div style={{ background: '#0D1526', border: '1px solid rgba(0,200,100,0.25)', borderRadius: 12, padding: '1.25rem', overflowX: 'auto' }}>
+              <div className="dash-card dash-table-card" style={{ background: '#0D1526', border: '1px solid rgba(0,200,100,0.25)', borderRadius: 12, padding: '1.25rem', overflowX: 'auto' }}>
                 {partnerStudents.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '2rem', color: 'rgba(200,215,240,0.6)' }}>
                     No students currently mapped under your organization's cohort.
@@ -3339,19 +4581,6 @@ export default function DashboardClient() {
             </button>
           );
         })}
-        {availableWorkspaces.length > 1 && (
-          <button
-            onClick={() => {
-              const nextIdx = (availableWorkspaces.findIndex((w) => w.id === activeWorkspace) + 1) % availableWorkspaces.length;
-              handleSwitchWorkspace(availableWorkspaces[nextIdx].id);
-            }}
-            className="dash-dock-item"
-            title="Switch Workspace"
-          >
-            <span className="dash-dock-icon">🔄</span>
-            <span>Switch</span>
-          </button>
-        )}
       </div>
     </div>
   );

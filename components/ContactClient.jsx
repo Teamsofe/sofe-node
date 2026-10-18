@@ -157,7 +157,7 @@ export default function ContactClient() {
 
             {status.error && (
               <div style={{ background: 'rgba(239,68,68,.1)', border: '1px solid rgba(239,68,68,.3)', borderRadius: '8px', padding: '14px 18px', marginTop: '16px', fontSize: '.85rem', color: '#f87171', display: 'flex', alignItems: 'center', gap: '.6rem' }}>
-                <span>✕</span> {status.error} — email us at <a href="mailto:info@sofegroup.com" style={{ color: '#f87171', textDecoration: 'underline', marginLeft: '4px' }}>info@sofegroup.com</a>
+                <span>✕</span> {status.error} — email us at <a href="mailto:info@node.sofegroup.com" style={{ color: '#f87171', textDecoration: 'underline', marginLeft: '4px' }}>info@node.sofegroup.com</a>
               </div>
             )}
           </form>
@@ -176,7 +176,7 @@ export default function ContactClient() {
               <div style={{ color: 'var(--blue)', fontSize: '1.5rem', marginBottom: '.6rem' }}>✉️</div>
               <h4 style={{ color: 'var(--white)', fontSize: '1.1rem', marginBottom: '.4rem' }}>Direct Email</h4>
               <p style={{ color: 'var(--muted)', fontSize: '.88rem', lineHeight: 1.6 }}>
-                General inquiries: <a href="mailto:info@sofegroup.com" style={{ color: 'var(--blue)', textDecoration: 'none' }}>info@sofegroup.com</a><br />
+                General inquiries: <a href="mailto:info@node.sofegroup.com" style={{ color: 'var(--blue)', textDecoration: 'none' }}>info@node.sofegroup.com</a><br />
                 Partnerships: <a href="mailto:partners@sofegroup.com" style={{ color: 'var(--blue)', textDecoration: 'none' }}>partners@sofegroup.com</a>
               </p>
             </div>

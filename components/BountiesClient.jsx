@@ -119,19 +119,19 @@ export default function BountiesClient() {
   });
 
   return (
-    <>
+    <div className="bounties-page-root" style={{ background: 'var(--black)', minHeight: '100vh', color: 'var(--white)' }}>
       <link rel="stylesheet" href="/css/bounties.css" />
 
       {/* ── HERO ── */}
-      <section className="bounty-hero" style={{ padding: '8rem 5vw 4rem', textAlign: 'center' }}>
+      <section className="bounty-hero" style={{ padding: '9.5rem 5vw 4rem', textAlign: 'center' }}>
         <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-          <div style={{ display: 'inline-block', background: 'rgba(20,40,255,.12)', color: '#6b8cff', border: '1px solid rgba(20,40,255,.3)', padding: '.35rem 1rem', borderRadius: '20px', fontSize: '.78rem', fontWeight: 700, textTransform: 'uppercase', marginBottom: '1.2rem' }}>
+          <div style={{ display: 'inline-block', background: 'rgba(20,40,255,.12)', color: 'var(--blue)', border: '1px solid rgba(20,40,255,.3)', padding: '.35rem 1rem', borderRadius: '20px', fontSize: '.78rem', fontWeight: 700, textTransform: 'uppercase', marginBottom: '1.2rem' }}>
             Earn On-Chain Rewards
           </div>
-          <h1 style={{ fontSize: 'clamp(2.2rem, 4.5vw, 3.6rem)', fontWeight: 800, lineHeight: 1.15, marginBottom: '1.2rem' }}>
+          <h1 style={{ fontSize: 'clamp(2.2rem, 4.5vw, 3.6rem)', fontWeight: 800, lineHeight: 1.15, marginBottom: '1.2rem', color: 'var(--white)' }}>
             Sofe Node <span style={{ color: 'var(--orange)' }}>Bounty</span> Campaigns
           </h1>
-          <p style={{ color: 'var(--muted)', fontSize: '1rem', lineHeight: 1.7, marginBottom: '2rem' }}>
+          <p style={{ color: 'var(--muted)', fontSize: '1rem', lineHeight: 1.7, maxWidth: '680px', margin: '0 auto 2rem', textAlign: 'center' }}>
             Contribute to leading Web3 protocols, complete technical and creative quests, build your on-chain reputation, and earn bounties paid in crypto &amp; fiat.
           </p>
 
@@ -161,16 +161,18 @@ export default function BountiesClient() {
                 <button
                   key={cat}
                   onClick={() => setCategory(cat)}
+                  className={`bounty-cat-btn ${category === cat ? 'active' : ''}`}
                   style={{
                     padding: '.5rem 1.1rem',
                     borderRadius: '20px',
                     border: category === cat ? '1px solid var(--blue)' : '1px solid var(--border)',
                     background: category === cat ? 'var(--blue)' : 'var(--panel)',
-                    color: '#fff',
+                    color: category === cat ? '#ffffff' : 'var(--white)',
                     fontSize: '.8rem',
                     fontWeight: 600,
                     cursor: 'pointer',
-                    textTransform: 'capitalize'
+                    textTransform: 'capitalize',
+                    transition: 'all 0.2s ease'
                   }}
                 >
                   {cat}
@@ -183,7 +185,17 @@ export default function BountiesClient() {
               placeholder="Search bounties…"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              style={{ padding: '.6rem 1.2rem', background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: '25px', color: '#fff', fontSize: '.85rem', width: '280px' }}
+              className="bounty-search-input"
+              style={{
+                padding: '.6rem 1.2rem',
+                background: 'var(--panel)',
+                border: '1px solid var(--border)',
+                borderRadius: '25px',
+                color: 'var(--white)',
+                fontSize: '.85rem',
+                width: '280px',
+                outline: 'none'
+              }}
             />
           </div>
 
@@ -197,10 +209,10 @@ export default function BountiesClient() {
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.8rem' }}>
               {filtered.map(b => (
-                <div key={b.id} style={{ background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: '12px', padding: '2rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                <div key={b.id} className="bounty-card" style={{ background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: '12px', padding: '2rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', transition: 'border-color 0.2s, transform 0.2s' }}>
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                      <span style={{ background: 'rgba(20,40,255,.15)', color: '#6b8cff', padding: '.25rem .7rem', borderRadius: '5px', fontSize: '.72rem', fontWeight: 700, textTransform: 'uppercase' }}>
+                      <span style={{ background: 'rgba(20,40,255,.12)', color: 'var(--blue)', border: '1px solid rgba(20,40,255,.25)', padding: '.25rem .7rem', borderRadius: '5px', fontSize: '.72rem', fontWeight: 700, textTransform: 'uppercase' }}>
                         {b.category || 'General'}
                       </span>
                       <span style={{ fontSize: '.78rem', color: 'var(--muted)' }}>
@@ -242,7 +254,7 @@ export default function BountiesClient() {
       {/* CREATE BOUNTY MODAL (FOR PROTOCOL PARTNERS) */}
       {showCreateModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-          <div style={{ background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: '14px', maxWidth: '600px', width: '100%', padding: '2rem', maxHeight: '90vh', overflowY: 'auto' }}>
+          <div className="bounty-modal" style={{ background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: '14px', maxWidth: '600px', width: '100%', padding: '2rem', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h3 style={{ fontSize: '1.3rem', fontWeight: 700, color: 'var(--white)' }}>Post Protocol Bounty</h3>
               <button onClick={() => setShowCreateModal(false)} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
@@ -263,7 +275,8 @@ export default function BountiesClient() {
                   value={newBounty.title}
                   onChange={e => setNewBounty({ ...newBounty, title: e.target.value })}
                   placeholder="e.g. Build an Open-Source Staking Dashboard"
-                  style={{ width: '100%', padding: '.75rem', background: 'var(--deep)', border: '1px solid var(--border)', borderRadius: '6px', color: '#fff' }}
+                  className="bounty-input"
+                  style={{ width: '100%', padding: '.75rem', background: 'var(--deep)', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--white)' }}
                 />
               </div>
 
@@ -273,7 +286,8 @@ export default function BountiesClient() {
                   <select
                     value={newBounty.category}
                     onChange={e => setNewBounty({ ...newBounty, category: e.target.value })}
-                    style={{ width: '100%', padding: '.75rem', background: 'var(--deep)', border: '1px solid var(--border)', borderRadius: '6px', color: '#fff' }}
+                    className="bounty-input"
+                    style={{ width: '100%', padding: '.75rem', background: 'var(--deep)', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--white)' }}
                   >
                     <option value="dev">Development</option>
                     <option value="design">Design / UI</option>
@@ -289,7 +303,8 @@ export default function BountiesClient() {
                     value={newBounty.reward_usd}
                     onChange={e => setNewBounty({ ...newBounty, reward_usd: e.target.value })}
                     placeholder="500"
-                    style={{ width: '100%', padding: '.75rem', background: 'var(--deep)', border: '1px solid var(--border)', borderRadius: '6px', color: '#fff' }}
+                    className="bounty-input"
+                    style={{ width: '100%', padding: '.75rem', background: 'var(--deep)', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--white)' }}
                   />
                 </div>
               </div>
@@ -300,7 +315,8 @@ export default function BountiesClient() {
                   type="date"
                   value={newBounty.deadline}
                   onChange={e => setNewBounty({ ...newBounty, deadline: e.target.value })}
-                  style={{ width: '100%', padding: '.75rem', background: 'var(--deep)', border: '1px solid var(--border)', borderRadius: '6px', color: '#fff' }}
+                  className="bounty-input"
+                  style={{ width: '100%', padding: '.75rem', background: 'var(--deep)', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--white)' }}
                 />
               </div>
 
@@ -312,7 +328,8 @@ export default function BountiesClient() {
                   value={newBounty.description}
                   onChange={e => setNewBounty({ ...newBounty, description: e.target.value })}
                   placeholder="Outline the scope and submission instructions..."
-                  style={{ width: '100%', padding: '.75rem', background: 'var(--deep)', border: '1px solid var(--border)', borderRadius: '6px', color: '#fff' }}
+                  className="bounty-input"
+                  style={{ width: '100%', padding: '.75rem', background: 'var(--deep)', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--white)' }}
                 />
               </div>
 
@@ -327,6 +344,6 @@ export default function BountiesClient() {
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }

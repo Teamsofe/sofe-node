@@ -24,6 +24,11 @@ export default function RootLayout({ children }) {
           rel="stylesheet"
         />
         <link rel="icon" href="/images/favicon.ico" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{if(location.pathname!=='/')return;var seen=sessionStorage.getItem('sofe_node_intro_seen');var isReplay=location.search.indexOf('intro')!==-1||location.search.indexOf('replay')!==-1;if(!isReplay&&seen)return;if(!isReplay&&window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;document.documentElement.setAttribute('data-sofe-intro','pending');window.__sofeIntroFailsafe=setTimeout(function(){document.documentElement.removeAttribute('data-sofe-intro')},6000)}catch(e){}})();`
+          }}
+        />
       </head>
       <body>
         <HexCanvas />

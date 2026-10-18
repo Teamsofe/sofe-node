@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import SofeIntro from './SofeIntro';
 
 export default function HomeClient() {
   const [activeTab, setActiveTab] = useState('b2c');
@@ -35,19 +36,23 @@ export default function HomeClient() {
 
   return (
     <>
+      <SofeIntro />
       {/* ── HERO ─────────────────────────────────────────────────────── */}
-      <section id="hero">
+      <section id="hero" data-intro-hero>
         <div className="hero-content">
           <div className="hero-tag">Sofe Node &middot; A Sofe Group Company</div>
-          <h1>Africa&apos;s <em>Distribution</em> &amp;<br />Web3 Talent Platform.</h1>
+          <h1 className="hero-title-2lines">
+            <span className="hero-line-1">Africa&apos;s <em>Web3 Talent &amp;</em></span>
+            <span className="hero-line-2"><em>Distribution</em> Engine</span>
+          </h1>
           <p className="hero-sub">
-            For protocols: market entry, active users and retention.<br />
+            For Ecosystems: market entry, active users and retention.<br />
             For talent: learn, earn, build reputation, and get rewarded.
           </p>
           <p className="hero-tagline">Validating Talent. Enhancing Growth.</p>
           <div className="hero-btns">
-            <Link href="/academy" className="btn-primary">Get Started Today</Link>
-            <Link href="/services/partners" className="btn-outline">Scale in Africa</Link>
+            <Link href="/for-talents" className="btn-primary">Get Started Today</Link>
+            <Link href="/ecosystem" className="btn-outline">Scale in Africa</Link>
           </div>
         </div>
       </section>
@@ -58,12 +63,13 @@ export default function HomeClient() {
           <div className="trust-label">Trusted by</div>
           <div className="trust-track">
             <div className="trust-scroll">
-              {['CoinW', 'Rally', 'CoinEx', '3.0 Verse', 'CoinW', 'Rally', 'CoinEx', '3.0 Verse'].map((name, i) => (
-                <div className="trust-item" key={i}>
-                  <div className="t-dot" />
-                  <span>{name}</span>
-                </div>
-              ))}
+              <div className="trust-item"><img src="/images/Partners/SofeNodeCoinW.png" alt="CoinW" style={{ height: '32px', maxHeight: '32px', width: 'auto', maxWidth: '120px', objectFit: 'contain' }} /></div>
+              <div className="trust-item"><img src="/images/Partners/SofeNodeRally.png" alt="Rally" style={{ height: '32px', maxHeight: '32px', width: 'auto', maxWidth: '120px', objectFit: 'contain' }} /></div>
+              <div className="trust-item"><img src="/images/Partners/SofeNodeCoinEx.png" alt="CoinEx" style={{ height: '32px', maxHeight: '32px', width: 'auto', maxWidth: '120px', objectFit: 'contain' }} /></div>
+              {/* Set 2 — duplicate for seamless loop */}
+              <div className="trust-item"><img src="/images/Partners/SofeNodeCoinW.png" alt="CoinW" style={{ height: '32px', maxHeight: '32px', width: 'auto', maxWidth: '120px', objectFit: 'contain' }} /></div>
+              <div className="trust-item"><img src="/images/Partners/SofeNodeRally.png" alt="Rally" style={{ height: '32px', maxHeight: '32px', width: 'auto', maxWidth: '120px', objectFit: 'contain' }} /></div>
+              <div className="trust-item"><img src="/images/Partners/SofeNodeCoinEx.png" alt="CoinEx" style={{ height: '32px', maxHeight: '32px', width: 'auto', maxWidth: '120px', objectFit: 'contain' }} /></div>
             </div>
           </div>
         </div>
@@ -164,7 +170,7 @@ export default function HomeClient() {
         <h2>Built for <em>Protocols</em> &amp; People</h2>
         <div className="vp-tabs">
           <button className={`vp-tab${activeTab === 'b2c' ? ' active' : ''}`} onClick={() => setActiveTab('b2c')}>For Talent (B2C)</button>
-          <button className={`vp-tab${activeTab === 'b2b' ? ' active' : ''}`} onClick={() => setActiveTab('b2b')}>For Partners (B2B)</button>
+          <button className={`vp-tab${activeTab === 'b2b' ? ' active' : ''}`} onClick={() => setActiveTab('b2b')}>For Ecosystems (B2B)</button>
         </div>
 
         {activeTab === 'b2c' && (
@@ -214,7 +220,7 @@ export default function HomeClient() {
               ))}
             </div>
             <div style={{ marginTop: '2rem' }}>
-              <Link href="/services/partners" className="btn-primary">Scale in Africa &rarr;</Link>
+              <Link href="/ecosystem" className="btn-primary">Scale in Africa &rarr;</Link>
             </div>
           </div>
         )}
@@ -346,7 +352,7 @@ export default function HomeClient() {
         </div>
         <div style={{ marginTop: '2rem', textAlign: 'center' }} className="reveal">
           <p style={{ fontFamily: 'Poppins,sans-serif', fontSize: '.88rem', fontWeight: 300, color: 'var(--muted)', marginBottom: '1.2rem' }}>Interested in partnering with Sofe Node?</p>
-          <Link href="/services/partners#community" className="btn-outline">Become a Community Partner &rarr;</Link>
+          <Link href="/ecosystem#community" className="btn-outline">Become an Ecosystem Partner &rarr;</Link>
         </div>
       </section>
 

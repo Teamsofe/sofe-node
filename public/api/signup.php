@@ -137,7 +137,7 @@ ok([
         'node'        => $node,
         'referral_id' => $newRefId,
         'xp_total'    => 0,
-        'xp_tier'     => 'Genesis Node',
+        'xp_tier'     => 'Genesis Scout',
         'role'        => 'student',
         'wallet'      => 0.00,
         'unread_notifs' => 1,

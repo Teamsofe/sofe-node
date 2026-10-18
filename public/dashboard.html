@@ -988,7 +988,7 @@ body.light .hamburger span { background: var(--white); }
             <!-- Tier + XP -->
             <div style="min-width:0;flex:1;">
               <div style="display:flex;align-items:center;gap:.3rem;font-size:.58rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--orange);margin-bottom:.18rem;">
-                <span id="xpWidgetTierIcon">🌱</span><span id="xpWidgetTierName">Genesis Node</span>
+                <span id="xpWidgetTierIcon">🌱</span><span id="xpWidgetTierName">Genesis Scout</span>
               </div>
               <div style="font-size:1rem;font-weight:800;color:var(--white);line-height:1;display:flex;align-items:baseline;gap:.25rem;">
                 <span id="xpWidgetTotal">0</span><span style="font-size:.58rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;">XP</span>
@@ -1238,7 +1238,7 @@ body.light .hamburger span { background: var(--white); }
         <div class="sofian-badges-grid" id="sofianBadgesGrid">
           <div class="sofian-badge-card badge-earned" id="sbadge-genesis">
             <div class="sofian-badge-icon">🌱</div>
-            <div class="sofian-badge-name">Genesis Node</div>
+            <div class="sofian-badge-name">Genesis Scout</div>
             <div class="sofian-badge-range">0 – 499 XP</div>
             <div class="sofian-badge-desc">Create your Sofe Node account. Welcome to the network — your journey begins here.</div>
             <span class="sofian-badge-status-tag sbt-earned">✓ Earned on signup</span>
@@ -2090,7 +2090,7 @@ onAuthStateChanged(auth, async function(user) {
     
     var isAdmin  = u.role === 'admin';
     var adminLbl = isAdmin ? (u.admin_role||'admin').replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase()) : '';
-    var XP_TIERS = [{name:'Genesis Node',min:0,icon:'🌱'},{name:'Validator',min:500,icon:'⚡'},{name:'Crypto Knight',min:1500,icon:'⚔️'},{name:'Chain Architect',min:4000,icon:'🔥'},{name:'Node Operator',min:8000,icon:'🏆'},{name:'Node Sovereign',min:15000,icon:'👑'}];
+    var XP_TIERS = [{name:'Genesis Scout',min:0,icon:'🌱'},{name:'Validator',min:500,icon:'⚡'},{name:'Crypto Knight',min:1500,icon:'⚔️'},{name:'Chain Architect',min:4000,icon:'🔥'},{name:'Node Operator',min:8000,icon:'🏆'},{name:'Node Sovereign',min:15000,icon:'👑'}];
     var xp   = Number(u.xp_total)||0;
     var tier = XP_TIERS.slice().reverse().find(t => xp>=t.min)||XP_TIERS[0];
     var nextT = XP_TIERS[XP_TIERS.indexOf(tier)+1];
@@ -2386,7 +2386,7 @@ window.loadXpLeaderboard = async function() {
     const rows = snap.docs.sort((a, b) => (Number(b.data().xp_this_period)||0) - (Number(a.data().xp_this_period)||0)).slice(0, 20);
     
     const XP_TIERS_LB = [
-      {name:'Genesis Node',min:0,icon:'🌱'},{name:'Validator',min:500,icon:'⚡'},
+      {name:'Genesis Scout',min:0,icon:'🌱'},{name:'Validator',min:500,icon:'⚡'},
       {name:'Crypto Knight',min:1500,icon:'⚔️'},{name:'Chain Architect',min:4000,icon:'🔥'},
       {name:'Node Operator',min:8000,icon:'🏆'},{name:'Node Sovereign',min:15000,icon:'👑'}
     ];
@@ -2464,7 +2464,7 @@ window.loadCommissionLeaderboard = async function() {
       html += '<tr' + (isMe?' style="background:rgba(255,138,0,.06);"':'') + '>' +
         '<td class="lb-rank ' + rankClass + '">' + (rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':rank) + '</td>' +
         '<td><span class="lb-avatar">' + initials(u) + '</span><span class="lb-name">' + name + (isMe?'<span style="color:var(--orange);font-size:.6rem;margin-left:.4rem;padding:2px 4px;background:var(--orange);color:#000;border-radius:4px;">YOU</span>':'') + '</span></td>' +
-        '<td><span class="lb-tier">' + (u.tier||'Genesis Node') + '</span></td>' +
+        '<td><span class="lb-tier">' + (u.tier||'Genesis Scout') + '</span></td>' +
         '<td class="lb-comm">₦' + comm.toLocaleString('en-NG') + '</td>' +
       '</tr>';
     });
@@ -2503,7 +2503,7 @@ window.loadReferralLeaderboard = async function() {
       html += '<tr' + (isMe?' style="background:rgba(255,138,0,.06);"':'') + '>' +
         '<td class="lb-rank ' + rankClass + '">' + (rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':rank) + '</td>' +
         '<td><span class="lb-avatar">' + initials(u) + '</span><span class="lb-name">' + name + (isMe?'<span style="color:var(--orange);font-size:.6rem;margin-left:.4rem;padding:2px 4px;background:var(--orange);color:#000;border-radius:4px;">YOU</span>':'') + '</span></td>' +
-        '<td><span class="lb-tier">' + (u.tier||'Genesis Node') + '</span></td>' +
+        '<td><span class="lb-tier">' + (u.tier||'Genesis Scout') + '</span></td>' +
         '<td class="lb-comm" style="color:#10b981;">🤝 ' + refs + '</td>' +
       '</tr>';
     });
@@ -2578,7 +2578,7 @@ window.handleDailyClaim = async function() {
     window.showXpToast(toastMsg);
 
     // Update Sidebar Tier
-    const XP_TIERS = [{name:'Genesis Node',min:0,icon:'🌱'},{name:'Validator',min:500,icon:'⚡'},{name:'Crypto Knight',min:1500,icon:'⚔️'},{name:'Chain Architect',min:4000,icon:'🔥'},{name:'Node Operator',min:8000,icon:'🏆'},{name:'Node Sovereign',min:15000,icon:'👑'}];
+    const XP_TIERS = [{name:'Genesis Scout',min:0,icon:'🌱'},{name:'Validator',min:500,icon:'⚡'},{name:'Crypto Knight',min:1500,icon:'⚔️'},{name:'Chain Architect',min:4000,icon:'🔥'},{name:'Node Operator',min:8000,icon:'🏆'},{name:'Node Sovereign',min:15000,icon:'👑'}];
     const newTier = XP_TIERS.slice().reverse().find(t => (u.xp_total || 0) >= t.min) || XP_TIERS[0];
     const lvl = document.getElementById('sidebarLevel');
     if (lvl) lvl.textContent = newTier.icon + ' ' + newTier.name + ' — ' + (u.xp_total || 0).toLocaleString() + ' XP';
@@ -2780,7 +2780,7 @@ window.handleDailyClaim = async function() {
   window.updateXpWidget = function(xp, streak, alreadyClaimed) {
     xp = Number(xp)||0; streak = Number(streak)||0;
     
-    const XP_TIERS_CLAIM = [{name:'Genesis Node',min:0,icon:'🌱'},{name:'Validator',min:500,icon:'⚡'},{name:'Crypto Knight',min:1500,icon:'⚔️'},{name:'Chain Architect',min:4000,icon:'🔥'},{name:'Node Operator',min:8000,icon:'🏆'},{name:'Node Sovereign',min:15000,icon:'👑'}];
+    const XP_TIERS_CLAIM = [{name:'Genesis Scout',min:0,icon:'🌱'},{name:'Validator',min:500,icon:'⚡'},{name:'Crypto Knight',min:1500,icon:'⚔️'},{name:'Chain Architect',min:4000,icon:'🔥'},{name:'Node Operator',min:8000,icon:'🏆'},{name:'Node Sovereign',min:15000,icon:'👑'}];
     const tier = XP_TIERS_CLAIM.slice().reverse().find(t => xp >= t.min) || XP_TIERS_CLAIM[0];
     const nextTier = XP_TIERS_CLAIM[XP_TIERS_CLAIM.indexOf(tier)+1]||null;
 

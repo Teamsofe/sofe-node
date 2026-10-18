@@ -20,7 +20,9 @@ import {
 export default function BountyDetailClient() {
   const params = useParams();
   const router = useRouter();
-  const bountyId = params?.id;
+  const bountyId = (params?.id && params.id !== 'default')
+    ? params.id
+    : (typeof window !== 'undefined' ? window.location.pathname.split('/').filter(Boolean)[1] : null);
 
   const [bounty, setBounty] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -138,101 +140,105 @@ export default function BountyDetailClient() {
   }
 
   return (
-    <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '8rem 5vw 6rem' }}>
-      <Link href="/bounties" style={{ color: 'var(--muted)', fontSize: '.85rem', textDecoration: 'none', display: 'inline-block', marginBottom: '1.5rem' }}>
-        ← Back to Bounties
-      </Link>
+    <div className="bounty-detail-page-root" style={{ background: 'var(--black)', minHeight: '100vh', color: 'var(--white)' }}>
+      <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '9.5rem 5vw 6rem' }}>
+        <Link href="/bounties" style={{ color: 'var(--muted)', fontSize: '.85rem', textDecoration: 'none', display: 'inline-block', marginBottom: '1.5rem' }}>
+          ← Back to Bounties
+        </Link>
 
-      <div style={{ background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: '16px', padding: '2.5rem', marginBottom: '2rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
-          <div>
-            <span style={{ background: 'rgba(20,40,255,.15)', color: '#6b8cff', padding: '.3rem .8rem', borderRadius: '6px', fontSize: '.75rem', fontWeight: 700, textTransform: 'uppercase' }}>
-              {bounty.category || 'General'}
-            </span>
-            <h1 style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--white)', marginTop: '.8rem', marginBottom: '.4rem' }}>
-              {bounty.title}
-            </h1>
-            <div style={{ fontSize: '.85rem', color: 'var(--muted)' }}>
-              Posted by {bounty.creator_name || 'Protocol Partner'} &middot; {bounty.deadline ? `Deadline: ${bounty.deadline}` : 'Open Deadline'}
+        <div className="bounty-detail-card" style={{ background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: '16px', padding: '2.5rem', marginBottom: '2rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
+            <div>
+              <span style={{ background: 'rgba(20,40,255,.12)', color: 'var(--blue)', border: '1px solid rgba(20,40,255,.25)', padding: '.3rem .8rem', borderRadius: '6px', fontSize: '.75rem', fontWeight: 700, textTransform: 'uppercase' }}>
+                {bounty.category || 'General'}
+              </span>
+              <h1 style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--white)', marginTop: '.8rem', marginBottom: '.4rem' }}>
+                {bounty.title}
+              </h1>
+              <div style={{ fontSize: '.85rem', color: 'var(--muted)' }}>
+                Posted by {bounty.creator_name || 'Protocol Partner'} &middot; {bounty.deadline ? `Deadline: ${bounty.deadline}` : 'Open Deadline'}
+              </div>
+            </div>
+
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: '.75rem', color: 'var(--muted)', textTransform: 'uppercase' }}>Bounty Reward</div>
+              <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--orange)' }}>
+                ${(bounty.reward_usd || 0).toLocaleString()}
+              </div>
             </div>
           </div>
 
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '.75rem', color: 'var(--muted)', textTransform: 'uppercase' }}>Bounty Reward</div>
-            <div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--orange)' }}>
-              ${(bounty.reward_usd || 0).toLocaleString()}
-            </div>
-          </div>
-        </div>
-
-        <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1.8rem', marginTop: '1.8rem' }}>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--white)', marginBottom: '.8rem' }}>Overview &amp; Deliverables</h3>
-          <p style={{ color: 'var(--muted)', fontSize: '.95rem', lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>
-            {bounty.description || 'No description provided.'}
-          </p>
-        </div>
-
-        {bounty.requirements && (
           <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1.8rem', marginTop: '1.8rem' }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--white)', marginBottom: '.8rem' }}>Requirements</h3>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--white)', marginBottom: '.8rem' }}>Overview &amp; Deliverables</h3>
             <p style={{ color: 'var(--muted)', fontSize: '.95rem', lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>
-              {bounty.requirements}
+              {bounty.description || 'No description provided.'}
             </p>
           </div>
-        )}
-      </div>
 
-      {/* SUBMISSION SECTION */}
-      <div style={{ background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: '16px', padding: '2.5rem' }}>
-        <h3 style={{ fontSize: '1.3rem', fontWeight: 700, color: 'var(--white)', marginBottom: '.5rem' }}>Submit Your Contribution</h3>
-        <p style={{ color: 'var(--muted)', fontSize: '.85rem', marginBottom: '1.8rem' }}>
-          Provide the link to your GitHub repo, pull request, Figma file, or live proof of work.
-        </p>
+          {bounty.requirements && (
+            <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1.8rem', marginTop: '1.8rem' }}>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--white)', marginBottom: '.8rem' }}>Requirements</h3>
+              <p style={{ color: 'var(--muted)', fontSize: '.95rem', lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>
+                {bounty.requirements}
+              </p>
+            </div>
+          )}
+        </div>
 
-        {existingSubmission ? (
-          <div style={{ background: 'rgba(16,185,129,.12)', border: '1px solid rgba(16,185,129,.3)', borderRadius: '10px', padding: '1.5rem' }}>
-            <div style={{ color: '#10b981', fontWeight: 700, fontSize: '1rem', marginBottom: '.4rem' }}>✓ Work Submitted</div>
-            <div style={{ fontSize: '.85rem', color: 'var(--white)', marginBottom: '.4rem' }}>
-              <strong>Your Link:</strong> <a href={existingSubmission.work_link} target="_blank" rel="noopener noreferrer" style={{ color: '#6b8cff', textDecoration: 'underline' }}>{existingSubmission.work_link}</a>
-            </div>
-            <div style={{ fontSize: '.78rem', color: 'var(--muted)' }}>
-              Status: <span style={{ textTransform: 'capitalize', color: 'var(--orange)' }}>{existingSubmission.status || 'Under Review'}</span>
-            </div>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmitWork}>
-            <div style={{ marginBottom: '1.2rem' }}>
-              <label style={{ display: 'block', fontSize: '.75rem', fontWeight: 600, color: 'var(--muted)', marginBottom: '.4rem' }}>Proof of Work URL (GitHub / Demo / Drive / Figma)</label>
-              <input
-                type="url"
-                required
-                value={workLink}
-                onChange={e => setWorkLink(e.target.value)}
-                placeholder="https://github.com/..."
-                style={{ width: '100%', padding: '.8rem 1rem', background: 'var(--deep)', border: '1px solid var(--border)', borderRadius: '8px', color: '#fff', fontSize: '.88rem' }}
-              />
-            </div>
+        {/* SUBMISSION SECTION */}
+        <div className="bounty-detail-card" style={{ background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: '16px', padding: '2.5rem' }}>
+          <h3 style={{ fontSize: '1.3rem', fontWeight: 700, color: 'var(--white)', marginBottom: '.5rem' }}>Submit Your Contribution</h3>
+          <p style={{ color: 'var(--muted)', fontSize: '.85rem', marginBottom: '1.8rem' }}>
+            Provide the link to your GitHub repo, pull request, Figma file, or live proof of work.
+          </p>
 
-            <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', fontSize: '.75rem', fontWeight: 600, color: 'var(--muted)', marginBottom: '.4rem' }}>Notes / Context (Optional)</label>
-              <textarea
-                rows={3}
-                value={submissionNotes}
-                onChange={e => setSubmissionNotes(e.target.value)}
-                placeholder="Key highlights or instructions for the reviewers..."
-                style={{ width: '100%', padding: '.8rem 1rem', background: 'var(--deep)', border: '1px solid var(--border)', borderRadius: '8px', color: '#fff', fontSize: '.88rem' }}
-              />
+          {existingSubmission ? (
+            <div style={{ background: 'rgba(16,185,129,.12)', border: '1px solid rgba(16,185,129,.3)', borderRadius: '10px', padding: '1.5rem' }}>
+              <div style={{ color: '#10b981', fontWeight: 700, fontSize: '1rem', marginBottom: '.4rem' }}>✓ Work Submitted</div>
+              <div style={{ fontSize: '.85rem', color: 'var(--white)', marginBottom: '.4rem' }}>
+                <strong>Your Link:</strong> <a href={existingSubmission.work_link} target="_blank" rel="noopener noreferrer" style={{ color: '#6b8cff', textDecoration: 'underline' }}>{existingSubmission.work_link}</a>
+              </div>
+              <div style={{ fontSize: '.78rem', color: 'var(--muted)' }}>
+                Status: <span style={{ textTransform: 'capitalize', color: 'var(--orange)' }}>{existingSubmission.status || 'Under Review'}</span>
+              </div>
             </div>
+          ) : (
+            <form onSubmit={handleSubmitWork}>
+              <div style={{ marginBottom: '1.2rem' }}>
+                <label style={{ display: 'block', fontSize: '.75rem', fontWeight: 600, color: 'var(--muted)', marginBottom: '.4rem' }}>Proof of Work URL (GitHub / Demo / Drive / Figma)</label>
+                <input
+                  type="url"
+                  required
+                  value={workLink}
+                  onChange={e => setWorkLink(e.target.value)}
+                  placeholder="https://github.com/..."
+                  className="bounty-input"
+                  style={{ width: '100%', padding: '.8rem 1rem', background: 'var(--deep)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--white)', fontSize: '.88rem' }}
+                />
+              </div>
 
-            <button
-              type="submit"
-              disabled={submitting}
-              style={{ padding: '.85rem 2rem', background: 'var(--blue)', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer', fontSize: '.95rem' }}
-            >
-              {submitting ? 'Submitting…' : 'Submit Proof of Work →'}
-            </button>
-          </form>
-        )}
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label style={{ display: 'block', fontSize: '.75rem', fontWeight: 600, color: 'var(--muted)', marginBottom: '.4rem' }}>Notes / Context (Optional)</label>
+                <textarea
+                  rows={3}
+                  value={submissionNotes}
+                  onChange={e => setSubmissionNotes(e.target.value)}
+                  placeholder="Key highlights or instructions for the reviewers..."
+                  className="bounty-input"
+                  style={{ width: '100%', padding: '.8rem 1rem', background: 'var(--deep)', border: '1px solid var(--border)', borderRadius: '8px', color: 'var(--white)', fontSize: '.88rem' }}
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={submitting}
+                style={{ padding: '.85rem 2rem', background: 'var(--blue)', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer', fontSize: '.95rem' }}
+              >
+                {submitting ? 'Submitting…' : 'Submit Proof of Work →'}
+              </button>
+            </form>
+          )}
+        </div>
       </div>
     </div>
   );

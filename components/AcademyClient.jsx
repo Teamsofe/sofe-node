@@ -149,7 +149,7 @@ export default function AcademyClient() {
               const priceMain = isFree ? 'FREE' : `₦${Number(price).toLocaleString('en-NG')}`;
               const isEnrolled = userEnrolments.includes(c.id);
               const tierLabel = tier === 'foundation' ? '★ Foundation' : tier === 'executive' ? '👑 Executive Program' : '◆ Career Track';
-              const href = isEnrolled ? '/dashboard' : tier === 'executive' ? `/cbie-application?course=${c.id}` : `/courses/${c.id}`;
+              const href = isEnrolled ? '/dashboard' : tier === 'executive' ? `/cbie-application?course=${c.id}` : `/course-detail?id=${c.id}`;
 
               return (
                 <article

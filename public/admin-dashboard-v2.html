@@ -82,9 +82,6 @@
   </nav>
 
   <div class="sb-bottom">
-    <button class="sb-item" onclick="window.location.href='/dashboard'" style="margin-bottom: 0.5rem; color: #FF8A00;">
-      <span class="sb-icon">🏠</span><span class="sb-label">Learner Hub</span>
-    </button>
     <button class="sb-item" onclick="handleLogout()">
       <span class="sb-icon">↩</span><span class="sb-label">Logout</span>
     </button>
@@ -884,7 +881,7 @@
         <!-- Demo badges (replace with Firebase data) -->
         <div class="badge-def-card">
           <div class="badge-def-icon">🌱</div>
-          <div class="badge-def-name">Genesis Node</div>
+          <div class="badge-def-name">Genesis Scout</div>
           <div class="badge-def-type" style="color:var(--muted);">Auto · Threshold</div>
           <div class="badge-threshold-tag">0 XP — awarded on signup</div>
           <div class="badge-def-desc">Awarded automatically when a student joins the platform.</div>
@@ -1019,7 +1016,12 @@
 
   <!-- ═══ SETTINGS ═══ -->
   <div class="panel" id="panel-settings">
-    <div class="section-header"><div><div class="section-title">Platform settings</div><div class="section-sub">Configure payments, commissions, and admin roles</div></div></div>
+    <div class="section-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;">
+      <div><div class="section-title">Platform settings</div><div class="section-sub">Configure payments, commissions, and admin roles</div></div>
+      <button class="btn btn-primary btn-sm" onclick="window.location.href='/dashboard'" style="background:linear-gradient(135deg,#FF8A00,#E07800);border:none;color:#fff;font-weight:700;display:inline-flex;align-items:center;gap:0.4rem;padding:0.5rem 1.1rem;box-shadow:0 2px 10px rgba(255,138,0,0.3);cursor:pointer;">
+        <span>🎓</span> Switch to User Dashboard →
+      </button>
+    </div>
     <div class="sub-tabs" id="settingsSubTabs">
       <button class="sub-tab active" onclick="switchSettingsTab('platform',this)">Platform</button>
       <button class="sub-tab" onclick="switchSettingsTab('payment',this)">Payment</button>
@@ -1143,6 +1145,8 @@
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:.75rem;margin-bottom:1.5rem;" id="roleDefsGrid">
         <div class="role-card"><div class="role-card-icon" style="background:rgba(255,68,68,.1);">👑</div><div class="role-card-info"><div class="role-card-name">Super Admin</div><div class="role-card-perms">Full access to all panels and settings</div></div></div>
         <div class="role-card"><div class="role-card-icon" style="background:rgba(20,40,255,.1);">📚</div><div class="role-card-info"><div class="role-card-name">Course Manager</div><div class="role-card-perms">Courses · Modules · Sessions · Enrolments</div></div></div>
+        <div class="role-card"><div class="role-card-icon" style="background:rgba(20,40,255,.15);">👨‍🏫</div><div class="role-card-info"><div class="role-card-name">Tutor / Instructor</div><div class="role-card-perms">Grading · Submissions · Course Content</div></div></div>
+        <div class="role-card"><div class="role-card-icon" style="background:rgba(255,138,0,.15);">🏛</div><div class="role-card-info"><div class="role-card-name">Campus Node Lead</div><div class="role-card-perms">Campus Chapters · Activations · Community</div></div></div>
         <div class="role-card"><div class="role-card-icon" style="background:rgba(0,200,100,.1);">💰</div><div class="role-card-info"><div class="role-card-name">Finance Admin</div><div class="role-card-perms">Payments · Commissions · Payouts</div></div></div>
         <div class="role-card"><div class="role-card-icon" style="background:rgba(155,95,228,.1);">⚡</div><div class="role-card-info"><div class="role-card-name">Community Manager</div><div class="role-card-perms">Students · XP & Badges · Notifications</div></div></div>
         <div class="role-card"><div class="role-card-icon" style="background:rgba(255,138,0,.1);">✍</div><div class="role-card-info"><div class="role-card-name">Social Media Manager</div><div class="role-card-perms">Blog only</div></div></div>
@@ -1255,7 +1259,7 @@
         <div id="notifTargetTier" style="display:none;margin-bottom:.85rem;">
           <div class="form-group"><label class="form-label">Minimum XP tier</label>
             <select class="form-select" id="notifTier">
-              <option value="Genesis Node">Genesis Node (0+ XP)</option>
+              <option value="Genesis Scout">Genesis Scout (0+ XP)</option>
               <option value="Validator">Validator (500+ XP)</option>
               <option value="Crypto Knight">Crypto Knight (1,500+ XP)</option>
               <option value="Chain Architect">Chain Architect (4,000+ XP)</option>
@@ -2046,6 +2050,8 @@
         <select class="form-select" id="inviteAdminRole">
           <option value="super_admin">Super Admin — full access</option>
           <option value="course_manager">Course Manager — courses & enrolments</option>
+          <option value="tutor">Tutor / Instructor — grading & course review</option>
+          <option value="node_lead">Node Lead — campus node activations</option>
           <option value="finance_admin">Finance Admin — payments & commissions</option>
           <option value="community_manager">Community Manager — students, XP & badges</option>
           <option value="social_media_manager">Social Media Manager — blog only</option>
@@ -2775,7 +2781,7 @@ async function loadAdminLeaderboard() {
     }
 
     var XP_TIERS_ADMIN = [
-      {name:'Genesis Node',min:0,icon:'🌱'},{name:'Validator',min:500,icon:'⚡'},
+      {name:'Genesis Scout',min:0,icon:'🌱'},{name:'Validator',min:500,icon:'⚡'},
       {name:'Crypto Knight',min:1500,icon:'⚔️'},{name:'Chain Architect',min:4000,icon:'🔥'},
       {name:'Node Operator',min:8000,icon:'🏆'},{name:'Node Sovereign',min:15000,icon:'👑'}
     ];
@@ -3001,7 +3007,7 @@ async function submitXpAward() {
       const u = updatedSnap.data();
       const newXp = Number(u.xp_total) || 0;
       const XP_TIERS_AW = [
-        {name:'Genesis Node',min:0},{name:'Validator',min:500},
+        {name:'Genesis Scout',min:0},{name:'Validator',min:500},
         {name:'Crypto Knight',min:1500},{name:'Chain Architect',min:4000},
         {name:'Node Operator',min:8000},{name:'Node Sovereign',min:15000}
       ];

@@ -709,7 +709,7 @@ exports.syncLeaderboard = onDocumentWritten('users/{uid}', async (event) => {
   }
 
   const XP_TIERS = [
-    { name: 'Genesis Node',    min: 0     },
+    { name: 'Genesis Scout',   min: 0     },
     { name: 'Validator',       min: 500   },
     { name: 'Crypto Knight',   min: 1500  },
     { name: 'Chain Architect', min: 4000  },
@@ -1075,7 +1075,7 @@ exports.resetMonthlyLeaderboard = onSchedule({
       batch.set(archiveRef, {
         first_name:               d.first_name || '',
         last_initial:             d.last_initial || '',
-        tier:                     d.tier || 'Genesis Node',
+        tier:                     d.tier || 'Genesis Scout',
         xp_this_period:           d.xp_this_period || 0,
         commission_this_period:   d.commission_this_period || 0,
         validated_referrals_this_period: d.validated_referrals_this_period || 0,
@@ -1195,7 +1195,7 @@ exports.backfillLeaderboard = onRequest(async (req, res) => {
   }
 
   const XP_TIERS = [
-    { name: 'Genesis Node',    min: 0     },
+    { name: 'Genesis Scout',   min: 0     },
     { name: 'Validator',       min: 500   },
     { name: 'Crypto Knight',   min: 1500  },
     { name: 'Chain Architect', min: 4000  },
@@ -2205,7 +2205,7 @@ exports.createTestArchive = onRequest(async (req, res) => {
       batch.set(archiveRef, {
         first_name:               d.first_name || '',
         last_initial:             d.last_initial || '',
-        tier:                     d.tier || 'Genesis Node',
+        tier:                     d.tier || 'Genesis Scout',
         xp_this_period:           d.xp_this_period || 0,
         commission_this_period:   d.commission_this_period || 0,
         validated_referrals_this_period: d.validated_referrals_this_period || 0,
@@ -2329,7 +2329,7 @@ exports.backfillHistoricalPeriod = onRequest(async (req, res) => {
       batch.set(archiveRef, {
         first_name:   u.first_name || '',
         last_initial: u.last_name ? u.last_name[0].toUpperCase() + '.' : '',
-        tier:         u.tier || 'Genesis Node', 
+        tier:         u.tier || 'Genesis Scout', 
         xp_this_period:           xpByUser[uid] || 0,
         commission_this_period:   commByUser[uid] || 0,
         validated_referrals_this_period: 0, 
@@ -2359,7 +2359,7 @@ exports.backfillHistoricalPeriod = onRequest(async (req, res) => {
 // SEND ADMIN NOTIFICATION
 // ═══════════════════════════════════════════════════════════════════════════
 
-const XP_TIER_ORDER = ['Genesis Node', 'Validator', 'Crypto Knight', 'Chain Architect', 'Node Operator', 'Node Sovereign'];
+const XP_TIER_ORDER = ['Genesis Scout', 'Validator', 'Crypto Knight', 'Chain Architect', 'Node Operator', 'Node Sovereign'];
 
 exports.sendAdminNotification = onCall({ timeoutSeconds: 300, memory: '256MiB' }, async (request) => {
   if (!request.auth) {

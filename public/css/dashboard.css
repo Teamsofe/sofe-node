@@ -122,8 +122,6 @@
     --muted: #04080F;
     --blue-dim: rgba(20,40,255,0.08);
     --orange-dim: rgba(255,138,0,0.10);
-  }
-  body.light nav { background: rgba(230,236,255,0.95) !important; }
   body.light footer { background: #E4EAFF; }
   body.light #trust { background: rgba(210,220,255,0.85); border-color: rgba(20,40,255,0.15); }
   body.light .trust-label { color: rgba(10,15,36,0.6); }
