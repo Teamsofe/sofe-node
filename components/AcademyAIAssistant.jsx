@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
 import { auth, onAuthStateChanged } from '@/lib/firebase';
+import FormattedMarkdown from '@/lib/markdownRenderer';
 
 const getMessageText = (m) => {
   if (typeof m?.content === 'string' && m.content) return m.content;
@@ -535,13 +536,13 @@ export default function AcademyAIAssistant() {
                       borderRadius: 10,
                       fontSize: '0.82rem',
                       lineHeight: 1.6,
-                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
                     }}
                   >
                     <div style={{ fontSize: '0.65rem', fontWeight: 700, color: m.role === 'user' ? 'rgba(255,255,255,0.7)' : '#FF8A00', marginBottom: '0.2rem' }}>
                       {m.role === 'user' ? 'You' : 'Sofe AI Tutor'}
                     </div>
-                    {getMessageText(m)}
+                    <FormattedMarkdown content={getMessageText(m)} isUser={m.role === 'user'} />
                   </div>
                 ))
               )}

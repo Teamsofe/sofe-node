@@ -1043,20 +1043,20 @@ export default function CourseViewClient() {
       const totalExamQuestions = result.totalQuestions || questions.length || 1;
       const correctExamQuestions = typeof result.correctCount === 'number' ? result.correctCount : Math.round(((result.score || 0) / 100) * totalExamQuestions);
       const wrongCount = totalExamQuestions - correctExamQuestions;
-      if (wrongCount > 0 && currentUser?.uid) {
-        const topicName = activeSession?.topic || activeMod?.title?.toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'blockchain-fundamentals';
+      const activeMod = modules.find((m) => m.id === activeModuleId);
+      const targetStudentId = currentUser?.uid || (typeof window !== 'undefined' ? localStorage.getItem('sofe_anon_student_id') || 'demo-student' : 'demo-student');
+      if (wrongCount > 0 && targetStudentId) {
+        const topicName = activeSession?.topic || activeMod?.title?.toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'cryptography-and-wallets';
         const failedAttempts = Array(wrongCount).fill(null).map(() => ({ topic: topicName, correct: false }));
         fetch('/api/quiz/result', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            student_id: currentUser.uid,
+            student_id: targetStudentId,
             attempts: failedAttempts,
           }),
         }).catch((err) => console.warn('Could not sync exam failures to AI assistant:', err));
       }
-
-      const activeMod = modules.find((m) => m.id === activeModuleId);
       const refCode = userData?.referral_code || (currentUser?.uid ? currentUser.uid.slice(0, 8).toUpperCase() : '');
       const origin = typeof window !== 'undefined' ? window.location.origin : 'https://node.sofegroup.com';
       const inviteUrl = refCode ? `${origin}/signup?ref=${refCode}` : `${origin}/signup`;
@@ -1665,7 +1665,7 @@ export default function CourseViewClient() {
         </div>
       ) : (
         <CourseAIAssistant
-          studentId={currentUser?.uid}
+          studentId={currentUser?.uid || (typeof window !== 'undefined' ? localStorage.getItem('sofe_anon_student_id') || 'demo-student' : 'demo-student')}
           activeSession={activeSession}
           activeModule={modules.find((m) => m.id === activeModuleId)}
           courseTitle={courseData?.title}

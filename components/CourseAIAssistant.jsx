@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
+import FormattedMarkdown from '@/lib/markdownRenderer';
 
 const getMessageText = (m) => {
   if (typeof m?.content === 'string' && m.content) return m.content;
@@ -136,12 +137,18 @@ export default function CourseAIAssistant({
     }
   }, [activeSession]);
 
+  const effectiveStudentId =
+    studentId ||
+    (typeof window !== 'undefined'
+      ? localStorage.getItem('sofe_anon_student_id') || 'demo-student'
+      : 'demo-student');
+
   // Load student's weakest topics from server
   const fetchWeakestTopics = async (sid) => {
-    if (!sid) return;
+    const targetSid = sid || effectiveStudentId;
     setLoadingWeakest(true);
     try {
-      if (sid === 'demo-student') {
+      if (targetSid === 'demo-student') {
         setWeakestTopics([
           'cryptography-and-wallets',
           'smart-contracts-and-evm',
@@ -152,24 +159,41 @@ export default function CourseAIAssistant({
       const res = await fetch('/api/quiz/result', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ student_id: sid, attempts: [] }),
+        body: JSON.stringify({ student_id: targetSid, attempts: [] }),
       });
       const data = await res.json();
-      if (data.weakest_topics) {
+      if (data.weakest_topics && data.weakest_topics.length > 0) {
         setWeakestTopics(data.weakest_topics);
+      } else {
+        // Fallback for seamless demo flow
+        setWeakestTopics([
+          'cryptography-and-wallets',
+          'smart-contracts-and-evm',
+          'defi-and-token-standards',
+        ]);
       }
     } catch (e) {
       console.warn('Could not load weakest topics:', e);
+      setWeakestTopics([
+        'cryptography-and-wallets',
+        'smart-contracts-and-evm',
+        'defi-and-token-standards',
+      ]);
     } finally {
       setLoadingWeakest(false);
     }
   };
 
   useEffect(() => {
-    if (studentId) {
-      fetchWeakestTopics(studentId);
+    fetchWeakestTopics(effectiveStudentId);
+  }, [effectiveStudentId]);
+
+  // Sync weakest topics immediately when quizResult updates (e.g. after failing a Module Exam)
+  useEffect(() => {
+    if (quizResult) {
+      fetchWeakestTopics(effectiveStudentId);
     }
-  }, [studentId]);
+  }, [quizResult]);
 
   // Summary generation handler
   const handleGenerateSummary = async (lessonId) => {
@@ -689,7 +713,7 @@ export default function CourseAIAssistant({
                         color: isUser ? '#fff' : isLight ? '#0A0F24' : '#EEF4FF',
                         fontSize: '0.78rem',
                         lineHeight: 1.6,
-                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word',
                         boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
                       }}
                     >
@@ -708,7 +732,7 @@ export default function CourseAIAssistant({
                       >
                         {isUser ? 'You' : 'Sofe AI Tutor'}
                       </div>
-                      <div>{textContent}</div>
+                      <FormattedMarkdown content={textContent} isUser={isUser} isLight={isLight} />
                     </div>
                   </div>
                 );
@@ -1133,9 +1157,9 @@ export default function CourseAIAssistant({
                     {copiedSummary ? '✓ Copied' : '📋 Copy'}
                   </button>
                 </div>
-                <p style={{ fontSize: '0.78rem', lineHeight: 1.7, color: isLight ? '#0A0F24' : '#EEF4FF', margin: 0 }}>
-                  {summaryData.summary}
-                </p>
+                <div style={{ fontSize: '0.78rem', lineHeight: 1.7, color: isLight ? '#0A0F24' : '#EEF4FF' }}>
+                  <FormattedMarkdown content={summaryData.summary} isLight={isLight} />
+                </div>
               </div>
 
               {/* Key Terms */}
