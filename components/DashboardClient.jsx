@@ -100,6 +100,52 @@ export default function DashboardClient() {
   const [gradeFeedback, setGradeFeedback] = useState('');
   const [gradingSubmitting, setGradingSubmitting] = useState(false);
 
+  // ── TUTOR COURSE SETTINGS / AI KNOWLEDGE BASE STATE ──
+  const [tutorSelectedCourse, setTutorSelectedCourse] = useState('foundation');
+  const [courseKbText, setCourseKbText] = useState('');
+  const [kbLoading, setKbLoading] = useState(false);
+  const [kbSaving, setKbSaving] = useState(false);
+  const [kbSuccessMsg, setKbSuccessMsg] = useState('');
+
+  const loadCourseKnowledgeBase = async (cId) => {
+    setKbLoading(true);
+    setKbSuccessMsg('');
+    try {
+      const snap = await getDoc(doc(db, 'course_content', cId));
+      if (snap.exists()) {
+        setCourseKbText(snap.data().content || '');
+      } else {
+        setCourseKbText('');
+      }
+    } catch (err) {
+      console.warn('Error reading course_content:', err);
+    } finally {
+      setKbLoading(false);
+    }
+  };
+
+  const handleSaveCourseKnowledgeBase = async () => {
+    setKbSaving(true);
+    setKbSuccessMsg('');
+    try {
+      await setDoc(
+        doc(db, 'course_content', tutorSelectedCourse),
+        {
+          course_id: tutorSelectedCourse,
+          content: courseKbText,
+          updated_at: serverTimestamp(),
+        },
+        { merge: true }
+      );
+      setKbSuccessMsg('Course AI Knowledge Base successfully updated in Firestore!');
+      setTimeout(() => setKbSuccessMsg(''), 4000);
+    } catch (err) {
+      alert('Error saving knowledge base: ' + err.message);
+    } finally {
+      setKbSaving(false);
+    }
+  };
+
   // Stats & Progress
   const [enrolments, setEnrolments] = useState([]);
   const [coursesData, setCoursesData] = useState({});
@@ -1116,6 +1162,7 @@ export default function DashboardClient() {
       return [
         { id: 'tutor-queue', icon: '✍️', label: 'Queue' },
         { id: 'tutor-sessions', icon: '📅', label: 'Sessions' },
+        { id: 'tutor-course-settings', icon: '📚', label: 'Course Settings' },
         { id: 'settings', icon: '⚙️', label: 'Settings' }
       ];
     }
@@ -1310,6 +1357,7 @@ export default function DashboardClient() {
             ] : activeWorkspace === 'tutor' ? [
               { id: 'tutor-queue', icon: '✍️', label: 'Grading Queue' },
               { id: 'tutor-sessions', icon: '📅', label: 'Office Hours' },
+              { id: 'tutor-course-settings', icon: '📚', label: 'Course Settings' },
               { id: 'settings', icon: '⚙️', label: 'Settings' }
             ] : activeWorkspace === 'admin' ? [
               { id: 'admin-iframe', icon: '⚡', label: 'Admin Panels' }
@@ -4128,6 +4176,131 @@ export default function DashboardClient() {
                     Open Live Room
                   </button>
                 </div>
+              </div>
+            </section>
+          )}
+
+          {/* TUTOR TAB 3: COURSE SETTINGS & AI KNOWLEDGE BASE */}
+          {activeTab === 'tutor-course-settings' && (
+            <section>
+              <div style={{ marginBottom: '1.5rem' }}>
+                <div style={{ fontSize: '0.72rem', color: '#FF8A00', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Tutor Desk • Course Settings
+                </div>
+                <h2 style={{ fontSize: '1.3rem', fontWeight: 800, marginTop: '0.2rem' }}>
+                  Course Knowledge Base &amp; AI Configuration
+                </h2>
+                <p style={{ fontSize: '0.78rem', color: isLight ? '#555' : 'rgba(200,215,240,0.7)', marginTop: '0.2rem' }}>
+                  Provide the course curriculum text, transcripts, and study guides. The Sofe AI Tutor uses this 1M-token context window knowledge base to answer student questions and generate practice questions.
+                </p>
+              </div>
+
+              <div style={{ background: isLight ? '#F8FAFF' : '#0D1526', border: '1px solid rgba(20,40,255,0.2)', borderRadius: 12, padding: '1.5rem' }}>
+                <div style={{ marginBottom: '1.25rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, marginBottom: '0.4rem', color: isLight ? '#0A0F24' : '#fff' }}>
+                    Select Course:
+                  </label>
+                  <select
+                    value={tutorSelectedCourse}
+                    onChange={(e) => {
+                      setTutorSelectedCourse(e.target.value);
+                      loadCourseKnowledgeBase(e.target.value);
+                    }}
+                    style={{
+                      padding: '0.6rem 0.85rem',
+                      borderRadius: 8,
+                      border: '1px solid rgba(20,40,255,0.3)',
+                      background: isLight ? '#fff' : '#080E1A',
+                      color: isLight ? '#0A0F24' : '#fff',
+                      fontSize: '0.82rem',
+                      outline: 'none',
+                      minWidth: 280,
+                    }}
+                  >
+                    <option value="foundation">Blockchain &amp; Cryptocurrency Foundation</option>
+                    <option value="solana-dev">Solana Developer Track</option>
+                    <option value="smart-contracts">Advanced Smart Contracts (Solidity)</option>
+                    <option value="defi-engineering">DeFi Engineering &amp; Protocols</option>
+                  </select>
+                </div>
+
+                <div style={{ marginBottom: '1.25rem' }}>
+                  <label
+                    htmlFor="course-ai-kb-input"
+                    style={{
+                      display: 'block',
+                      fontSize: '0.82rem',
+                      fontWeight: 800,
+                      marginBottom: '0.5rem',
+                      color: isLight ? '#0A0F24' : '#fff',
+                    }}
+                  >
+                    Course AI Knowledge Base (Paste transcripts/text here)
+                  </label>
+                  <textarea
+                    id="course-ai-kb-input"
+                    value={courseKbText}
+                    onChange={(e) => setCourseKbText(e.target.value)}
+                    placeholder="Paste full lesson scripts, curriculum transcripts, notes, and technical definitions here..."
+                    rows={16}
+                    disabled={kbLoading}
+                    style={{
+                      width: '100%',
+                      padding: '0.85rem 1rem',
+                      borderRadius: 8,
+                      border: '1px solid rgba(20,40,255,0.25)',
+                      background: isLight ? '#FFFFFF' : '#080E1A',
+                      color: isLight ? '#0A0F24' : '#EEF4FF',
+                      fontSize: '0.8rem',
+                      lineHeight: 1.6,
+                      fontFamily: 'monospace',
+                      outline: 'none',
+                      resize: 'vertical',
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.4rem' }}>
+                    <span style={{ fontSize: '0.7rem', color: isLight ? '#666' : 'rgba(200,215,240,0.6)' }}>
+                      {courseKbText.length.toLocaleString()} characters • Injected directly into Meta Muse Spark 1M-token context window
+                    </span>
+                  </div>
+                </div>
+
+                {kbSuccessMsg && (
+                  <div
+                    style={{
+                      padding: '0.65rem 1rem',
+                      borderRadius: 6,
+                      background: 'rgba(0,200,100,0.12)',
+                      border: '1px solid #00c864',
+                      color: '#00c864',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      marginBottom: '1rem',
+                    }}
+                  >
+                    ✓ {kbSuccessMsg}
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleSaveCourseKnowledgeBase}
+                  disabled={kbSaving || kbLoading}
+                  style={{
+                    background: kbSaving ? 'rgba(20,40,255,0.5)' : '#1428FF',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: 8,
+                    padding: '0.7rem 1.6rem',
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                    cursor: kbSaving ? 'not-allowed' : 'pointer',
+                    boxShadow: '0 4px 14px rgba(20,40,255,0.3)',
+                  }}
+                >
+                  {kbSaving ? 'Saving to Firestore...' : '💾 Save AI Knowledge Base'}
+                </button>
               </div>
             </section>
           )}

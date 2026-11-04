@@ -1,0 +1,29 @@
+/* Sofe Node intro. Imported by SofeIntro.tsx. */
+
+/* Cover the page from the very first paint until the intro overlay is mounted.
+   Keep this colour in sync with `background` in sofeIntroEngine.js. */
+html[data-sofe-intro="pending"]::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  background: #ffffff;
+}
+
+/* Real navbar logo stays hidden while the intro runs, then fades in as the lockup lands on it. */
+html[data-sofe-intro] [data-intro-target] {
+  opacity: 0 !important;
+}
+[data-intro-target] {
+  transition: opacity 0.2s ease;
+}
+
+/* Hero fades up from 16px below as the lockup starts docking. */
+[data-intro-hero] {
+  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+html[data-sofe-intro="pending"] [data-intro-hero],
+html[data-sofe-intro="running"] [data-intro-hero] {
+  opacity: 0;
+  transform: translateY(16px);
+}

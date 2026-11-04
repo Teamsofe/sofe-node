@@ -1136,29 +1136,55 @@
 
     <!-- Admin roles tab — SUPER ADMIN ONLY -->
     <div id="settings-tab-roles" style="display:none;">
-      <div class="section-header" style="margin-bottom:1rem;">
-        <div><div style="font-size:.82rem;font-weight:700;color:var(--white);">Admin team members</div></div>
-        <button class="btn btn-purple btn-sm" onclick="openModal('modal-invite-admin')">+ Invite admin</button>
+      <div id="rolesAccessDenied" style="display:none;">
+        <div class="access-denied">
+          <div class="access-denied-icon">🔒</div>
+          <div class="access-denied-title">Super Admin only</div>
+          <div class="access-denied-sub">Only Super Admins can manage admin roles and permissions.</div>
+        </div>
       </div>
+      <div id="rolesTabContent">
+        <div class="section-header" style="margin-bottom:1rem;">
+          <div>
+            <div style="font-size:.82rem;font-weight:700;color:var(--white);">Admin team members</div>
+            <div style="font-size:.72rem;color:var(--muted);margin-top:2px;">Assign, edit, and terminate administrative roles across the platform.</div>
+          </div>
+          <button class="btn btn-purple btn-sm" onclick="openAssignAdminModal()">+ Assign New Admin</button>
+        </div>
 
-      <!-- Role definitions reference -->
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:.75rem;margin-bottom:1.5rem;" id="roleDefsGrid">
-        <div class="role-card"><div class="role-card-icon" style="background:rgba(255,68,68,.1);">👑</div><div class="role-card-info"><div class="role-card-name">Super Admin</div><div class="role-card-perms">Full access to all panels and settings</div></div></div>
-        <div class="role-card"><div class="role-card-icon" style="background:rgba(20,40,255,.1);">📚</div><div class="role-card-info"><div class="role-card-name">Course Manager</div><div class="role-card-perms">Courses · Modules · Sessions · Enrolments</div></div></div>
-        <div class="role-card"><div class="role-card-icon" style="background:rgba(20,40,255,.15);">👨‍🏫</div><div class="role-card-info"><div class="role-card-name">Tutor / Instructor</div><div class="role-card-perms">Grading · Submissions · Course Content</div></div></div>
-        <div class="role-card"><div class="role-card-icon" style="background:rgba(255,138,0,.15);">🏛</div><div class="role-card-info"><div class="role-card-name">Campus Node Lead</div><div class="role-card-perms">Campus Chapters · Activations · Community</div></div></div>
-        <div class="role-card"><div class="role-card-icon" style="background:rgba(0,200,100,.1);">💰</div><div class="role-card-info"><div class="role-card-name">Finance Admin</div><div class="role-card-perms">Payments · Commissions · Payouts</div></div></div>
-        <div class="role-card"><div class="role-card-icon" style="background:rgba(155,95,228,.1);">⚡</div><div class="role-card-info"><div class="role-card-name">Community Manager</div><div class="role-card-perms">Students · XP & Badges · Notifications</div></div></div>
-        <div class="role-card"><div class="role-card-icon" style="background:rgba(255,138,0,.1);">✍</div><div class="role-card-info"><div class="role-card-name">Social Media Manager</div><div class="role-card-perms">Blog only</div></div></div>
-      </div>
+        <!-- Role definitions reference -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:.75rem;margin-bottom:1.5rem;" id="roleDefsGrid">
+          <div class="role-card"><div class="role-card-icon" style="background:rgba(255,68,68,.1);">👑</div><div class="role-card-info"><div class="role-card-name">Super Admin</div><div class="role-card-perms">Full access to all panels and settings</div></div></div>
+          <div class="role-card"><div class="role-card-icon" style="background:rgba(0,180,216,.1);">💼</div><div class="role-card-info"><div class="role-card-name">Chief Operations</div><div class="role-card-perms">All platform operations except Payments · Commissions · Payouts</div></div></div>
+          <div class="role-card"><div class="role-card-icon" style="background:rgba(20,40,255,.1);">📚</div><div class="role-card-info"><div class="role-card-name">Course Manager</div><div class="role-card-perms">Courses · Modules · Sessions · Enrolments</div></div></div>
+          <div class="role-card"><div class="role-card-icon" style="background:rgba(20,40,255,.15);">👨‍🏫</div><div class="role-card-info"><div class="role-card-name">Tutor / Instructor</div><div class="role-card-perms">Grading · Submissions · Course Content</div></div></div>
+          <div class="role-card"><div class="role-card-icon" style="background:rgba(255,138,0,.15);">🏛</div><div class="role-card-info"><div class="role-card-name">Campus Node Lead</div><div class="role-card-perms">Campus Chapters · Activations · Community</div></div></div>
+          <div class="role-card"><div class="role-card-icon" style="background:rgba(0,200,100,.1);">💰</div><div class="role-card-info"><div class="role-card-name">Finance Admin</div><div class="role-card-perms">Payments · Commissions · Payouts</div></div></div>
+          <div class="role-card"><div class="role-card-icon" style="background:rgba(155,95,228,.1);">⚡</div><div class="role-card-info"><div class="role-card-name">Community Manager</div><div class="role-card-perms">Students · XP & Badges · Notifications</div></div></div>
+          <div class="role-card"><div class="role-card-icon" style="background:rgba(255,138,0,.1);">✍</div><div class="role-card-info"><div class="role-card-name">Social Media Manager</div><div class="role-card-perms">Blog only</div></div></div>
+        </div>
 
-      <!-- Active admin list -->
-      <div class="table-wrap">
-        <div class="table-head"><span class="table-title">Active admins</span></div>
-        <table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Last active</th><th>Actions</th></tr></thead>
-        <tbody id="adminsTable">
-          <tr><td colspan="5"><div class="empty-state"><div class="empty-state-text">Connect Firebase to load admin users</div></div></td></tr>
-        </tbody></table>
+        <!-- Active admin list -->
+        <div class="table-wrap">
+          <div class="table-head">
+            <span class="table-title">Active admins</span>
+            <button class="btn btn-ghost btn-sm" onclick="loadAdminUsers()" title="Refresh" style="font-size:0.72rem;padding:0.25rem 0.6rem;">↻ Refresh</button>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Role Privilege</th>
+                <th>Last active</th>
+                <th style="text-align:right;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="adminsTable">
+              <tr><td colspan="5"><div class="empty-state"><div class="empty-state-text">Loading active admins...</div></div></td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
@@ -2039,26 +2065,71 @@
   </div>
 </div>
 
-<!-- Invite Admin -->
+<!-- Assign New Admin Modal -->
 <div class="modal-overlay" id="modal-invite-admin">
   <div class="modal">
-    <div class="modal-head"><span class="modal-title">Invite admin</span><button class="modal-close" onclick="closeModal('modal-invite-admin')">✕</button></div>
+    <div class="modal-head"><span class="modal-title">Assign New Admin</span><button class="modal-close" onclick="closeModal('modal-invite-admin')">✕</button></div>
     <div class="modal-body">
-      <div style="background:var(--blue-dim);border:1px solid rgba(20,40,255,.2);border-radius:8px;padding:.85rem;font-size:.76rem;color:#6b8cff;margin-bottom:1rem;">The invited person must already have a Sofe Node account. Enter their registered email and assign a role.</div>
-      <div class="form-group" style="margin-bottom:.75rem;"><label class="form-label">Email address</label><input class="form-input" id="inviteAdminEmail" placeholder="admin@example.com" type="email"/></div>
-      <div class="form-group"><label class="form-label">Admin role</label>
+      <div style="background:var(--blue-dim);border:1px solid rgba(20,40,255,.2);border-radius:8px;padding:.85rem;font-size:.76rem;color:#6b8cff;margin-bottom:1rem;">
+        The user must have an existing Sofe account. Enter their registered email to assign an administrative role immediately. The user will instantly become an admin and receive an in-app notification.
+      </div>
+      <div class="form-group" style="margin-bottom:.75rem;">
+        <label class="form-label">Email address</label>
+        <input class="form-input" id="inviteAdminEmail" placeholder="user@example.com" type="email" autocomplete="off"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Admin role privilege</label>
         <select class="form-select" id="inviteAdminRole">
-          <option value="super_admin">Super Admin — full access</option>
-          <option value="course_manager">Course Manager — courses & enrolments</option>
-          <option value="tutor">Tutor / Instructor — grading & course review</option>
-          <option value="node_lead">Node Lead — campus node activations</option>
-          <option value="finance_admin">Finance Admin — payments & commissions</option>
-          <option value="community_manager">Community Manager — students, XP & badges</option>
-          <option value="social_media_manager">Social Media Manager — blog only</option>
+          <option value="super_admin">👑 Super Admin — full platform access</option>
+          <option value="chief_operations">💼 Chief Operations — all operations except payments/payouts</option>
+          <option value="course_manager">📚 Course Manager — courses & enrolments</option>
+          <option value="tutor">👨‍🏫 Tutor / Instructor — grading & course review</option>
+          <option value="node_lead">🏛 Campus Node Lead — campus node activations</option>
+          <option value="finance_admin">💰 Finance Admin — payments & commissions</option>
+          <option value="community_manager">⚡ Community Manager — students, XP & badges</option>
+          <option value="social_media_manager">✍ Social Media Manager — blog only</option>
         </select>
       </div>
     </div>
-    <div class="modal-foot"><button class="btn btn-ghost" onclick="closeModal('modal-invite-admin')">Cancel</button><button class="btn btn-primary" onclick="inviteAdmin()">Send invite</button></div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('modal-invite-admin')">Cancel</button>
+      <button class="btn btn-primary" id="btnAssignAdminSubmit" onclick="assignNewAdmin()">Assign Admin Role</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Admin Role Modal -->
+<div class="modal-overlay" id="modal-edit-admin">
+  <div class="modal">
+    <div class="modal-head"><span class="modal-title">Edit Admin Role</span><button class="modal-close" onclick="closeModal('modal-edit-admin')">✕</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="editAdminUid" />
+      <div class="form-group" style="margin-bottom:.75rem;">
+        <label class="form-label">Admin Name</label>
+        <input class="form-input" id="editAdminName" readonly style="opacity:0.8;background:rgba(255,255,255,0.03);" />
+      </div>
+      <div class="form-group" style="margin-bottom:.75rem;">
+        <label class="form-label">Email address</label>
+        <input class="form-input" id="editAdminEmail" readonly style="opacity:0.8;background:rgba(255,255,255,0.03);" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Admin role privilege</label>
+        <select class="form-select" id="editAdminRole">
+          <option value="super_admin">👑 Super Admin — full platform access</option>
+          <option value="chief_operations">💼 Chief Operations — all operations except payments/payouts</option>
+          <option value="course_manager">📚 Course Manager — courses & enrolments</option>
+          <option value="tutor">👨‍🏫 Tutor / Instructor — grading & course review</option>
+          <option value="node_lead">🏛 Campus Node Lead — campus node activations</option>
+          <option value="finance_admin">💰 Finance Admin — payments & commissions</option>
+          <option value="community_manager">⚡ Community Manager — students, XP & badges</option>
+          <option value="social_media_manager">✍ Social Media Manager — blog only</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('modal-edit-admin')">Cancel</button>
+      <button class="btn btn-purple" id="btnSaveEditAdmin" onclick="saveEditAdminRole()">Save Changes</button>
+    </div>
   </div>
 </div>
 
@@ -2293,6 +2364,7 @@
 // ════════════════════════════════════════════════════
 const ROLES = {
   super_admin:          { label: 'Super Admin',          panels: ['overview','courses','cohorts','applications','students','enrolments','payments','discounts','xp','bounties','notifications','chapters','blog','settings'] },
+  chief_operations:     { label: 'Chief Operations',     panels: ['overview','courses','cohorts','applications','students','enrolments','discounts','xp','bounties','notifications','chapters','blog','settings'] },
   admin:                { label: 'Admin',                panels: ['overview','courses','cohorts','applications','students','enrolments','discounts','xp','bounties','notifications','chapters','blog'] },
   course_manager:       { label: 'Course Manager',       panels: ['overview','courses','cohorts','applications','students','enrolments', 'discounts'] },
   tutor:                { label: 'Tutor',                panels: ['courses'] },
@@ -2352,6 +2424,8 @@ function initDashboard(role) {
 
   // Build sidebar nav based on permitted panels
   buildSidebar(roleConfig.panels);
+  const paymentSubTabBtn = document.querySelector("#settingsSubTabs button[onclick*='payment']");
+  if (paymentSubTabBtn) paymentSubTabBtn.style.display = (role === 'chief_operations') ? 'none' : '';
 
   // Show the first permitted panel
   const firstPanel = roleConfig.panels[0];
@@ -3088,27 +3162,325 @@ function saveBadgeDefinition() {
 // ════════════════════════════════════════════════════
 // ADMIN ROLE MANAGEMENT
 // ════════════════════════════════════════════════════
-function inviteAdmin() {
-  const email = document.getElementById('inviteAdminEmail').value.trim();
-  const role  = document.getElementById('inviteAdminRole').value;
-  if (!email) { showToast('Email required', 'error'); return; }
+window._allAdminUsers = [];
 
-  /* FIREBASE:
-  // 1. Find user by email
-  const snap = await db.collection('users').where('email','==',email).limit(1).get();
-  if (snap.empty) { showToast('No account found with that email', 'error'); return; }
-  const userDoc = snap.docs[0];
-  // 2. Update their role
-  await userDoc.ref.update({ role: 'admin', admin_role: role });
-  // 3. Send notification email
-  */
-  closeModal('modal-invite-admin');
-  showToast('Admin invite sent — connect Firebase to save');
-}
+const ADMIN_ROLE_META = {
+  super_admin: { label: 'Super Admin', color: '#ef4444', icon: '👑' },
+  chief_operations: { label: 'Chief Operations', color: '#00b4d8', icon: '💼' },
+  course_manager: { label: 'Course Manager', color: '#3b82f6', icon: '📚' },
+  tutor: { label: 'Tutor / Instructor', color: '#6366f1', icon: '👨‍🏫' },
+  node_lead: { label: 'Campus Node Lead', color: '#f59e0b', icon: '🏛' },
+  finance_admin: { label: 'Finance Admin', color: '#10b981', icon: '💰' },
+  community_manager: { label: 'Community Manager', color: '#8b5cf6', icon: '⚡' },
+  social_media_manager: { label: 'Social Media Manager', color: '#ec4899', icon: '✍' },
+  admin: { label: 'Super Admin', color: '#ef4444', icon: '👑' }
+};
 
-// ════════════════════════════════════════════════════
-// SUB-TAB SWITCHERS
-// ════════════════════════════════════════════════════
+window.openAssignAdminModal = function() {
+  const emailInput = document.getElementById('inviteAdminEmail');
+  const roleSelect = document.getElementById('inviteAdminRole');
+  if (emailInput) emailInput.value = '';
+  if (roleSelect) roleSelect.value = 'course_manager';
+  openModal('modal-invite-admin');
+};
+
+window.assignNewAdmin = async function() {
+  const emailInput = document.getElementById('inviteAdminEmail');
+  const roleSelect = document.getElementById('inviteAdminRole');
+  const btn = document.getElementById('btnAssignAdminSubmit');
+  const email = emailInput ? emailInput.value.trim().toLowerCase() : '';
+  const role = roleSelect ? roleSelect.value : 'course_manager';
+
+  if (!email) {
+    showToast('Please enter user email address', 'error');
+    return;
+  }
+
+  const dbInstance = window.db || window._db;
+  const fsInstance = window._fs || window;
+  if (!dbInstance) {
+    showToast('Database connection initializing, please wait...', 'error');
+    return;
+  }
+
+  try {
+    if (btn) { btn.disabled = true; btn.textContent = 'Assigning...'; }
+
+    // Query user by email
+    const usersRef = fsInstance.collection(dbInstance, 'users');
+    const q = fsInstance.query(usersRef, fsInstance.where('email', '==', email), fsInstance.limit(1));
+    const snap = await fsInstance.getDocs(q);
+
+    if (snap.empty) {
+      showToast(`No Sofe account found for ${email}. The user must create an account first.`, 'error');
+      if (btn) { btn.disabled = false; btn.textContent = 'Assign Admin Role'; }
+      return;
+    }
+
+    const targetDoc = snap.docs[0];
+    const targetUid = targetDoc.id;
+    const targetData = targetDoc.data();
+
+    // Map role: tutors and node_leads keep their primary role or become admin with admin_role
+    const primaryRole = (role === 'tutor' || role === 'node_lead') ? role : 'admin';
+
+    await fsInstance.updateDoc(fsInstance.doc(dbInstance, 'users', targetUid), {
+      role: primaryRole,
+      admin_role: role,
+      updated_at: fsInstance.serverTimestamp()
+    });
+
+    // Send in-app notification
+    const roleMeta = ADMIN_ROLE_META[role] || { label: role.toUpperCase() };
+    try {
+      await fsInstance.addDoc(fsInstance.collection(dbInstance, 'notifications'), {
+        user_id: targetUid,
+        type: 'personal',
+        title: '👑 Admin Role Assigned',
+        message: `Congratulations! You have been assigned the ${roleMeta.label} role on the Sofe platform. You now have administrative privileges.`,
+        read: false,
+        role: role,
+        created_at: fsInstance.serverTimestamp()
+      });
+    } catch (notifErr) {
+      console.warn('Notification creation error:', notifErr);
+    }
+
+    closeModal('modal-invite-admin');
+    showToast(`Successfully assigned ${roleMeta.label} role to ${email}!`, 'success');
+    if (emailInput) emailInput.value = '';
+
+    // Refresh admin team list
+    loadAdminUsers();
+  } catch (err) {
+    console.error('Error assigning admin role:', err);
+    showToast('Failed to assign admin role: ' + (err.message || err), 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Assign Admin Role'; }
+  }
+};
+
+window.inviteAdmin = window.assignNewAdmin;
+
+window.loadAdminUsers = async function() {
+  const tbody = document.getElementById('adminsTable');
+  if (tbody) tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state"><div class="empty-state-text">Loading active admins...</div></div></td></tr>';
+
+  const dbInstance = window.db || window._db;
+  const fsInstance = window._fs || window;
+  if (!dbInstance) return;
+
+  try {
+    const superEmails = ['admin@sofenode.com', 'admin@sofegroup.com', 'superadmin@sofenode.com'];
+    const usersSnap = await fsInstance.getDocs(fsInstance.collection(dbInstance, 'users'));
+    const allUsers = usersSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    const admins = allUsers.filter(u => {
+      const uEmail = (u.email || '').toLowerCase();
+      const hasAdminRole = Boolean(u.admin_role);
+      const isRoleAdmin = u.role === 'admin' || u.role === 'tutor' || u.role === 'node_lead';
+      const isSuperEmail = superEmails.includes(uEmail);
+      return hasAdminRole || isRoleAdmin || isSuperEmail;
+    });
+
+    window._allAdminUsers = admins;
+
+    if (!admins.length) {
+      if (tbody) tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state"><div class="empty-state-text">No active admin team members found.</div></div></td></tr>';
+      return;
+    }
+
+    const currentUid = window._auth?.currentUser?.uid || window._adminUid;
+    const currentEmail = (window._auth?.currentUser?.email || '').toLowerCase();
+
+    let html = '';
+    admins.forEach(admin => {
+      const uid = admin.uid || admin.id;
+      const email = admin.email || '—';
+      const name = (admin.first_name || admin.last_name) ? `${admin.first_name || ''} ${admin.last_name || ''}`.trim() : 'Sofian Admin';
+      const initials = (name.split(' ').map(n => n[0]).join('') || 'A').toUpperCase().slice(0, 2);
+
+      const emailLower = email.toLowerCase();
+      const effectiveRole = superEmails.includes(emailLower) 
+        ? 'super_admin' 
+        : (admin.admin_role || (admin.role === 'admin' ? 'super_admin' : (admin.role || 'admin')));
+      const meta = ADMIN_ROLE_META[effectiveRole] || { label: effectiveRole, color: '#6b8cff', icon: '🛡' };
+
+      const isSelf = uid === currentUid || emailLower === currentEmail;
+      const isSuper = superEmails.includes(emailLower);
+
+      const lastSeen = admin.last_active_at?.toDate ? admin.last_active_at.toDate() : (admin.updated_at?.toDate ? admin.updated_at.toDate() : (admin.created_at?.toDate ? admin.created_at.toDate() : null));
+      const lastSeenStr = lastSeen ? lastSeen.toLocaleDateString('en-NG', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Active recently';
+
+      const safeName = name.replace(/'/g, "\'");
+      const safeEmail = email.replace(/'/g, "\'");
+
+      html += `
+        <tr>
+          <td>
+            <div style="display:flex;align-items:center;gap:.6rem;">
+              <div style="width:30px;height:30px;border-radius:50%;background:rgba(20,40,255,.15);border:1px solid ${meta.color}44;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;color:${meta.color};">
+                ${initials}
+              </div>
+              <div>
+                <div style="font-weight:600;color:var(--white);font-size:.82rem;">${name} ${isSelf ? '<span style="font-size:.65rem;color:var(--muted);font-weight:400;">(You)</span>' : ''}</div>
+              </div>
+            </div>
+          </td>
+          <td style="color:var(--muted);font-size:.78rem;">${email}</td>
+          <td>
+            <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:4px;font-size:.68rem;font-weight:700;background:${meta.color}15;color:${meta.color};border:1px solid ${meta.color}33;">
+              <span>${meta.icon}</span> <span>${meta.label}</span>
+            </span>
+          </td>
+          <td style="color:var(--muted);font-size:.74rem;">${lastSeenStr}</td>
+          <td style="text-align:right;">
+            <div style="display:inline-flex;gap:.4rem;align-items:center;">
+              <button class="btn btn-ghost btn-sm" onclick="openEditAdminModal('${uid}')" style="font-size:.72rem;padding:.22rem .55rem;">
+                ✏️ Edit
+              </button>
+              ${(!isSelf && !isSuper) ? `
+                <button class="btn btn-danger btn-sm" onclick="terminateAdminRole('${uid}', '${safeName}', '${safeEmail}')" style="font-size:.72rem;padding:.22rem .55rem;background:rgba(255,68,68,0.15);border:1px solid rgba(255,68,68,0.3);color:#ff6b6b;">
+                  Terminate
+                </button>
+              ` : `
+                <span style="font-size:.68rem;color:var(--muted);padding:0 .3rem;">${isSelf ? 'Active' : 'Super'}</span>
+              `}
+            </div>
+          </td>
+        </tr>
+      `;
+    });
+
+    if (tbody) tbody.innerHTML = html;
+  } catch (err) {
+    console.error('Error loading admin users:', err);
+    if (tbody) tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="empty-state-text" style="color:var(--red);">Error loading admins: ${err.message || err}</div></div></td></tr>`;
+  }
+};
+
+window.openEditAdminModal = function(uid) {
+  const admin = (window._allAdminUsers || []).find(u => (u.uid || u.id) === uid);
+  if (!admin) {
+    showToast('Admin user details not found', 'error');
+    return;
+  }
+  const superEmails = ['admin@sofenode.com', 'admin@sofegroup.com', 'superadmin@sofenode.com'];
+  const name = (admin.first_name || admin.last_name) ? `${admin.first_name || ''} ${admin.last_name || ''}`.trim() : 'Sofian Admin';
+  const email = admin.email || '';
+  const currentAdminRole = superEmails.includes(email.toLowerCase()) 
+    ? 'super_admin' 
+    : (admin.admin_role || (admin.role === 'admin' ? 'super_admin' : (admin.role || 'course_manager')));
+
+  document.getElementById('editAdminUid').value = uid;
+  document.getElementById('editAdminName').value = name;
+  document.getElementById('editAdminEmail').value = email;
+  document.getElementById('editAdminRole').value = currentAdminRole;
+
+  openModal('modal-edit-admin');
+};
+
+window.saveEditAdminRole = async function() {
+  const uid = document.getElementById('editAdminUid').value;
+  const newRole = document.getElementById('editAdminRole').value;
+  const email = document.getElementById('editAdminEmail').value;
+  const btn = document.getElementById('btnSaveEditAdmin');
+
+  if (!uid || !newRole) {
+    showToast('Role selection required', 'error');
+    return;
+  }
+
+  const dbInstance = window.db || window._db;
+  const fsInstance = window._fs || window;
+  if (!dbInstance) return;
+
+  try {
+    if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
+
+    const primaryRole = (newRole === 'tutor' || newRole === 'node_lead') ? newRole : 'admin';
+
+    await fsInstance.updateDoc(fsInstance.doc(dbInstance, 'users', uid), {
+      role: primaryRole,
+      admin_role: newRole,
+      updated_at: fsInstance.serverTimestamp()
+    });
+
+    const roleMeta = ADMIN_ROLE_META[newRole] || { label: newRole.toUpperCase() };
+
+    // Send in-app notification
+    try {
+      await fsInstance.addDoc(fsInstance.collection(dbInstance, 'notifications'), {
+        user_id: uid,
+        type: 'personal',
+        title: '👑 Admin Role Updated',
+        message: `Your administrator role on Sofe has been updated to ${roleMeta.label}.`,
+        read: false,
+        role: newRole,
+        created_at: fsInstance.serverTimestamp()
+      });
+    } catch (notifErr) {
+      console.warn('Notification error:', notifErr);
+    }
+
+    closeModal('modal-edit-admin');
+    showToast(`Updated admin role for ${email} to ${roleMeta.label}`, 'success');
+    loadAdminUsers();
+  } catch (err) {
+    console.error('Error updating admin role:', err);
+    showToast('Failed to update role: ' + (err.message || err), 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Save Changes'; }
+  }
+};
+
+window.terminateAdminRole = async function(uid, name, email) {
+  const currentUid = window._auth?.currentUser?.uid || window._adminUid;
+  if (uid === currentUid) {
+    showToast('You cannot terminate your own Super Admin access!', 'error');
+    return;
+  }
+
+  const confirmed = confirm(`Are you sure you want to terminate admin privileges for ${name} (${email})?\n\nThis will revoke all administrative access and revert them to a standard student account.`);
+  if (!confirmed) return;
+
+  const dbInstance = window.db || window._db;
+  const fsInstance = window._fs || window;
+  if (!dbInstance) return;
+
+  try {
+    showToast(`Terminating administrative role for ${name}...`, 'info');
+
+    await fsInstance.updateDoc(fsInstance.doc(dbInstance, 'users', uid), {
+      role: 'student',
+      admin_role: null,
+      admin_terminated_at: fsInstance.serverTimestamp(),
+      updated_at: fsInstance.serverTimestamp()
+    });
+
+    // Send notification
+    try {
+      await fsInstance.addDoc(fsInstance.collection(dbInstance, 'notifications'), {
+        user_id: uid,
+        type: 'personal',
+        title: 'Administrative Access Revoked',
+        message: 'Your administrative access on Sofe has been revoked by a Super Admin. Your account has returned to standard student privileges.',
+        read: false,
+        role: 'student',
+        created_at: fsInstance.serverTimestamp()
+      });
+    } catch (notifErr) {
+      console.warn('Notification error:', notifErr);
+    }
+
+    showToast(`Administrative role for ${name} terminated successfully`, 'success');
+    loadAdminUsers();
+  } catch (err) {
+    console.error('Error terminating admin role:', err);
+    showToast('Failed to terminate admin role: ' + (err.message || err), 'error');
+  }
+};
+
 function switchCourseTab(id, el) {
   document.getElementById('course-tab-list').style.display = id === 'list' ? '' : 'none';
   document.getElementById('course-tab-modules').style.display = id === 'modules' ? '' : 'none';
@@ -4240,13 +4612,38 @@ function switchXpTab(id, el) {
   if (id === 'log') setTimeout(loadAdminXpLog, 100);
 }
 function switchSettingsTab(id, el) {
-  ['platform','payment','roles'].forEach(t => document.getElementById('settings-tab-'+t).style.display = 'none');
-  document.getElementById('settings-tab-'+id).style.display = '';
+  ['platform','payment','roles'].forEach(t => {
+    const tabEl = document.getElementById('settings-tab-'+t);
+    if (tabEl) tabEl.style.display = 'none';
+  });
+  const targetTab = document.getElementById('settings-tab-'+id);
+  if (id === 'payment' && currentRole === 'chief_operations') {
+    if (targetTab) {
+      targetTab.style.display = '';
+      targetTab.innerHTML = '<div class="access-denied"><div class="access-denied-icon">🔒</div><div class="access-denied-title">Access restricted</div><div class="access-denied-sub">Chief Operations does not have permission to view or manage financial payment, commission, and payout configurations.</div></div>';
+    }
+    return;
+  }
+  if (targetTab) targetTab.style.display = '';
   document.querySelectorAll('#settingsSubTabs .sub-tab').forEach(b => b.classList.remove('active'));
   if (el) el.classList.add('active');
-  // Hide roles tab from non-super-admins
-  if (id === 'roles' && currentRole !== 'super_admin') {
-    document.getElementById('settings-tab-roles').innerHTML = `<div class="access-denied"><div class="access-denied-icon">🔒</div><div class="access-denied-title">Super Admin only</div><div class="access-denied-sub">Only Super Admins can manage admin roles and permissions.</div></div>`;
+
+  // Handle roles tab authentication & data loading
+  if (id === 'roles') {
+    const superEmails = ['admin@sofenode.com', 'admin@sofegroup.com', 'superadmin@sofenode.com'];
+    const currentEmail = (window._auth?.currentUser?.email || '').toLowerCase();
+    const isSuper = currentRole === 'super_admin' || superEmails.includes(currentEmail);
+    const contentEl = document.getElementById('rolesTabContent');
+    const deniedEl = document.getElementById('rolesAccessDenied');
+
+    if (!isSuper) {
+      if (contentEl) contentEl.style.display = 'none';
+      if (deniedEl) deniedEl.style.display = 'block';
+    } else {
+      if (contentEl) contentEl.style.display = 'block';
+      if (deniedEl) deniedEl.style.display = 'none';
+      loadAdminUsers();
+    }
   }
 }
 
@@ -5625,6 +6022,7 @@ onAuthStateChanged(auth, async (user) => {
     // Load full overview stats, activity feed, and Sofian demographics once Firebase is ready
     if (typeof window.loadOverview === 'function') window.loadOverview();
     if (typeof window.loadStudents === 'function') window.loadStudents();
+    if (typeof window.loadAdminUsers === 'function') window.loadAdminUsers();
     if (typeof window.loadBountiesData === 'function') setTimeout(loadBountiesData, 500);
 
   } catch (err) {

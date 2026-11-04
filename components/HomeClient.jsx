@@ -108,12 +108,40 @@ export default function HomeClient() {
           </div>
           <div className="cs-visual">
             <div className="network-visual">
-              {['UNN\nNode', 'UniJos\nNode', 'Traders\nTrained', 'UniLag\nNode', 'UniAbuja\nNode'].map((label, i) => (
-                <div className="nv-node" key={i}>{label.split('\n').map((l, j) => <span key={j}>{l}{j === 0 ? <br /> : ''}</span>)}</div>
+              {/* Central SOFE NODE Hub */}
+              <div className="nv-center" title="Sofe Node Hub">
+                SOFE<br />NODE
+              </div>
+
+              {/* Connecting Lines */}
+              <div className="nv-line nv-line-1" />
+              <div className="nv-line nv-line-2" />
+              <div className="nv-line nv-line-3" />
+              <div className="nv-line nv-line-4" />
+              <div className="nv-line nv-line-5" />
+
+              {/* 5 University & Campus Node Satellites with Official Logos */}
+              {[
+                { name: 'UniJos Node', img: '/images/Nodes/SofeNodeUniJOS.png', cls: 'nv-node-1' },
+                { name: 'UniBen Node', img: '/images/Nodes/SofeNodeUniBEN.png', cls: 'nv-node-2' },
+                { name: 'FPNO Node',   img: '/images/Nodes/SofeNodeFPNO.png',   cls: 'nv-node-3' },
+                { name: 'DSPG Node',   img: '/images/Nodes/SofeNodeDSPG.png',   cls: 'nv-node-4' },
+                { name: 'UNN Node',    img: '/images/Nodes/SofeNodeUNN.png',    cls: 'nv-node-5' },
+              ].map((node) => (
+                <div className={`nv-node ${node.cls}`} key={node.name} title={node.name}>
+                  <img
+                    src={node.img}
+                    alt={node.name}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'contain',
+                      borderRadius: '50%',
+                      display: 'block'
+                    }}
+                  />
+                </div>
               ))}
-              <div className="nv-center">SOFE<br />NODE</div>
-              <div className="nv-line" /><div className="nv-line" /><div className="nv-line" />
-              <div className="nv-line" /><div className="nv-line" />
             </div>
           </div>
         </div>

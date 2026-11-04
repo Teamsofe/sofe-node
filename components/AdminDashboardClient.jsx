@@ -41,7 +41,8 @@ export default function AdminDashboardClient() {
     cbieApps: 0,
     coursesCount: 0,
     pendingDisbursements: 0,
-    pendingSubmissions: 0
+    pendingSubmissions: 0,
+    pendingPayments: 0
   });
 
   // Data Collections
@@ -53,6 +54,8 @@ export default function AdminDashboardClient() {
   const [cbieApps, setCbieApps] = useState([]);
   const [chapters, setChapters] = useState([]);
   const [bounties, setBounties] = useState([]);
+  const [payments, setPayments] = useState([]);
+  const [syncingFoundation, setSyncingFoundation] = useState(false);
 
   // Modals & Active Edit Objects
   const [selectedUser, setSelectedUser] = useState(null);
@@ -189,11 +192,22 @@ export default function AdminDashboardClient() {
         console.warn('Settings load notice:', err.message);
       }
 
+      // 9. Payments (Bank Transfers & VIP Memberships)
+      let pList = [];
+      try {
+        const pSnap = await getDocs(query(collection(db, 'payments'), orderBy('created_at', 'desc'), limit(50)));
+        pList = pSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        setPayments(pList);
+      } catch (pErr) {
+        console.warn('Payments load notice:', pErr.message);
+      }
+
       // Compute Overview Metrics
       const validated = uList.filter((u) => u.foundation_complete === true).length;
       const verified = uList.filter((u) => u.email_verified === true).length;
       const pendingD = dList.filter((d) => d.status === 'pending').length;
       const pendingS = sList.filter((s) => s.status === 'pending' || !s.reviewed_at).length;
+      const pendingP = pList.filter((p) => p.status === 'pending_approval' || p.status === 'pending').length;
 
       setMetrics({
         totalUsers: uList.length,
@@ -202,7 +216,8 @@ export default function AdminDashboardClient() {
         cbieApps: aList.length,
         coursesCount: cList.length,
         pendingDisbursements: pendingD,
-        pendingSubmissions: pendingS
+        pendingSubmissions: pendingS,
+        pendingPayments: pendingP
       });
     } catch (err) {
       console.error('Error loading admin dataset:', err);
@@ -235,12 +250,71 @@ export default function AdminDashboardClient() {
         updated_at: serverTimestamp()
       });
 
+      // Dispatch in-app notification to the assigned user
+      try {
+        const roleTitle = formatRoleBadge(primaryRole, inviteAdminRole);
+        await addDoc(collection(db, 'notifications'), {
+          user_id: foundUser.id,
+          type: 'personal',
+          title: '👑 Admin Role Assigned',
+          message: `Congratulations! You have been assigned the ${roleTitle} role on the Sofe platform. You now have administrative privileges.`,
+          read: false,
+          role: inviteAdminRole,
+          created_at: serverTimestamp()
+        });
+      } catch (notifErr) {
+        console.warn('Failed to send assignment notification:', notifErr);
+      }
+
       showToast(`Assigned ${inviteAdminRole.replace(/_/g, ' ').toUpperCase()} role to ${foundUser.email}!`, 'success');
       setInviteAdminEmail('');
       loadAllAdminData();
     } catch (err) {
       console.error('Error assigning admin role:', err);
       showToast(`Failed to assign role: ${err.message}`, 'error');
+    }
+  };
+
+  // Terminate Admin Role (revert to student)
+  const handleTerminateAdmin = async (u) => {
+    if (!u) return;
+    const currentUid = auth.currentUser?.uid;
+    if (u.id === currentUid) {
+      showToast('You cannot terminate your own Super Admin access!', 'error');
+      return;
+    }
+    const name = u.first_name ? `${u.first_name} ${u.last_name || ''}`.trim() : u.email;
+    const confirmed = window.confirm(`Are you sure you want to terminate admin privileges for ${name} (${u.email})?\n\nThis will revoke all administrative access and revert them to a standard student account.`);
+    if (!confirmed) return;
+
+    try {
+      await updateDoc(doc(db, 'users', u.id), {
+        role: 'student',
+        admin_role: null,
+        admin_terminated_at: serverTimestamp(),
+        updated_at: serverTimestamp()
+      });
+
+      // Send in-app notification
+      try {
+        await addDoc(collection(db, 'notifications'), {
+          user_id: u.id,
+          type: 'personal',
+          title: 'Administrative Access Revoked',
+          message: 'Your administrative access on Sofe has been revoked by a Super Admin. Your account has returned to standard student privileges.',
+          read: false,
+          role: 'student',
+          created_at: serverTimestamp()
+        });
+      } catch (notifErr) {
+        console.warn('Failed to send terminate notification:', notifErr);
+      }
+
+      showToast(`Administrative role for ${name} terminated successfully!`, 'success');
+      loadAllAdminData();
+    } catch (err) {
+      console.error('Error terminating admin role:', err);
+      showToast('Failed to terminate admin role: ' + err.message, 'error');
     }
   };
 
@@ -281,9 +355,12 @@ export default function AdminDashboardClient() {
     e.preventDefault();
     if (!selectedUser) return;
     try {
+      const primaryRole = userRoleForm.role;
+      const adminRole = userRoleForm.admin_role || null;
+
       await updateDoc(doc(db, 'users', selectedUser.id), {
-        role: userRoleForm.role,
-        admin_role: userRoleForm.admin_role || null,
+        role: primaryRole,
+        admin_role: adminRole,
         account_type: userRoleForm.account_type,
         affiliate_tier: userRoleForm.affiliate_tier,
         is_premium: userRoleForm.is_premium,
@@ -293,6 +370,24 @@ export default function AdminDashboardClient() {
         node_lead_for: userRoleForm.node_lead_for || null,
         updated_at: serverTimestamp()
       });
+
+      // If administrative or platform role changed, send notification
+      if (adminRole !== selectedUser.admin_role || primaryRole !== selectedUser.role) {
+        try {
+          const roleTitle = formatRoleBadge(primaryRole, adminRole);
+          await addDoc(collection(db, 'notifications'), {
+            user_id: selectedUser.id,
+            type: 'personal',
+            title: adminRole ? '👑 Admin Role Updated' : 'Account Role Updated',
+            message: `Your administrative role on Sofe has been updated to ${roleTitle}.`,
+            read: false,
+            role: adminRole || primaryRole,
+            created_at: serverTimestamp()
+          });
+        } catch (notifErr) {
+          console.warn('Failed to send role update notification:', notifErr);
+        }
+      }
 
       showToast(`User ${selectedUser.email} updated successfully!`, 'success');
       setShowUserModal(false);
@@ -355,6 +450,60 @@ export default function AdminDashboardClient() {
       loadAllAdminData();
     } catch (err) {
       showToast('Error updating disbursement: ' + err.message, 'error');
+    }
+  };
+
+  // Confirm Bank Payment (triggers Cloud Functions: grantCourseAccessOnPaymentApproval, grantPremiumOnPaymentApproval, processPaymentCommission)
+  const handleConfirmPayment = async (paymentId, studentEmail, courseTitle) => {
+    if (!confirm(`Confirm bank payment for ${studentEmail || 'student'} (${courseTitle || 'Course/VIP'})?\n\nThis will trigger the server to activate their enrolment and process referral commissions.`)) return;
+    try {
+      await updateDoc(doc(db, 'payments', paymentId), {
+        status: 'confirmed',
+        confirmed_at: serverTimestamp(),
+        confirmed_by: adminUser.uid
+      });
+      showToast('Payment confirmed! Server is activating enrolment and commissions.', 'success');
+      loadAllAdminData();
+    } catch (err) {
+      showToast('Error confirming payment: ' + err.message, 'error');
+    }
+  };
+
+  // Reject Bank Payment
+  const handleRejectPayment = async (paymentId) => {
+    const reason = prompt('Enter reason for payment rejection (optional):', 'Payment proof invalid or transfer not received.');
+    if (reason === null) return;
+    try {
+      await updateDoc(doc(db, 'payments', paymentId), {
+        status: 'rejected',
+        rejection_reason: reason,
+        rejected_at: serverTimestamp(),
+        rejected_by: adminUser.uid
+      });
+      showToast('Payment marked as rejected.', 'success');
+      loadAllAdminData();
+    } catch (err) {
+      showToast('Error rejecting payment: ' + err.message, 'error');
+    }
+  };
+
+  // Run Foundation payment backfill and lock unpaid users
+  const handleSyncFoundationEnrolments = async () => {
+    if (!confirm('Run Foundation Payment Backfill & Access Audit?\n\nThis will scan all confirmed payments and lock Foundation access for users who haven\'t paid, while unlocking and preserving access for paying students and VIP members.')) return;
+    setSyncingFoundation(true);
+    try {
+      const res = await fetch('https://backfillpastenrollments-ypp2z3pfaq-uc.a.run.app?secret=eae8e40375c6e9ad6bd6aa5c48f13809');
+      const data = await res.json();
+      if (data.success) {
+        showToast(data.message, 'success');
+        loadAllAdminData();
+      } else {
+        showToast('Sync error: ' + (data.error || 'Failed'), 'error');
+      }
+    } catch (err) {
+      showToast('Sync failed: ' + err.message, 'error');
+    } finally {
+      setSyncingFoundation(false);
     }
   };
 
@@ -447,6 +596,7 @@ export default function AdminDashboardClient() {
             <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
               {[
                 { id: 'overview', icon: '📊', label: 'Overview' },
+                { id: 'payments', icon: '💳', label: `Payments (${metrics.pendingPayments || 0})` },
                 { id: 'grading', icon: '📝', label: `Grading (${metrics.pendingSubmissions})` },
                 { id: 'users', icon: '👥', label: 'Sofians & Roles' },
                 { id: 'courses', icon: '📚', label: 'Courses & Modules' },
@@ -560,6 +710,11 @@ export default function AdminDashboardClient() {
                 </div>
 
                 <div style={{ background: '#0D1526', border: '1px solid rgba(20,40,255,0.2)', borderRadius: 10, padding: '1.25rem' }}>
+                  <div style={{ fontSize: '0.7rem', color: 'rgba(200,215,240,0.6)' }}>Pending Payments</div>
+                  <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#FF8A00', marginTop: '0.3rem' }}>{metrics.pendingPayments || 0}</div>
+                </div>
+
+                <div style={{ background: '#0D1526', border: '1px solid rgba(20,40,255,0.2)', borderRadius: 10, padding: '1.25rem' }}>
                   <div style={{ fontSize: '0.7rem', color: 'rgba(200,215,240,0.6)' }}>Pending Disbursements</div>
                   <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#6b8cff', marginTop: '0.3rem' }}>{metrics.pendingDisbursements}</div>
                 </div>
@@ -570,6 +725,12 @@ export default function AdminDashboardClient() {
                 <h3 style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: '0.8rem' }}>Staff Action Center</h3>
                 <div style={{ display: 'flex', gap: '0.8rem', flexWrap: 'wrap' }}>
                   <button
+                    onClick={() => setActivePanel('payments')}
+                    style={{ background: '#10b981', border: 'none', color: '#fff', padding: '0.6rem 1.2rem', borderRadius: 6, fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    Review Payments ({metrics.pendingPayments || 0} pending) →
+                  </button>
+                  <button
                     onClick={() => setActivePanel('grading')}
                     style={{ background: '#1428FF', border: 'none', color: '#fff', padding: '0.6rem 1.2rem', borderRadius: 6, fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}
                   >
@@ -577,7 +738,7 @@ export default function AdminDashboardClient() {
                   </button>
                   <button
                     onClick={() => setActivePanel('disbursements')}
-                    style={{ background: '#10b981', border: 'none', color: '#fff', padding: '0.6rem 1.2rem', borderRadius: 6, fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}
+                    style={{ background: '#0891b2', border: 'none', color: '#fff', padding: '0.6rem 1.2rem', borderRadius: 6, fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}
                   >
                     Review Disbursements ({metrics.pendingDisbursements} pending) →
                   </button>
@@ -726,21 +887,39 @@ export default function AdminDashboardClient() {
                           </td>
                           <td style={{ padding: '0.6rem' }}>{u.node_label || u.chapter_id || '—'}</td>
                           <td style={{ padding: '0.6rem', textAlign: 'right' }}>
-                            <button
-                              onClick={() => handleOpenUserModal(u)}
-                              style={{
-                                background: 'rgba(20,40,255,0.2)',
-                                border: '1px solid rgba(20,40,255,0.4)',
-                                color: '#fff',
-                                padding: '0.35rem 0.8rem',
-                                borderRadius: 4,
-                                fontSize: '0.72rem',
-                                cursor: 'pointer'
-                              }}
-                            >
-                              Edit Roles →
-                            </button>
-                          </td>
+                                    <div style={{ display: 'inline-flex', gap: '0.4rem', alignItems: 'center' }}>
+                                      <button
+                                        onClick={() => handleOpenUserModal(u)}
+                                        style={{
+                                          background: 'rgba(20,40,255,0.2)',
+                                          border: '1px solid rgba(20,40,255,0.3)',
+                                          color: '#6b8cff',
+                                          borderRadius: 4,
+                                          padding: '0.25rem 0.6rem',
+                                          fontSize: '0.7rem',
+                                          cursor: 'pointer'
+                                        }}
+                                      >
+                                        Edit Role
+                                      </button>
+                                      {u.id !== auth.currentUser?.uid && !['admin@sofenode.com', 'admin@sofegroup.com', 'superadmin@sofenode.com'].includes(u.email?.toLowerCase()) && (
+                                        <button
+                                          onClick={() => handleTerminateAdmin(u)}
+                                          style={{
+                                            background: 'rgba(239,68,68,0.15)',
+                                            border: '1px solid rgba(239,68,68,0.3)',
+                                            color: '#ff6b6b',
+                                            borderRadius: 4,
+                                            padding: '0.25rem 0.6rem',
+                                            fontSize: '0.7rem',
+                                            cursor: 'pointer'
+                                          }}
+                                        >
+                                          Terminate
+                                        </button>
+                                      )}
+                                    </div>
+                                  </td>
                         </tr>
                       );
                     })}
@@ -767,6 +946,11 @@ export default function AdminDashboardClient() {
                     const slug = prompt('Enter Course URL Slug (e.g. solana-dev):', title.toLowerCase().replace(/[^a-z0-9]+/g, '-'));
                     if (!slug) return;
                     const desc = prompt('Enter Short Description:', 'Master advanced decentralized engineering.');
+                    const isFound = confirm('Is this the Foundation Course? Click OK for Yes, Cancel for Specialization/Track.');
+                    const incFound = !isFound ? confirm('Include Foundation Course in this track payment? Click OK for Yes (Included), Cancel for No (Standalone).') : false;
+                    const defaultP = isFound ? '50000' : '200000';
+                    const priceStr = prompt('Enter Course Price in ₦:', defaultP);
+                    const price = priceStr ? Number(priceStr) : (isFound ? 50000 : 200000);
                     try {
                       await setDoc(doc(db, 'courses', slug), {
                         title,
@@ -774,10 +958,12 @@ export default function AdminDashboardClient() {
                         description: desc || '',
                         status: 'draft',
                         display_order: courses.length + 1,
-                        is_foundation: false,
+                        is_foundation: isFound,
+                        includes_foundation: isFound ? false : incFound,
+                        price: isNaN(price) ? 0 : price,
                         created_at: serverTimestamp()
                       });
-                      showToast(`Course "${title}" created as Draft!`, 'success');
+                      showToast(`Course "${title}" created as Draft with price ₦${(isNaN(price) ? 0 : price).toLocaleString('en-NG')}!`, 'success');
                       loadAllAdminData();
                     } catch (err) {
                       showToast(`Error creating course: ${err.message}`, 'error');
@@ -799,6 +985,8 @@ export default function AdminDashboardClient() {
                         <th style={{ padding: '0.6rem' }}>Course Title</th>
                         <th style={{ padding: '0.6rem' }}>Slug / ID</th>
                         <th style={{ padding: '0.6rem' }}>Type</th>
+                        <th style={{ padding: '0.6rem' }}>Price (₦)</th>
+                        <th style={{ padding: '0.6rem' }}>Includes Foundation?</th>
                         <th style={{ padding: '0.6rem' }}>Status</th>
                         <th style={{ padding: '0.6rem', textAlign: 'right' }}>Actions</th>
                       </tr>
@@ -820,6 +1008,43 @@ export default function AdminDashboardClient() {
                               {c.is_foundation ? 'Foundation' : 'Specialization'}
                             </span>
                           </td>
+                          <td style={{ padding: '0.6rem', fontWeight: 600, color: '#FF8A00' }}>
+                            {c.price !== undefined ? `₦${Number(c.price).toLocaleString('en-NG')}` : (c.is_foundation ? '₦50,000 (Subsidized)' : '₦200,000 (Default)')}
+                          </td>
+                          <td style={{ padding: '0.6rem' }}>
+                            {!c.is_foundation ? (
+                              <button
+                                onClick={async () => {
+                                  const nextVal = c.includes_foundation === false ? true : false;
+                                  try {
+                                    await updateDoc(doc(db, 'courses', c.id), {
+                                      includes_foundation: nextVal,
+                                      updated_at: serverTimestamp()
+                                    });
+                                    showToast(`Course "${c.title || c.id}" foundation inclusion set to: ${nextVal ? 'Included' : 'Not Included'}`, 'success');
+                                    loadAllAdminData();
+                                  } catch (err) {
+                                    showToast(`Error: ${err.message}`, 'error');
+                                  }
+                                }}
+                                style={{
+                                  background: c.includes_foundation !== false ? 'rgba(0,200,100,0.15)' : 'rgba(255,80,80,0.15)',
+                                  border: `1px solid ${c.includes_foundation !== false ? 'rgba(0,200,100,0.3)' : 'rgba(255,80,80,0.3)'}`,
+                                  color: c.includes_foundation !== false ? '#00c864' : '#ff6b6b',
+                                  borderRadius: 4,
+                                  padding: '0.2rem 0.5rem',
+                                  fontSize: '0.66rem',
+                                  fontWeight: 700,
+                                  cursor: 'pointer'
+                                }}
+                                title="Click to toggle whether this career course includes the Foundation course in its payment"
+                              >
+                                {c.includes_foundation !== false ? '✓ Included' : '✕ Not Included'}
+                              </button>
+                            ) : (
+                              <span style={{ color: 'rgba(200,215,240,0.4)', fontSize: '0.68rem' }}>Base Course</span>
+                            )}
+                          </td>
                           <td style={{ padding: '0.6rem' }}>
                             <span style={{
                               color: c.status === 'published' ? '#10b981' : '#FF8A00',
@@ -830,6 +1055,40 @@ export default function AdminDashboardClient() {
                           </td>
                           <td style={{ padding: '0.6rem', textAlign: 'right' }}>
                             <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'flex-end' }}>
+                              <button
+                                onClick={async () => {
+                                  const curPrice = c.price !== undefined ? c.price : (c.is_foundation ? 50000 : 200000);
+                                  const newPriceStr = prompt(`Set price in ₦ for "${c.title || c.id}":`, String(curPrice));
+                                  if (newPriceStr === null) return;
+                                  const newP = Number(newPriceStr);
+                                  if (isNaN(newP) || newP < 0) {
+                                    showToast('Please enter a valid price amount.', 'error');
+                                    return;
+                                  }
+                                  try {
+                                    await updateDoc(doc(db, 'courses', c.id), {
+                                      price: newP,
+                                      updated_at: serverTimestamp()
+                                    });
+                                    showToast(`Updated price for "${c.title || c.id}" to ₦${newP.toLocaleString('en-NG')}!`, 'success');
+                                    loadAllAdminData();
+                                  } catch (err) {
+                                    showToast(`Failed to update price: ${err.message}`, 'error');
+                                  }
+                                }}
+                                style={{
+                                  background: 'rgba(255,138,0,0.15)',
+                                  border: '1px solid rgba(255,138,0,0.3)',
+                                  color: '#FF8A00',
+                                  padding: '0.3rem 0.6rem',
+                                  borderRadius: 4,
+                                  cursor: 'pointer',
+                                  fontSize: '0.7rem',
+                                  fontWeight: 600
+                                }}
+                              >
+                                Edit Price
+                              </button>
                               <Link
                                 href={`/course-view?course=${c.slug || c.id}`}
                                 target="_blank"
@@ -884,8 +1143,195 @@ export default function AdminDashboardClient() {
             </div>
           )}
 
+          {/* PANEL: PAYMENTS (BANK TRANSFERS & ENROLMENTS) */}
+          {activePanel === 'payments' && adminProfile?.admin_role === 'chief_operations' && (
+            <div style={{ background: '#0D1526', border: '1px solid rgba(255,80,80,0.3)', borderRadius: 10, padding: '2.5rem', textAlign: 'center' }}>
+              <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>🔒</div>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#ff6b6b', marginBottom: '0.5rem' }}>Access Restricted</h3>
+              <p style={{ fontSize: '0.8rem', color: 'rgba(200,215,240,0.7)', maxWidth: 480, margin: '0 auto' }}>
+                Chief Operations does not have permission to view or authorize payments, commissions, or payouts.
+              </p>
+            </div>
+          )}
+          {activePanel === 'payments' && adminProfile?.admin_role !== 'chief_operations' && (
+            <div style={{ background: '#0D1526', border: '1px solid rgba(20,40,255,0.2)', borderRadius: 10, padding: '1.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                <div>
+                  <h3 style={{ fontSize: '1rem', fontWeight: 700 }}>Payments & Bank Transfer Confirmations</h3>
+                  <p style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.6)', marginTop: '0.2rem' }}>
+                    Confirming a bank transfer triggers the server to activate the student&apos;s enrolment and process referral commissions.
+                  </p>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', flexWrap: 'wrap' }}>
+                  <button
+                    onClick={handleSyncFoundationEnrolments}
+                    disabled={syncingFoundation}
+                    style={{
+                      background: 'rgba(255,138,0,0.15)',
+                      border: '1px solid #FF8A00',
+                      color: '#FF8A00',
+                      padding: '0.4rem 0.8rem',
+                      borderRadius: 6,
+                      fontSize: '0.74rem',
+                      fontWeight: 700,
+                      cursor: syncingFoundation ? 'wait' : 'pointer'
+                    }}
+                  >
+                    {syncingFoundation ? 'Auditing & Restricting...' : '⚡ Audit & Restrict Foundation Enrolments'}
+                  </button>
+                  <span style={{ fontSize: '0.72rem', color: '#10b981', fontWeight: 600 }}>Permissions: Super Admin, Finance Admin</span>
+                </div>
+              </div>
+
+              {payments.length === 0 ? (
+                <p style={{ textAlign: 'center', padding: '3rem', color: 'rgba(200,215,240,0.5)', fontSize: '0.8rem' }}>No payment records found.</p>
+              ) : (
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.76rem' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid rgba(200,215,240,0.1)', textAlign: 'left', color: 'rgba(200,215,240,0.6)' }}>
+                        <th style={{ padding: '0.6rem' }}>Student</th>
+                        <th style={{ padding: '0.6rem' }}>Course / Plan</th>
+                        <th style={{ padding: '0.6rem' }}>Amount</th>
+                        <th style={{ padding: '0.6rem' }}>Method & Ref</th>
+                        <th style={{ padding: '0.6rem' }}>Proof</th>
+                        <th style={{ padding: '0.6rem' }}>Status</th>
+                        <th style={{ padding: '0.6rem', textAlign: 'right' }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {payments.map((p) => {
+                        const isPending = p.status === 'pending_approval' || p.status === 'pending';
+                        return (
+                          <tr key={p.id} style={{ borderBottom: '1px solid rgba(200,215,240,0.06)' }}>
+                            <td style={{ padding: '0.6rem' }}>
+                              <div style={{ fontWeight: 600, color: '#fff' }}>{p.user_email || p.user_id?.slice(0, 10)}</div>
+                              <div style={{ fontSize: '0.65rem', color: 'rgba(200,215,240,0.5)' }}>UID: {p.user_id?.slice(0, 8)}...</div>
+                            </td>
+                            <td style={{ padding: '0.6rem' }}>
+                              <span style={{
+                                display: 'inline-block',
+                                background: p.is_premium || p.payment_type === 'premium' ? 'rgba(255,138,0,0.15)' : 'rgba(20,40,255,0.15)',
+                                color: p.is_premium || p.payment_type === 'premium' ? '#FF8A00' : '#6b8cff',
+                                padding: '0.2rem 0.5rem',
+                                borderRadius: 4,
+                                fontWeight: 700,
+                                fontSize: '0.7rem'
+                              }}>
+                                {p.is_premium || p.payment_type === 'premium' ? '💎 VIP Premium' : (p.course_title || p.course_id || 'Course')}
+                              </span>
+                            </td>
+                            <td style={{ padding: '0.6rem', fontWeight: 700, color: '#10b981' }}>
+                              ₦{Number(p.amount || 0).toLocaleString('en-NG')}
+                            </td>
+                            <td style={{ padding: '0.6rem' }}>
+                              <div style={{ fontWeight: 600 }}>{p.method === 'bank' ? '🏦 Bank Transfer' : (p.method || 'Online')}</div>
+                              <div style={{ fontSize: '0.65rem', color: 'rgba(200,215,240,0.5)' }}>{p.reference || p.id}</div>
+                            </td>
+                            <td style={{ padding: '0.6rem' }}>
+                              {p.proof_url ? (
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    if (p.proof_url.startsWith('http')) {
+                                      window.open(p.proof_url, '_blank');
+                                    } else {
+                                      try {
+                                        const { getStorage, ref: sRef, getDownloadURL } = await import('@/lib/firebase');
+                                        const dlUrl = await getDownloadURL(sRef(getStorage(), p.proof_url));
+                                        window.open(dlUrl, '_blank');
+                                      } catch (e) {
+                                        alert('Could not open proof: ' + e.message);
+                                      }
+                                    }
+                                  }}
+                                  style={{
+                                    background: 'rgba(20,40,255,0.15)',
+                                    border: '1px solid rgba(20,40,255,0.3)',
+                                    color: '#6b8cff',
+                                    padding: '0.25rem 0.55rem',
+                                    borderRadius: 4,
+                                    fontSize: '0.7rem',
+                                    fontWeight: 600,
+                                    cursor: 'pointer'
+                                  }}
+                                >
+                                  View Proof ↗
+                                </button>
+                              ) : (
+                                <span style={{ color: 'rgba(200,215,240,0.4)', fontSize: '0.7rem' }}>None</span>
+                              )}
+                            </td>
+                            <td style={{ padding: '0.6rem' }}>
+                              <span style={{
+                                color: p.status === 'confirmed' ? '#10b981' : p.status === 'rejected' ? '#ff5555' : '#FF8A00',
+                                fontWeight: 700,
+                                fontSize: '0.72rem'
+                              }}>
+                                {p.status ? p.status.toUpperCase() : 'PENDING'}
+                              </span>
+                            </td>
+                            <td style={{ padding: '0.6rem', textAlign: 'right' }}>
+                              {isPending ? (
+                                <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'flex-end' }}>
+                                  <button
+                                    onClick={() => handleConfirmPayment(p.id, p.user_email, p.course_title)}
+                                    style={{
+                                      background: '#10b981',
+                                      color: '#fff',
+                                      border: 'none',
+                                      padding: '0.35rem 0.7rem',
+                                      borderRadius: 4,
+                                      cursor: 'pointer',
+                                      fontSize: '0.72rem',
+                                      fontWeight: 700
+                                    }}
+                                  >
+                                    Approve Payment
+                                  </button>
+                                  <button
+                                    onClick={() => handleRejectPayment(p.id)}
+                                    style={{
+                                      background: '#ff5555',
+                                      color: '#fff',
+                                      border: 'none',
+                                      padding: '0.35rem 0.7rem',
+                                      borderRadius: 4,
+                                      cursor: 'pointer',
+                                      fontSize: '0.72rem',
+                                      fontWeight: 600
+                                    }}
+                                  >
+                                    Reject
+                                  </button>
+                                </div>
+                              ) : (
+                                <span style={{ color: 'rgba(200,215,240,0.5)', fontSize: '0.72rem' }}>
+                                  {p.status === 'confirmed' ? '✓ Activated' : 'Rejected'}
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* PANEL 4: DISBURSEMENTS */}
-          {activePanel === 'disbursements' && (
+          {activePanel === 'disbursements' && adminProfile?.admin_role === 'chief_operations' && (
+            <div style={{ background: '#0D1526', border: '1px solid rgba(255,80,80,0.3)', borderRadius: 10, padding: '2.5rem', textAlign: 'center' }}>
+              <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>🔒</div>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#ff6b6b', marginBottom: '0.5rem' }}>Access Restricted</h3>
+              <p style={{ fontSize: '0.8rem', color: 'rgba(200,215,240,0.7)', maxWidth: 480, margin: '0 auto' }}>
+                Chief Operations does not have permission to view or authorize payments, commissions, or payouts.
+              </p>
+            </div>
+          )}
+          {activePanel === 'disbursements' && adminProfile?.admin_role !== 'chief_operations' && (
             <div style={{ background: '#0D1526', border: '1px solid rgba(20,40,255,0.2)', borderRadius: 10, padding: '1.5rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
                 <h3 style={{ fontSize: '1rem', fontWeight: 700 }}>Withdrawals & Node Treasury Disbursements</h3>
@@ -1142,9 +1588,9 @@ export default function AdminDashboardClient() {
 
                   {/* Assign / Invite Admin Box */}
                   <div style={{ background: '#0D1526', border: '1px solid rgba(20,40,255,0.25)', borderRadius: 10, padding: '1.25rem' }}>
-                    <h4 style={{ fontSize: '0.92rem', fontWeight: 700, marginBottom: '0.4rem' }}>Assign Admin Role to Sofian</h4>
+                    <h4 style={{ fontSize: '0.92rem', fontWeight: 700, marginBottom: '0.4rem' }}>+ Assign New Admin</h4>
                     <p style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.65)', marginBottom: '1rem' }}>
-                      Enter the registered email of an existing Sofian account and select the administrative privilege to grant.
+                      Enter the registered email of an existing Sofian account to immediately grant administrative privileges. The user will receive an in-app notification.
                     </p>
                     <form onSubmit={handleInviteAdmin} style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
                       <div style={{ flex: '1 1 240px' }}>
@@ -1159,13 +1605,14 @@ export default function AdminDashboardClient() {
                         />
                       </div>
                       <div style={{ flex: '1 1 220px' }}>
-                        <label style={{ display: 'block', fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)', marginBottom: 4 }}>Assign Role</label>
+                        <label style={{ display: 'block', fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)', marginBottom: 4 }}>Assign Role Privilege</label>
                         <select
                           value={inviteAdminRole}
                           onChange={(e) => setInviteAdminRole(e.target.value)}
                           style={{ width: '100%', background: '#080E1A', border: '1px solid rgba(20,40,255,0.3)', borderRadius: 6, padding: '0.55rem 0.8rem', color: '#fff', fontSize: '0.78rem' }}
                         >
                           <option value="super_admin">👑 Super Admin - Full Platform Access</option>
+                          <option value="chief_operations">💼 Chief Operations - All Operations Except Payments & Payouts</option>
                           <option value="course_manager">📚 Course Manager - Courses & Enrolments</option>
                           <option value="tutor">👨‍🏫 Tutor / Instructor - Grading & Submissions</option>
                           <option value="node_lead">🏛 Campus Node Lead - Chapter Activations</option>
@@ -1177,7 +1624,7 @@ export default function AdminDashboardClient() {
                       <button
                         type="submit"
                         style={{
-                          background: '#1428FF',
+                          background: 'linear-gradient(135deg, #1428FF, #0012B3)',
                           color: '#fff',
                           border: 'none',
                           borderRadius: 6,
@@ -1187,7 +1634,7 @@ export default function AdminDashboardClient() {
                           cursor: 'pointer'
                         }}
                       >
-                        + Assign Privileges
+                        Assign Admin Role
                       </button>
                     </form>
                   </div>
@@ -1217,6 +1664,7 @@ export default function AdminDashboardClient() {
                             .map((u) => {
                               const badgeColor = 
                                 u.admin_role === 'super_admin' ? '#ef4444' :
+                                u.admin_role === 'chief_operations' ? '#00b4d8' :
                                 (u.role === 'tutor' || u.admin_role === 'tutor') ? '#3b82f6' :
                                 (u.role === 'node_lead' || u.admin_role === 'node_lead') ? '#f59e0b' :
                                 '#10b981';
@@ -1427,6 +1875,7 @@ export default function AdminDashboardClient() {
                 >
                   <option value="">None (Standard)</option>
                   <option value="super_admin">Super Admin</option>
+                  <option value="chief_operations">Chief Operations</option>
                   <option value="course_manager">Course Manager</option>
                   <option value="tutor">Tutor</option>
                   <option value="finance_admin">Finance Admin</option>

@@ -2262,12 +2262,12 @@ onAuthStateChanged(auth, async function(user) {
     var fpct=0, fdone=false, fenrolled=false;
     try {
       var es = await getDocs(query(collection(db,'enrolments'),where('user_id','==',user.uid)));
-      allEnrolments = es.docs.map(d => Object.assign({id:d.id}, d.data()));
+      allEnrolments = es.docs.map(d => Object.assign({id:d.id}, d.data())).filter(d => d.status === 'active' || d.status === 'completed');
       try {
         var es2 = await getDocs(query(collection(db,'enrolment'),where('user_id','==',user.uid)));
         if (!es2.empty) {
           var existingIds = new Set(allEnrolments.map(e => e.course_id));
-          es2.docs.forEach(d => { var data = Object.assign({id:d.id, _legacy:true}, d.data()); if (!existingIds.has(data.course_id)) allEnrolments.push(data); });
+          es2.docs.forEach(d => { var data = Object.assign({id:d.id, _legacy:true}, d.data()); if (!existingIds.has(data.course_id) && (data.status === 'active' || data.status === 'completed')) allEnrolments.push(data); });
         }
       } catch(e2){}
       var fe = allEnrolments.find(d => (d.course_id === 'foundation' || !d.course_id) && d.status === 'active');

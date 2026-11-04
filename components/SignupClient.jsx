@@ -49,9 +49,9 @@ const BRAND_CONTENT = {
   sofian: {
     tag: 'Free to Join',
     heading: <>Learn, Earn &amp;<br />Build Your <em>Web3 Career.</em></>,
-    subtitle: 'Join 5,000+ Africans who’ve used Sofe Node to break into blockchain — for free. Your journey starts with one click.',
+    subtitle: 'Join 5,000+ Africans who’ve used Sofe Node to break into blockchain. Your journey starts with one click.',
     benefits: [
-      { icon: '📚', color: 'blue', title: 'Free Foundation Course', desc: 'Start with the Blockchain & Crypto Bootcamp — fully subsidised by our global partners.' },
+      { icon: '📚', color: 'blue', title: 'Subsidized Foundation Course', desc: 'Start with the Blockchain & Crypto Bootcamp — subsidized by our global partners.' },
       { icon: '💰', color: 'orange', title: 'Earn While You Learn', desc: 'Unlock your referral link on graduation. Earn 10% direct & 5% indirect commission.' },
       { icon: '🏆', color: 'green', title: 'Verified Certificates', desc: 'Download and share on-chain certificates to LinkedIn and your portfolio.' },
       { icon: '🚀', color: 'blue', title: '6 Career Tracks', desc: 'Development, Data, Design, Management, Growth & AI — choose your specialisation.' },
@@ -369,6 +369,9 @@ export default function SignupClient() {
         role: activeType.role,
         account_type: accountType,
         xp_total: 0,
+        xp_this_period: 0,
+        monthly_xp: 0,
+        daily_streak: 0,
         xp_tier: 'Genesis',
         wallet_balance: 0,
         referral_code: myRefCode,

@@ -39,7 +39,7 @@ const FALLBACK_COURSES = {
     title: 'Blockchain & Cryptocurrency Foundation',
     description: 'Master the fundamental primitives of blockchain architecture, digital wallets, decentralized protocols, and crypto economics.',
     tier: 'foundation',
-    price: 0,
+    price: 50000,
     duration_weeks: 4,
     cohort_based: false,
     modules: [
@@ -164,10 +164,10 @@ export default function CourseDetailClient({ courseIdProp }) {
     );
   }
 
-  const isFree = !course.price || course.price === 0;
-  const priceDisplay = isFree ? 'FREE' : `₦${Number(course.price).toLocaleString('en-NG')}`;
+  const coursePrice = course.price !== undefined ? course.price : (course.tier === 'foundation' ? 50000 : 200000);
+  const priceDisplay = `₦${Number(coursePrice).toLocaleString('en-NG')}`;
   const tierClass = course.tier === 'foundation' ? 'foundation' : course.tier === 'executive' ? 'executive' : 'track';
-  const tierLabel = course.tier === 'foundation' ? 'Foundation Course' : course.tier === 'executive' ? 'Executive Program' : 'Career Track';
+  const tierLabel = course.tier === 'foundation' ? 'Subsidized Foundation Course' : course.tier === 'executive' ? 'Executive Program' : 'Career Track';
   const enrolUrl = course.tier === 'executive' ? `/cbie-application?course=${course.id}` : `/payment-flow?course=${course.id}`;
 
   return (
@@ -210,14 +210,14 @@ export default function CourseDetailClient({ courseIdProp }) {
           <div className="course-sidebar-card">
             <div className="sidebar-price">
               <div className="price-main">{priceDisplay}</div>
-              <div className="price-sub">{isFree ? 'Self-Paced Access' : 'One-time Payment'}</div>
+              <div className="price-sub">{course.tier === 'foundation' ? 'Subsidized Rate' : 'One-time Payment'}</div>
             </div>
 
             <div className="sidebar-includes">
               <h3>What&apos;s Included:</h3>
               <div className="sidebar-includes-item">
                 <span className="check-icon">✓</span>
-                <span>Foundation Course included</span>
+                <span>{course.tier === 'foundation' ? 'Subsidized Course Access' : course.includes_foundation !== false ? 'Foundation Course included' : 'Specialized Track Curriculum'}</span>
               </div>
               <div className="sidebar-includes-item">
                 <span className="check-icon">✓</span>
@@ -235,14 +235,14 @@ export default function CourseDetailClient({ courseIdProp }) {
 
             <Link href={enrolUrl} style={{ textDecoration: 'none' }}>
               <button className="enrol-btn">
-                {isFree ? 'Start Free Course →' : 'ENROL NOW →'}
+                ENROL NOW →
               </button>
             </Link>
 
-            {course.tier !== 'foundation' && (
+            {course.tier !== 'foundation' && course.includes_foundation !== false && (
               <div className="foundation-notice">
                 <span>✓</span>
-                <span>Foundation Course included — must be completed before track modules unlock.</span>
+                <span>Foundation Course included in payment — unlocks automatically upon enrolment.</span>
               </div>
             )}
           </div>

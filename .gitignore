@@ -22,3 +22,12 @@
 .firebase/
 firebase-debug.log
 firebase-debug.*.log
+
+# local backups / scratch tooling
+/backups/
+*.bak
+* - Copy.*
+/scratch/node_modules/
+
+.env.local
+*firebase-adminsdk*.json

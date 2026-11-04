@@ -1,5 +1,7 @@
 # Sofe Node — Next.js Project
 
+Africa's node for Web3 growth: marketing site, Academy (LMS), CBIE executive programme, bounties, learner dashboard and admin console.
+
 ## Quick Start
 
 ```bash
@@ -9,78 +11,71 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000)
 
+## Build & Deploy
+
+The site is a static export (`output: 'export'` → `out/`) served by Firebase Hosting.
+
+```bash
+npm run build                                  # writes out/
+firebase deploy --only hosting                 # site
+firebase deploy --only firestore:rules,storage # security rules
+firebase deploy --only functions               # Cloud Functions (functions/)
+```
+
 ---
 
 ## Project Structure
 
 ```
 sofe-node-nextjs/
-├── app/
-│   ├── globals.css         # All shared CSS (design tokens, nav, footer, components)
-│   ├── layout.jsx          # Root layout: fonts, Nav, Footer, HexCanvas
-│   ├── page.jsx            # Homepage (/)
-│   ├── services/
-│   │   ├── talent/page.jsx       # For Talent (/services/talent)
-│   │   └── partners/page.jsx     # For Partners (/services/partners)
-│   └── academy/page.jsx          # Academy (/academy)
+├── app/                    # App Router pages — each page.jsx renders a *Client component
+│   ├── layout.jsx          # Root layout: fonts, Nav, Footer, HexCanvas, intro animation
+│   ├── globals.css         # Shared CSS (design tokens, nav, footer, components)
+│   ├── academy/ courses/ course-detail/ course-view/   # Academy / LMS
+│   ├── cbie/ cbie-application/                          # CBIE executive programme
+│   ├── bounties/ dashboard/ admin/ admin-dashboard/
+│   ├── login/ signup/ payment/ payment-flow/ join/      # Auth, Paystack, chapter referral links
+│   └── about/ bce/ blog/ contact/ events/ for-talents/ for-ecosystems/ services/
 │
-├── components/
-│   ├── Nav.jsx             # Sticky nav with mobile menu + theme toggle (client)
-│   ├── Footer.jsx          # Site footer with newsletter signup
-│   ├── HexCanvas.jsx       # Animated hex background (client, canvas)
-│   ├── ScrollReveal.jsx    # IntersectionObserver for .reveal elements (client)
-│   ├── HomeClient.jsx      # Homepage body — tabs, FAQ accordion (client)
-│   ├── TalentClient.jsx    # /services/talent body (client)
-│   ├── PartnersClient.jsx  # /services/partners body (client)
-│   └── AcademyClient.jsx   # /academy body with mode toggle (client)
+├── components/             # Page bodies (*Client.jsx) plus Nav, Footer, HexCanvas, ScrollReveal
+├── lib/
+│   ├── firebase.js         # Firebase app, Auth, Firestore, Storage, Functions exports
+│   ├── qrcodeGenerator.js  # QR codes for score / certificate share images
+│   └── sofeIntroEngine.js  # Homepage intro animation
 │
-├── public/
-│   └── logo.png            # ← Add your logo here
-│
-├── jsconfig.json           # Path alias: @/* → ./*
-├── next.config.mjs
-└── package.json
+├── functions/index.js      # Cloud Functions: XP, progress, certificates, payments,
+│                           # commissions, referrals, leaderboards, notifications
+├── public/                 # Static assets + legacy HTML pages (being migrated)
+├── firestore.rules         # Firestore security rules
+├── storage.rules
+├── firebase.json           # Hosting (redirects, rewrites, CSP headers), functions, extensions
+└── dataconnect/            # Firebase Data Connect schema
 ```
 
 ---
 
-## Adding Your Logo
+## Migration Status
 
-Place your `logo.png` in the `/public` folder. It will be served at `/logo.png`.
-
-The Nav and Footer reference it as `<img src="/logo.png" />`. For optimal performance, switch to Next.js `<Image>` component once your logo is in place.
-
----
-
-## Remaining Pages to Build
-
-| Page | Route | Status |
-|------|-------|--------|
-| About Us | `/about` | 🔲 Pending |
-| BCE Conference | `/bce` | 🔲 Pending |
-| Login / Signup | `/login`, `/signup` | 🔲 Pending |
-| Dashboard | `/dashboard` | 🔲 Pending |
-| Contact | `/contact` | 🔲 Pending |
+All main routes have Next.js pages. Some features still live in the legacy HTML under
+`public/` — most notably the admin console (`public/admin-dashboard-v2.html`), which is
+being ported to `components/AdminDashboardClient.jsx`.
 
 ---
 
-## CMS Integration (Next Step)
+## Security Model
 
-This project is ready for **Sanity CMS** integration. Recommended setup:
+Progress, XP, payments, enrolment activation and certificates are written only by Cloud
+Functions (`markSessionComplete`, `submitQuizAnswers`, `issueCertificate`, payment and grading
+triggers). The Firestore rules block clients from writing these fields directly — don't add
+client-side fallbacks that write them.
 
-1. `npm create sanity@latest` — initialise Sanity Studio
-2. Define content models for: cohort dates, case studies, partners, testimonials
-3. Fetch in page components using `sanity/client`
-4. Deploy to **Vercel** with a webhook to rebuild on Sanity publish
-
-See the project documentation for the full CMS strategy.
+Backfill/migration HTTP endpoints require `?secret=` matching the `BACKFILL_SECRET` env var.
 
 ---
 
 ## Tech Stack
 
-- **Next.js 14** (App Router)
-- **React 18**
-- **Custom CSS** (no Tailwind — preserves design system)
-- **Google Fonts** (Poppins via `next/font`)
-- **Vercel** (recommended hosting)
+- **Next.js 14** (App Router, static export) + **React 18**
+- **Firebase**: Auth, Firestore, Storage, Cloud Functions (v2), Data Connect, Trigger Email extension
+- **Paystack** for payments
+- **Custom CSS** (no Tailwind — preserves design system), Google Fonts (Poppins, Space Grotesk)

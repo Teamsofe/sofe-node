@@ -19,7 +19,9 @@ import {
   where,
   serverTimestamp,
   ref,
-  uploadBytes
+  uploadBytes,
+  functions,
+  httpsCallable
 } from '@/lib/firebase';
 
 const FALLBACK_PAYMENT_COURSES = {
@@ -42,7 +44,7 @@ const FALLBACK_PAYMENT_COURSES = {
     title: 'Blockchain & Cryptocurrency Foundation',
     description: 'Master the fundamentals of Web3, wallets, and smart contracts.',
     tier: 'foundation',
-    price: 0
+    price: 50000
   }
 };
 
@@ -60,7 +62,7 @@ export default function PaymentFlowClient() {
   const [settings, setSettings] = useState({});
 
   // Payment state
-  const [selectedMethod, setSelectedMethod] = useState('paystack'); // 'paystack' | 'bank'
+  const [selectedMethod, setSelectedMethod] = useState('bank'); // 'paystack' (currently unavailable) | 'bank'
   const [discountCode, setDiscountCode] = useState('');
   const [appliedDiscount, setAppliedDiscount] = useState(null);
   const [discountMsg, setDiscountMsg] = useState(null);
@@ -138,12 +140,20 @@ export default function PaymentFlowClient() {
         }
       } else {
         // Default to Foundation
+        let fPrice = 50000;
+        try {
+          const fDoc = await getDoc(doc(db, 'courses', 'foundation'));
+          if (fDoc.exists() && fDoc.data().price !== undefined) {
+            fPrice = Number(fDoc.data().price);
+          }
+        } catch (e) {}
+
         setCourse({
           id: 'foundation',
           title: 'Blockchain & Cryptocurrency Foundation',
           description: 'Master the fundamentals of Web3, wallets, and smart contracts.',
           tier: 'foundation',
-          price: 0
+          price: fPrice
         });
       }
     } catch (err) {
@@ -202,34 +212,9 @@ export default function PaymentFlowClient() {
   const handleFreeEnrol = async () => {
     setSubmitting(true);
     try {
-      const enrolId = `${currentUser.uid}_${course.id}`;
-      await setDoc(doc(db, 'enrolments', enrolId), {
-        user_id: currentUser.uid,
-        user_email: currentUser.email,
-        course_id: course.id,
-        course_title: course.title || course.id,
-        status: 'active',
-        progress_pct: 0,
-        enrolled_at: serverTimestamp()
-      }, { merge: true });
-
-      if (course.id !== 'foundation') {
-        const foundationEnrolId = `${currentUser.uid}_foundation`;
-        await setDoc(doc(db, 'enrolments', foundationEnrolId), {
-          user_id: currentUser.uid,
-          user_email: currentUser.email,
-          course_id: 'foundation',
-          course_title: 'Blockchain & Cryptocurrency Foundation',
-          status: 'active',
-          progress_pct: 0,
-          enrolled_at: serverTimestamp()
-        }, { merge: true });
-
-        await updateDoc(doc(db, 'users', currentUser.uid), {
-          career_enrolled: true,
-          updated_at: serverTimestamp()
-        });
-      }
+      // Server checks the admin-set price is 0 before creating the enrolment(s) and setting career_enrolled
+      const enrolFn = httpsCallable(functions, 'enrolFreeCourse');
+      await enrolFn({ courseId: course.id });
 
       setSuccessData({
         title: 'Enrolment Activated!',
@@ -249,7 +234,13 @@ export default function PaymentFlowClient() {
       return handleFreeEnrol();
     }
 
-    if (selectedMethod === 'bank' && !proofFile) {
+    // Paystack is currently unavailable — bank transfer only
+    if (selectedMethod !== 'bank') {
+      alert('Card payments via Paystack are currently unavailable. Please pay by bank transfer.');
+      return;
+    }
+
+    if (!proofFile) {
       alert('Please select and upload your payment transfer proof receipt.');
       return;
     }
@@ -267,7 +258,7 @@ export default function PaymentFlowClient() {
 
       const reference = `SOFE_${Date.now()}_${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
 
-      // 1. Record in payments table
+      // 1. Record in payments table (status: 'pending_approval' until admin confirms)
       await addDoc(collection(db, 'payments'), {
         user_id: currentUser.uid,
         user_email: currentUser.email,
@@ -281,57 +272,27 @@ export default function PaymentFlowClient() {
         reference: reference,
         proof_url: proofUrl,
         discount_code: appliedDiscount?.code || null,
-        status: selectedMethod === 'bank' ? 'pending_verification' : 'successful',
+        // Pending until an admin confirms the transfer. On confirmation the server grants
+        // access: grantCourseAccessOnPaymentApproval (courses) / grantPremiumOnPaymentApproval (VIP)
+        payment_type: isPremiumCheckout ? 'premium' : 'enrolment',
+        status: 'pending_approval',
         created_at: serverTimestamp()
       });
 
-      // 2. If it's a course checkout, activate enrolment directly
-      if (!isPremiumCheckout) {
-        const enrolId = `${currentUser.uid}_${course.id}`;
-        await setDoc(doc(db, 'enrolments', enrolId), {
+      // 2. Student may create ONLY a pending enrolment doc in enrolments (access locked until admin confirms)
+      if (!isPremiumCheckout && course?.id) {
+        await setDoc(doc(db, 'enrolments', `${currentUser.uid}_${course.id}`), {
           user_id: currentUser.uid,
           user_email: currentUser.email,
           course_id: course.id,
           course_title: course.title,
-          status: 'active',
+          tier: course.tier || 'track',
+          status: 'pending',
           progress_pct: 0,
-          payment_ref: reference,
-          enrolled_at: serverTimestamp()
-        }, { merge: true });
-
-        if (course.id !== 'foundation') {
-          const foundationEnrolId = `${currentUser.uid}_foundation`;
-          await setDoc(doc(db, 'enrolments', foundationEnrolId), {
-            user_id: currentUser.uid,
-            user_email: currentUser.email,
-            course_id: 'foundation',
-            course_title: 'Blockchain & Cryptocurrency Foundation',
-            status: 'active',
-            progress_pct: 0,
-            enrolled_at: serverTimestamp()
-          }, { merge: true });
-        }
-      } else {
-        // Premium Membership Checkout: Grant Foundation course access directly
-        const foundationEnrolId = `${currentUser.uid}_foundation`;
-        await setDoc(doc(db, 'enrolments', foundationEnrolId), {
-          user_id: currentUser.uid,
-          user_email: currentUser.email,
-          course_id: 'foundation',
-          course_title: 'Blockchain & Cryptocurrency Foundation',
-          status: 'active',
-          progress_pct: 0,
-          payment_ref: reference,
-          enrolled_at: serverTimestamp()
+          enrolled_at: serverTimestamp(),
+          updated_at: serverTimestamp()
         }, { merge: true });
       }
-
-      // 3. Update user document — Upgrade to Premium & Level 2 - Affiliate
-      await updateDoc(doc(db, 'users', currentUser.uid), {
-        ...(course?.id !== 'foundation' && !isPremiumCheckout ? { career_enrolled: true } : {}),
-        ...(isPremiumCheckout ? { is_premium: true, affiliate_tier: 'affiliate' } : {}),
-        updated_at: serverTimestamp()
-      });
 
       // 4. Commission logic
       if (userProfile?.referred_by && netPaid > 0) {
@@ -364,13 +325,11 @@ export default function PaymentFlowClient() {
       }
 
       setSuccessData({
-        title: isPremiumCheckout ? '💎 Premium Membership Activated!' : 'Payment Received — Enrolled Successfully!',
+        title: 'Payment received — awaiting verification',
         isPremium: isPremiumCheckout,
         message: isPremiumCheckout
-          ? 'Your $100 VIP payment has been recorded. Connect with our VIP admin on WhatsApp to join the private mastermind group.'
-          : selectedMethod === 'bank'
-          ? "We've received your transfer proof. You have been enrolled in your course and the foundational course."
-          : 'Your payment was successful! Your course and the foundational course are now active in your dashboard.'
+          ? 'Your $100 VIP payment proof has been recorded. Your Premium Membership will be activated once our team verifies the transfer. Meanwhile, connect with our VIP admin on WhatsApp to join the private mastermind group.'
+          : "We've received your transfer proof. Your enrolment will be activated once our team verifies the payment — you'll see it in your dashboard."
       });
     } catch (err) {
       console.error('Payment submission failed:', err);
@@ -479,7 +438,7 @@ export default function PaymentFlowClient() {
               Complete your enrolment
             </h1>
             <p style={{ color: 'var(--muted, #94a3b8)', fontSize: '0.9rem', marginBottom: '2.5rem' }}>
-              Pay securely via Paystack or bank transfer.
+              Pay securely via bank transfer (Card payments via Paystack are currently unavailable).
             </p>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '2.5rem', alignItems: 'start' }}>
@@ -494,21 +453,24 @@ export default function PaymentFlowClient() {
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                         <button
                           type="button"
-                          onClick={() => setSelectedMethod('paystack')}
-                          className={`payment-method-card ${selectedMethod === 'paystack' ? 'active' : ''}`}
+                          disabled
+                          aria-disabled="true"
+                          title="Card payments are currently unavailable"
+                          className="payment-method-card"
                           style={{
-                            background: selectedMethod === 'paystack' ? 'rgba(20,40,255,0.15)' : '#080E1A',
-                            border: selectedMethod === 'paystack' ? '2px solid #FF8A00' : '1px solid rgba(200,215,240,0.15)',
+                            background: '#080E1A',
+                            border: '1px solid rgba(200,215,240,0.15)',
                             borderRadius: 12,
                             padding: '1.25rem 1rem',
                             textAlign: 'center',
-                            cursor: 'pointer',
+                            cursor: 'not-allowed',
+                            opacity: 0.5,
                             transition: 'all 0.2s'
                           }}
                         >
                           <div style={{ fontSize: '1.6rem', marginBottom: '0.3rem' }}>💳</div>
                           <div className="method-title" style={{ fontWeight: 700, fontSize: '0.88rem', color: '#fff' }}>Card / Bank App</div>
-                          <div className="method-sub" style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.65)', marginTop: '0.2rem' }}>Paystack — Instant access</div>
+                          <div className="method-sub" style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.65)', marginTop: '0.2rem' }}>Paystack — Currently unavailable</div>
                         </button>
                         <button
                           type="button"
@@ -641,14 +603,18 @@ export default function PaymentFlowClient() {
 
                 <div className="payment-summary-box" style={{ background: 'rgba(20,40,255,0.08)', border: '1px solid rgba(20,40,255,0.2)', borderRadius: 10, padding: '1.25rem', marginBottom: '1.5rem' }}>
                   <div style={{ display: 'inline-block', background: 'rgba(255,138,0,0.15)', color: '#FF8A00', borderRadius: 4, padding: '0.2rem 0.5rem', fontSize: '0.68rem', fontWeight: 700, marginBottom: '0.6rem' }}>
-                    ◆ {course?.tier === 'foundation' ? 'FOUNDATION' : course?.tier === 'executive' ? 'EXECUTIVE' : 'CAREER TRACK'}
+                    ◆ {course?.tier === 'foundation' ? 'FOUNDATION (SUBSIDIZED)' : course?.tier === 'executive' ? 'EXECUTIVE' : 'CAREER TRACK'}
                   </div>
                   <div className="summary-title" style={{ fontSize: '1.05rem', fontWeight: 800, color: '#fff', marginBottom: '0.4rem' }}>{course?.title}</div>
                   <div className="summary-desc" style={{ fontSize: '0.78rem', color: 'rgba(200,215,240,0.7)', lineHeight: 1.6, marginBottom: '0.8rem' }}>
                     {course?.description}
                   </div>
                   <div style={{ background: 'rgba(20,40,255,0.12)', border: '1px solid rgba(20,40,255,0.25)', borderRadius: 6, padding: '0.6rem 0.8rem', fontSize: '0.74rem', color: '#8DA6FF' }}>
-                    ✓ Foundation Course included — must be completed before track modules unlock.
+                    {course?.tier === 'foundation'
+                      ? '✓ Subsidized course access — verified on-chain certificate upon completion.'
+                      : course?.includes_foundation !== false
+                      ? '✓ Foundation Course included in payment — unlocks automatically upon enrolment.'
+                      : '✓ Specialized Career Track curriculum with capstone project.'}
                   </div>
                 </div>
 

@@ -26,11 +26,11 @@ service cloud.firestore {
     //   - chapter_name: string (optional)
     //   - node_lead_for: string (optional, admin-assigned chapter id)
     //   - role: string ('student', 'tutor', 'node_lead', 'admin', 'partner', 'ambassador')
-    //   - admin_role: string ('super_admin', 'course_manager', 'finance_admin', 'community_manager', 'social_media_manager', 'admin', 'tutor', 'node_lead')
+    //   - admin_role: string ('super_admin', 'chief_operations', 'course_manager', 'finance_admin', 'community_manager', 'social_media_manager', 'admin', 'tutor', 'node_lead')
     //   - account_type: string ('student', 'premium', 'sofian', 'partner_org', 'protocol')
     //   - is_premium: bool (optional)
     //   - affiliate_tier: string ('newbie', 'affiliate', 'ambassador')
-    //   - career_enrolled: bool (optional)
+    //   - career_enrolled: bool (optional, server-maintained upon payment confirmation)
     //   - bypass_foundation: bool (optional)
     //   - can_post_bounties: bool (optional)
     //   - tutor_courses: list (optional, course IDs)
@@ -132,7 +132,7 @@ service cloud.firestore {
           (
             'admin_role' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data &&
             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.admin_role in [
-              'super_admin', 'course_manager', 'finance_admin', 'community_manager', 'social_media_manager', 'admin'
+              'super_admin', 'chief_operations', 'course_manager', 'finance_admin', 'community_manager', 'social_media_manager', 'admin'
             ]
           )
         );
@@ -161,8 +161,10 @@ service cloud.firestore {
 
     // Safely checks if user has admin privileges and matches required roles:
     // Super admin has access to all role-restricted admin resources
-    // Or 'admin_role' matches one of the roles (safely guarding against missing field)
-    // Or primary 'role' matches one of the roles
+    // Role precedence:
+    // If 'admin_role' exists in the user document, evaluate data.admin_role in roles.
+    // If 'admin_role' is not set (missing or null), fall back to data.role in roles.
+    // The admin console writes admin_role: null when no sub-role is picked.
     function hasAdminRole(roles) {
       return isSignedIn() &&
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
@@ -172,7 +174,13 @@ service cloud.firestore {
             'admin_role' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data &&
             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.admin_role in roles
           ) ||
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in roles
+          (
+            (
+              !('admin_role' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data) ||
+              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.admin_role == null
+            ) &&
+            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in roles
+          )
         );
     }
 
@@ -255,7 +263,10 @@ service cloud.firestore {
         && !('admin_role' in d)                                             // cannot self-assign admin role
         && !('can_post_bounties' in d && d.can_post_bounties == true)
         && !('bypass_foundation' in d && d.bypass_foundation == true)
+        && !('career_enrolled' in d && d.career_enrolled == true)
         && !('is_premium' in d && d.is_premium == true)
+        && !('email_verified' in d && d.email_verified == true)       // synced from Firebase Auth by syncEmailVerified
+        && (!('affiliate_tier' in d) || d.affiliate_tier == 'newbie') // higher tiers are server/admin-assigned
         && !('tutor_courses' in d)
         && !('tutor_modules' in d)
         && !('node_lead_for' in d);
@@ -266,8 +277,8 @@ service cloud.firestore {
       return ['first_name', 'last_name', 'phone', 'country', 'state',
               'node', 'node_label', 'chapter_id', 'chapter_name',
               'bank_name', 'account_number', 'account_name',
-              'marketing_ok', 'email_verified', 'updated_at',
-              'is_premium', 'affiliate_tier', 'career_enrolled', 'account_type',
+              'marketing_ok', 'updated_at',
+              'account_type',
               'x_handle', 'twitter_handle', 'linkedin_username', 'skills',
               'xp_total', 'daily_streak', 'last_daily_claim', 'xp_tier', 'monthly_xp', 'xp_this_period'];
     }
@@ -286,10 +297,7 @@ service cloud.firestore {
         && (!('bank_name' in d) || (d.bank_name is string && d.bank_name.size() <= 100))
         && (!('account_number' in d) || (d.account_number is string && d.account_number.size() <= 30))
         && (!('account_name' in d) || (d.account_name is string && d.account_name.size() <= 100))
-        && (!('is_premium' in d) || d.is_premium is bool)
-        && (!('affiliate_tier' in d) || d.affiliate_tier in ['newbie', 'affiliate', 'ambassador'])
-        && (!('career_enrolled' in d) || d.career_enrolled is bool)
-        && (!('account_type' in d) || d.account_type in ['student', 'premium', 'sofian', 'partner_org', 'protocol'])
+        && (!('account_type' in d) || d.account_type in ['student', 'sofian', 'partner_org', 'protocol'])
         && (!('x_handle' in d) || (d.x_handle is string && d.x_handle.size() <= 100))
         && (!('twitter_handle' in d) || (d.twitter_handle is string && d.twitter_handle.size() <= 100))
         && (!('linkedin_username' in d) || (d.linkedin_username is string && d.linkedin_username.size() <= 150))
@@ -331,23 +339,23 @@ service cloud.firestore {
     // COURSES
     // ═════════════════════════════════════════════════════════════════════════
     match /courses/{courseId} {
-      allow read: if isSignedIn() || resource.data.status == 'published' || isTutor() || hasAdminRole(['super_admin', 'course_manager', 'admin']);
-      allow write: if hasAdminRole(['super_admin', 'course_manager', 'admin']);
+      allow read: if isSignedIn() || resource.data.status == 'published' || isTutor() || hasAdminRole(['super_admin', 'chief_operations', 'course_manager', 'admin']);
+      allow write: if hasAdminRole(['super_admin', 'chief_operations', 'course_manager', 'admin']);
 
       match /modules/{moduleId} {
         allow read: if true;
-        allow write: if hasAdminRole(['super_admin', 'course_manager', 'admin']);
+        allow write: if hasAdminRole(['super_admin', 'chief_operations', 'course_manager', 'admin']);
 
         match /sessions/{sessionId} {
           allow read: if true;
-          allow write: if hasAdminRole(['super_admin', 'course_manager', 'admin']);
+          allow write: if hasAdminRole(['super_admin', 'chief_operations', 'course_manager', 'admin']);
         }
       }
     }
 
     match /modules/{moduleId} {
       allow read: if true;
-      allow write: if hasAdminRole(['super_admin', 'course_manager', 'admin']);
+      allow write: if hasAdminRole(['super_admin', 'chief_operations', 'course_manager', 'admin']);
     }
 
     // ═════════════════════════════════════════════════════════════════════════
@@ -356,25 +364,26 @@ service cloud.firestore {
     match /enrolments/{enrolmentId} {
       allow read: if isOwner(resource.data.user_id) || isAdmin();
 
-      // Student creates an enrolment document (e.g. for course_id == 'foundation' or any enrolled course)
+      // Student may only create a pending enrolment. Access (active / locked_pending_foundation)
+      // is granted server-side when an admin confirms payment.
       allow create: if isSignedIn()
         && request.resource.data.user_id == request.auth.uid
-        && request.resource.data.status in ['active', 'locked_pending_foundation', 'pending']
+        && request.resource.data.status == 'pending'
         && (!('progress_pct' in request.resource.data) || request.resource.data.progress_pct == 0)
         && !('completed_at' in request.resource.data)
         && !('reviewed_by' in request.resource.data);
 
-      allow create: if hasAdminRole(['super_admin', 'course_manager', 'admin']);
+      allow create: if hasAdminRole(['super_admin', 'chief_operations', 'course_manager', 'admin']);
 
-      // Student update (e.g. for setDoc with merge: true upon foundation unlock or payment completion)
+      // Student update — status can never be changed by the student
       allow update: if isOwner(resource.data.user_id)
         && request.resource.data.user_id == request.auth.uid
-        && request.resource.data.status in ['active', 'locked_pending_foundation', 'pending']
+        && request.resource.data.status == resource.data.status
         && (!('progress_pct' in request.resource.data) || request.resource.data.progress_pct == resource.data.progress_pct || request.resource.data.progress_pct == 0)
         && !('completed_at' in request.resource.data)
         && !('reviewed_by' in request.resource.data);
 
-      allow update: if hasAdminRole(['super_admin', 'course_manager', 'admin']);
+      allow update: if hasAdminRole(['super_admin', 'chief_operations', 'course_manager', 'admin']);
 
       allow delete: if isSuperAdmin();
     }
@@ -383,18 +392,18 @@ service cloud.firestore {
       allow read: if isOwner(resource.data.user_id) || isAdmin();
       allow create: if isSignedIn()
         && request.resource.data.user_id == request.auth.uid
-        && request.resource.data.status in ['active', 'locked_pending_foundation', 'pending']
+        && request.resource.data.status == 'pending'
         && (!('progress_pct' in request.resource.data) || request.resource.data.progress_pct == 0)
         && !('completed_at' in request.resource.data)
         && !('reviewed_by' in request.resource.data);
-      allow create: if hasAdminRole(['super_admin', 'course_manager', 'admin']);
+      allow create: if hasAdminRole(['super_admin', 'chief_operations', 'course_manager', 'admin']);
       allow update: if isOwner(resource.data.user_id)
         && request.resource.data.user_id == request.auth.uid
-        && request.resource.data.status in ['active', 'locked_pending_foundation', 'pending']
+        && request.resource.data.status == resource.data.status
         && (!('progress_pct' in request.resource.data) || request.resource.data.progress_pct == resource.data.progress_pct || request.resource.data.progress_pct == 0)
         && !('completed_at' in request.resource.data)
         && !('reviewed_by' in request.resource.data);
-      allow update: if hasAdminRole(['super_admin', 'course_manager', 'admin']);
+      allow update: if hasAdminRole(['super_admin', 'chief_operations', 'course_manager', 'admin']);
       allow delete: if isSuperAdmin();
     }
 
@@ -413,11 +422,11 @@ service cloud.firestore {
     // ═════════════════════════════════════════════════════════════════════════
     match /sessions/{sessionId} {
       allow read: if true;
-      allow write: if hasAdminRole(['super_admin', 'course_manager', 'admin']);
+      allow write: if hasAdminRole(['super_admin', 'chief_operations', 'course_manager', 'admin']);
 
       match /answer_key/{docId} {
-        allow read: if hasAdminRole(['super_admin', 'course_manager', 'admin']) || isTutor();
-        allow write: if hasAdminRole(['super_admin', 'course_manager', 'admin']);
+        allow read: if hasAdminRole(['super_admin', 'chief_operations', 'course_manager', 'admin']) || isTutor();
+        allow write: if hasAdminRole(['super_admin', 'chief_operations', 'course_manager', 'admin']);
       }
     }
 
@@ -427,7 +436,8 @@ service cloud.firestore {
     match /session_submissions/{submissionId} {
       allow read: if isOwner(resource.data.user_id) || isAdmin() || isTutor();
 
-      // Student submits project, assignment, or quiz
+      // Student submits project or assignment. Quiz submissions are written only by
+      // the submitQuizAnswers Cloud Function (server-side grading).
       allow create: if isOwner(request.resource.data.user_id)
         && (
           // Assignments & Projects (pending tutor/admin grading)
@@ -445,15 +455,6 @@ service cloud.firestore {
             && !('reviewed_at' in request.resource.data)
             && !('graded_by' in request.resource.data)
             && !('graded_at' in request.resource.data)
-          ) ||
-          // Quizzes (client recorded or server graded)
-          (
-            request.resource.data.type == 'quiz'
-            && request.resource.data.score is number
-            && request.resource.data.passed is bool
-            && !('feedback' in request.resource.data)
-            && !('reviewed_by' in request.resource.data)
-            && !('graded_by' in request.resource.data)
           )
         );
 
@@ -476,6 +477,14 @@ service cloud.firestore {
         && onlyChanges(['status', 'feedback', 'reviewed_by', 'reviewed_at', 'score', 'passed', 'graded_by', 'graded_at']);
 
       allow delete: if isSuperAdmin();
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    // QUIZZES
+    // ═════════════════════════════════════════════════════════════════════════
+    match /quizzes/{quizId} {
+      allow read: if isSignedIn();
+      allow write: if hasAdminRole(['super_admin', 'chief_operations', 'course_manager', 'admin']);
     }
 
     // ═════════════════════════════════════════════════════════════════════════
@@ -512,7 +521,7 @@ service cloud.firestore {
     }
 
     // ═════════════════════════════════════════════════════════════════════════
-    // CONTACT MESSAGES
+    // CONTACT MESSAGES & SUPPORT TICKETS
     // ═════════════════════════════════════════════════════════════════════════
     match /contact_messages/{msgId} {
       allow create: if request.resource.data.keys().hasAll(['first_name','email','message'])
@@ -521,8 +530,20 @@ service cloud.firestore {
         && request.resource.data.message is string && request.resource.data.message.size() <= 5000;
 
       allow read:   if isAdmin();
-      allow update: if hasAdminRole(['super_admin', 'admin', 'community_manager'])
+      allow update: if hasAdminRole(['super_admin', 'chief_operations', 'admin', 'community_manager'])
         && onlyChanges(['status', 'assigned_to', 'reply', 'updated_at']);
+      allow delete: if isSuperAdmin();
+    }
+
+    match /support_tickets/{ticketId} {
+      allow read: if isOwner(resource.data.user_id) || isAdmin();
+      allow create: if isSignedIn()
+        && request.resource.data.user_id == request.auth.uid
+        && request.resource.data.keys().hasAll(['user_id', 'subject', 'message'])
+        && request.resource.data.subject is string && request.resource.data.subject.size() <= 200
+        && request.resource.data.message is string && request.resource.data.message.size() <= 5000;
+      allow update: if hasAdminRole(['super_admin', 'chief_operations', 'admin', 'community_manager'])
+        || (isOwner(resource.data.user_id) && onlyChanges(['updated_at', 'status']));
       allow delete: if isSuperAdmin();
     }
 
@@ -587,7 +608,7 @@ service cloud.firestore {
 
     match /blog/{postId} {
       allow read: if resource.data.status == 'published' || isAdmin();
-      allow write: if hasAdminRole(['super_admin', 'social_media_manager', 'admin']);
+      allow write: if hasAdminRole(['super_admin', 'chief_operations', 'social_media_manager', 'admin']);
     }
 
     match /notifications/{notifId} {
@@ -600,18 +621,18 @@ service cloud.firestore {
         && isOwner(resource.data.user_id)
         && onlyChanges(['read', 'read_at']);
 
-      allow create: if hasAdminRole(['super_admin', 'community_manager', 'admin']);
+      allow create: if hasAdminRole(['super_admin', 'chief_operations', 'community_manager', 'admin']);
       allow delete: if isSuperAdmin();
     }
 
     match /badges/{badgeId} {
       allow read: if true;
-      allow write: if hasAdminRole(['super_admin', 'community_manager', 'admin']);
+      allow write: if hasAdminRole(['super_admin', 'chief_operations', 'community_manager', 'admin']);
     }
 
     match /chapters/{chapterId} {
       allow read: if true;
-      allow write: if hasAdminRole(['super_admin', 'community_manager', 'finance_admin', 'node_lead', 'admin']);
+      allow write: if hasAdminRole(['super_admin', 'chief_operations', 'community_manager', 'finance_admin', 'node_lead', 'admin']);
     }
 
     match /user_badges/{docId} {
@@ -641,7 +662,7 @@ service cloud.firestore {
 
     match /xp_transactions/{txId} {
       allow read: if isOwner(resource.data.user_id) || isAdmin();
-      allow write: if hasAdminRole(['super_admin', 'community_manager', 'admin']);
+      allow write: if hasAdminRole(['super_admin', 'chief_operations', 'community_manager', 'admin']);
     }
 
     // ═════════════════════════════════════════════════════════════════════════
@@ -651,7 +672,7 @@ service cloud.firestore {
       allow read: if true;
 
       // Admins can create bounties; Protocol partners can create drafts or pending bounties
-      allow create: if hasAdminRole(['super_admin', 'community_manager', 'admin'])
+      allow create: if hasAdminRole(['super_admin', 'chief_operations', 'community_manager', 'admin'])
         || (
           isProtocolPartner()
           && request.resource.data.status in ['pending_approval', 'draft']
@@ -663,7 +684,7 @@ service cloud.firestore {
         );
 
       // Admins can update any bounty; Protocol partner owner can update non-approved bounties or declare winners
-      allow update: if hasAdminRole(['super_admin', 'community_manager', 'admin'])
+      allow update: if hasAdminRole(['super_admin', 'chief_operations', 'community_manager', 'admin'])
         || (
           isProtocolPartner()
           && isBountyOwner(resource.data)
@@ -684,21 +705,21 @@ service cloud.firestore {
           )
         );
 
-      allow delete: if hasAdminRole(['super_admin', 'community_manager', 'admin']);
+      allow delete: if hasAdminRole(['super_admin', 'chief_operations', 'community_manager', 'admin']);
     }
 
     match /bounty_submissions/{submissionId} {
       allow read: if isOwner(resource.data.user_id) || isAdmin();
       allow create: if isOwner(request.resource.data.user_id)
         && request.resource.data.status == 'submitted';
-      allow update: if hasAdminRole(['super_admin', 'community_manager', 'admin']);
+      allow update: if hasAdminRole(['super_admin', 'chief_operations', 'community_manager', 'admin']);
     }
 
     match /bounty_applications/{appId} {
       allow read: if isOwner(resource.data.user_id) || isAdmin();
       allow create: if isSignedIn() && request.resource.data.user_id == request.auth.uid
         && request.resource.data.status == 'applied';
-      allow update: if hasAdminRole(['super_admin', 'community_manager', 'admin']);
+      allow update: if hasAdminRole(['super_admin', 'chief_operations', 'community_manager', 'admin']);
       allow delete: if isSuperAdmin();
     }
 
@@ -719,7 +740,7 @@ service cloud.firestore {
 
     match /applications/{appId} {
       allow read: if isOwner(resource.data.user_id) ||
-                     hasAdminRole(['super_admin', 'course_manager', 'admin']);
+                     hasAdminRole(['super_admin', 'chief_operations', 'course_manager', 'admin']);
 
       allow create: if isSignedIn()
         && request.resource.data.user_id == request.auth.uid
@@ -739,13 +760,13 @@ service cloud.firestore {
           )
         );
 
-      allow update: if hasAdminRole(['super_admin', 'course_manager', 'admin']);
+      allow update: if hasAdminRole(['super_admin', 'chief_operations', 'course_manager', 'admin']);
       allow delete: if isSuperAdmin();
     }
 
     match /cohorts/{cohortId} {
       allow read: if isSignedIn() || resource.data.status == 'open';
-      allow write: if hasAdminRole(['super_admin', 'course_manager', 'admin']);
+      allow write: if hasAdminRole(['super_admin', 'chief_operations', 'course_manager', 'admin']);
     }
 
     match /discount_codes/{codeId} {
@@ -790,6 +811,11 @@ service cloud.firestore {
         allow read: if isAdmin();
         allow write: if isAdmin();
       }
+    }
+
+    // AI Assistant Progress Tracking: Deny ALL client reads and writes (Server Admin SDK only)
+    match /quiz_attempts/{attemptId} {
+      allow read, write: if false;
     }
 
     match /{document=**} {

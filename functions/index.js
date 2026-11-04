@@ -45,6 +45,32 @@ async function recalcEnrolmentProgress(uid, courseId) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// COURSE ACCESS HELPER
+// Same access check submitQuizAnswers has always used, shared with markSessionComplete:
+// an active enrolment for the course, or (for Foundation sessions) any active
+// enrolment; admins bypass. Returns { allowed, enrolSnap } (the user's active enrolments).
+// ═══════════════════════════════════════════════════════════════════════════
+async function getCourseAccess(db, uid, courseId) {
+  const enrolSnap = await db.collection('enrolments')
+    .where('user_id', '==', uid)
+    .where('status', '==', 'active')
+    .get();
+
+  const hasDirectEnrolment = enrolSnap.docs.some(d => d.data().course_id === courseId);
+  const hasAnyActiveEnrolment = !enrolSnap.empty;
+  const isFoundationSession = courseId === 'foundation';
+
+  const userSnap = await db.collection('users').doc(uid).get();
+  const isAdminUser = userSnap.exists && userSnap.data().role === 'admin';
+
+  const allowed = isAdminUser
+    || hasDirectEnrolment
+    || (isFoundationSession && hasAnyActiveEnrolment);
+
+  return { allowed, enrolSnap };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // NEW USER REFERRAL ENGINE
 // Fires when a user profile is created. If they used a referral code, this
 // resolves the code to the referrer's UID and creates the 'referrals' doc.
@@ -162,6 +188,8 @@ exports.claimDailyXp = onCall(async (request) => {
 
       transaction.update(userRef, {
           xp_total: admin.firestore.FieldValue.increment(xpEarned),
+          monthly_xp: admin.firestore.FieldValue.increment(xpEarned),
+          xp_this_period: admin.firestore.FieldValue.increment(xpEarned),
           daily_streak: newStreak,
           last_daily_claim: admin.firestore.FieldValue.serverTimestamp()
       });
@@ -198,6 +226,15 @@ exports.markSessionComplete = onCall(async (request) => {
   const session = sessionSnap.data();
   const courseId = session.course_id;
 
+  // Graded sessions complete through their own paths: quizzes via submitQuizAnswers,
+  // assignments/projects via tutor approval (syncAssignmentGradedXP)
+  if (['quiz', 'assignment', 'project'].includes(session.type)) {
+    throw new HttpsError('failed-precondition', 'This session is completed by submitting it for grading.');
+  }
+  if (session.module_id && session.module_id !== moduleId) {
+    throw new HttpsError('invalid-argument', 'Session does not belong to this module.');
+  }
+
   // --- 🔴 TEMPORAL LOCK EXPLOIT FIX 🔴 ---
   if (session.session_type === 'live' && session.date) {
     const now = new Date();
@@ -214,11 +251,10 @@ exports.markSessionComplete = onCall(async (request) => {
   // ---------------------------------------
 
   // 2. Verify Enrolment
-  const enrolSnap = await db.collection('enrolments')
-    .where('user_id', '==', uid)
-    .where('course_id', '==', courseId)
-    .where('status', '==', 'active')
-    .get();
+  const { allowed } = await getCourseAccess(db, uid, courseId);
+  if (!allowed) {
+    throw new HttpsError('permission-denied', 'You do not have an active enrolment for this course.');
+  }
 
   // 3. Check existing progress to prevent double XP
   const progressId = `${uid}_${moduleId}`;
@@ -265,7 +301,11 @@ exports.markSessionComplete = onCall(async (request) => {
   }
 
   // 5. Award 5 XP Securely
-  batch.update(db.collection('users').doc(uid), { xp_total: admin.firestore.FieldValue.increment(5) });
+  batch.update(db.collection('users').doc(uid), {
+    xp_total: admin.firestore.FieldValue.increment(5),
+    monthly_xp: admin.firestore.FieldValue.increment(5),
+    xp_this_period: admin.firestore.FieldValue.increment(5)
+  });
 
   batch.set(db.collection('xp').doc(), {
       user_id: uid,
@@ -283,6 +323,69 @@ exports.markSessionComplete = onCall(async (request) => {
   recalcEnrolmentProgress(uid, courseId).catch(console.error);
 
   return { success: true, xpEarned: 5, allSessionsDone: allDone };
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ISSUE CERTIFICATE (server-side only — clients cannot write certificates)
+// ═══════════════════════════════════════════════════════════════════════════
+exports.issueCertificate = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Must be signed in.');
+  const uid = request.auth.uid;
+  const { courseId } = request.data || {};
+  if (!courseId || typeof courseId !== 'string') throw new HttpsError('invalid-argument', 'Missing courseId.');
+
+  const db = admin.firestore();
+  const certRef = db.collection('certificates').doc(`${uid}_${courseId}`);
+
+  const serialize = (id, data) => ({
+    id,
+    ...data,
+    issued_at: data.issued_at?.toDate ? data.issued_at.toDate().toISOString() : null,
+  });
+
+  const existing = await certRef.get();
+  if (existing.exists) return serialize(existing.id, existing.data());
+
+  const courseSnap = await db.collection('courses').doc(courseId).get();
+  if (!courseSnap.exists) throw new HttpsError('not-found', 'Course not found.');
+
+  // Every session in every module of the course must be complete
+  const modulesSnap = await db.collection('modules').where('course_id', '==', courseId).get();
+  let totalSessions = 0;
+  let doneSessions = 0;
+  for (const mDoc of modulesSnap.docs) {
+    const mSessions = await db.collection('sessions').where('module_id', '==', mDoc.id).get();
+    totalSessions += mSessions.size;
+    const pSnap = await db.collection('module_progress').doc(`${uid}_${mDoc.id}`).get();
+    const sc = pSnap.exists ? (pSnap.data().sessions_completed || {}) : {};
+    mSessions.docs.forEach(s => { if (sc[s.id]) doneSessions++; });
+  }
+  if (totalSessions === 0 || doneSessions < totalSessions) {
+    throw new HttpsError('failed-precondition', 'Course is not yet complete.');
+  }
+
+  const userSnap = await db.collection('users').doc(uid).get();
+  const userData = userSnap.exists ? userSnap.data() : {};
+  const course = courseSnap.data();
+
+  const newCert = {
+    user_id: uid,
+    course_id: courseId,
+    course_title: course.title || 'Blockchain & Cryptocurrency Foundation',
+    recipient_name: userData.full_name || userData.name || request.auth.token.name || 'Sofian',
+    cert_number: 'SOFE-' + require('crypto').randomBytes(4).toString('hex').toUpperCase(),
+    issued_at: admin.firestore.FieldValue.serverTimestamp(),
+    status: 'verified',
+  };
+
+  try {
+    await certRef.create(newCert);
+  } catch (err) {
+    // 6 = ALREADY_EXISTS: a concurrent call issued it first
+    if (err.code !== 6) throw err;
+  }
+  const saved = await certRef.get();
+  return serialize(saved.id, saved.data());
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -621,59 +724,246 @@ exports.grantCourseAccessOnPaymentApproval = onDocumentUpdated('payments/{paymen
       console.error(`[grantCourseAccess] Course not found: ${after.course_id}`);
       return null;
     }
-    const course = courseSnap.data();
-
-    const tier = course.tier || 'track';
-    const includesFoundation = (tier === 'track' && course.includes_foundation !== false);
-    const mainStatus = (tier === 'track' && includesFoundation) ? 'locked_pending_foundation' : 'active';
-
-    const batch = db.batch();
-
-    const mainEnrolId = `${after.user_id}_${after.course_id}`;
-    batch.set(db.collection('enrolments').doc(mainEnrolId), {
-      user_id: after.user_id,
-      course_id: after.course_id,
-      course_title: course.title || after.course_id,
-      tier: tier,
-      status: mainStatus,
-      progress_pct: 0,
-      enrolled_at: admin.firestore.FieldValue.serverTimestamp(),
-      updated_at: admin.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
-
-    if (includesFoundation) {
-      const foundationEnrolId = `${after.user_id}_foundation`;
-      const fSnap = await db.collection('enrolments').doc(foundationEnrolId).get();
-      
-      if (!fSnap.exists) {
-        batch.set(db.collection('enrolments').doc(foundationEnrolId), {
-          user_id: after.user_id,
-          course_id: 'foundation',
-          course_title: 'Blockchain & Cryptocurrency Foundation',
-          tier: 'foundation',
-          status: 'active',
-          progress_pct: 0,
-          enrolled_at: admin.firestore.FieldValue.serverTimestamp(),
-          updated_at: admin.firestore.FieldValue.serverTimestamp(),
-          granted_via: after.course_id
-        });
-      } else {
-        const fData = fSnap.data();
-        if (fData.progress_pct >= 100 || fData.status === 'completed') {
-          batch.update(db.collection('enrolments').doc(mainEnrolId), { 
-            status: 'active',
-            updated_at: admin.firestore.FieldValue.serverTimestamp()
-          });
-        }
-      }
-    }
-
-    await batch.commit();
+    await grantCourseEnrolment(db, after, courseSnap.data());
     return null;
   } catch (err) {
     console.error('[grantCourseAccess]', err);
     return null;
   }
+});
+
+// Creates the course enrolment (and the bundled Foundation enrolment for tracks).
+// `after` needs user_id and course_id. Shared by payment approval and free enrolment.
+async function grantCourseEnrolment(db, after, course) {
+  const tier = course.tier || 'track';
+  const includesFoundation = (tier === 'track' && course.includes_foundation !== false);
+  const mainStatus = (tier === 'track' && includesFoundation) ? 'locked_pending_foundation' : 'active';
+
+  const batch = db.batch();
+
+  const mainEnrolId = `${after.user_id}_${after.course_id}`;
+  batch.set(db.collection('enrolments').doc(mainEnrolId), {
+    user_id: after.user_id,
+    course_id: after.course_id,
+    course_title: course.title || after.course_id,
+    tier: tier,
+    status: mainStatus,
+    progress_pct: 0,
+    enrolled_at: admin.firestore.FieldValue.serverTimestamp(),
+    updated_at: admin.firestore.FieldValue.serverTimestamp()
+  }, { merge: true });
+
+  if (includesFoundation) {
+    const foundationEnrolId = `${after.user_id}_foundation`;
+    const fSnap = await db.collection('enrolments').doc(foundationEnrolId).get();
+    
+    if (!fSnap.exists) {
+      batch.set(db.collection('enrolments').doc(foundationEnrolId), {
+        user_id: after.user_id,
+        course_id: 'foundation',
+        course_title: 'Blockchain & Cryptocurrency Foundation',
+        tier: 'foundation',
+        status: 'active',
+        progress_pct: 0,
+        enrolled_at: admin.firestore.FieldValue.serverTimestamp(),
+        updated_at: admin.firestore.FieldValue.serverTimestamp(),
+        granted_via: after.course_id
+      });
+    } else {
+      const fData = fSnap.data();
+      if (fData.progress_pct >= 100 || fData.status === 'completed') {
+        batch.update(db.collection('enrolments').doc(mainEnrolId), { 
+          status: 'active',
+          updated_at: admin.firestore.FieldValue.serverTimestamp()
+        });
+      }
+    }
+  }
+
+  // On server confirmation of career track, set career_enrolled: true on user document
+  if (tier === 'track' || after.course_id !== 'foundation') {
+    batch.update(db.collection('users').doc(after.user_id), {
+      career_enrolled: true,
+      updated_at: admin.firestore.FieldValue.serverTimestamp()
+    });
+  }
+
+  await batch.commit();
+
+  // Update referral records and check if referrer qualifies for affiliate tier upgrade
+  try {
+    if (tier === 'track' || after.course_id !== 'foundation') {
+      const refSnap = await db.collection('referrals')
+        .where('referred_user_id', '==', after.user_id)
+        .limit(1)
+        .get();
+      if (!refSnap.empty) {
+        const refDoc = refSnap.docs[0];
+        await refDoc.ref.update({ career_enrolled: true });
+        const referrerId = refDoc.data().referrer_id;
+        if (referrerId) {
+          await checkAndUpgradeAffiliateTier(db, referrerId);
+        }
+      }
+    }
+  } catch (refErr) {
+    console.error('[grantCourseEnrolment:referral]', refErr);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SERVER-SIDE AFFILIATE TIER EVALUATOR
+// Evaluates criteria for affiliate tier:
+// - newbie: default
+// - affiliate: is_premium === true OR >= 10 qualified referrals
+// - ambassador: ASSIGNED ONLY BY ADMIN (never overwritten)
+// ═══════════════════════════════════════════════════════════════════════════
+async function checkAndUpgradeAffiliateTier(db, uid) {
+  if (!uid) return;
+  try {
+    const userRef = db.collection('users').doc(uid);
+    const userSnap = await userRef.get();
+    if (!userSnap.exists) return;
+    const userData = userSnap.data();
+
+    // Ambassador is strictly admin-assigned — preserve it completely
+    if (userData.affiliate_tier === 'ambassador' || userData.role === 'ambassador') return;
+
+    // 1. VIP Premium automatically qualifies for Level 2 Affiliate (10%)
+    if (userData.is_premium === true) {
+      if (userData.affiliate_tier !== 'affiliate') {
+        await userRef.update({
+          affiliate_tier: 'affiliate',
+          updated_at: admin.firestore.FieldValue.serverTimestamp()
+        });
+      }
+      return;
+    }
+
+    // 2. 10 or more qualified referrals (foundation_complete && career_enrolled)
+    let qualifiedCount = 0;
+    if (userData.referral_code) {
+      const qSnap = await db.collection('referrals')
+        .where('referrer_code', '==', userData.referral_code)
+        .where('foundation_complete', '==', true)
+        .where('career_enrolled', '==', true)
+        .get();
+      qualifiedCount = qSnap.size;
+    }
+
+    if (qualifiedCount >= 10) {
+      if (userData.affiliate_tier !== 'affiliate') {
+        await userRef.update({
+          affiliate_tier: 'affiliate',
+          updated_at: admin.firestore.FieldValue.serverTimestamp()
+        });
+      }
+    }
+  } catch (err) {
+    console.error('[checkAndUpgradeAffiliateTier]', err);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// GRANT PREMIUM ON PAYMENT APPROVAL
+// Premium follows the same pending → admin-confirmed flow as courses. On approval:
+// is_premium, Level 2 Affiliate tier (ambassador is admin-assigned and kept), and
+// Foundation access.
+// ═══════════════════════════════════════════════════════════════════════════
+exports.grantPremiumOnPaymentApproval = onDocumentUpdated('payments/{paymentId}', async (event) => {
+  const before = event.data.before.data();
+  const after = event.data.after.data();
+
+  if (before.status === 'confirmed' || after.status !== 'confirmed') return null;
+  if (after.payment_type !== 'premium' || !after.user_id) return null;
+
+  try {
+    const db = admin.firestore();
+    const userRef = db.collection('users').doc(after.user_id);
+    const userSnap = await userRef.get();
+    if (!userSnap.exists) return null;
+    const user = userSnap.data();
+
+    const batch = db.batch();
+    const userUpdate = { is_premium: true, updated_at: admin.firestore.FieldValue.serverTimestamp() };
+    if (user.affiliate_tier !== 'ambassador') userUpdate.affiliate_tier = 'affiliate';
+    batch.update(userRef, userUpdate);
+
+    const foundationRef = db.collection('enrolments').doc(`${after.user_id}_foundation`);
+    const fSnap = await foundationRef.get();
+    if (!fSnap.exists) {
+      batch.set(foundationRef, {
+        user_id: after.user_id,
+        course_id: 'foundation',
+        course_title: 'Blockchain & Cryptocurrency Foundation',
+        tier: 'foundation',
+        status: 'active',
+        progress_pct: 0,
+        enrolled_at: admin.firestore.FieldValue.serverTimestamp(),
+        updated_at: admin.firestore.FieldValue.serverTimestamp(),
+        granted_via: 'premium'
+      });
+    } else if (!['active', 'completed'].includes(fSnap.data().status)) {
+      batch.update(foundationRef, { status: 'active', updated_at: admin.firestore.FieldValue.serverTimestamp() });
+    }
+
+    await batch.commit();
+    return null;
+  } catch (err) {
+    console.error('[grantPremium]', err);
+    return null;
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FREE COURSE ENROLMENT — only for courses an admin has priced at 0
+// ═══════════════════════════════════════════════════════════════════════════
+exports.enrolFreeCourse = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Must be signed in.');
+  const { courseId } = request.data || {};
+  if (!courseId || typeof courseId !== 'string') throw new HttpsError('invalid-argument', 'Missing courseId.');
+
+  const db = admin.firestore();
+  const courseSnap = await db.collection('courses').doc(courseId).get();
+  if (!courseSnap.exists) throw new HttpsError('not-found', 'Course not found.');
+  const course = courseSnap.data();
+  if (course.price === undefined || Number(course.price) !== 0) {
+    throw new HttpsError('failed-precondition', 'This course requires payment.');
+  }
+
+  await grantCourseEnrolment(db, { user_id: request.auth.uid, course_id: courseId }, course);
+  return { success: true };
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SYNC EMAIL VERIFIED — copies Firebase Auth's emailVerified onto the user doc
+// (students cannot write email_verified themselves)
+// ═══════════════════════════════════════════════════════════════════════════
+exports.syncEmailVerified = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Must be signed in.');
+  const uid = request.auth.uid;
+
+  const authUser = await admin.auth().getUser(uid);
+  if (!authUser.emailVerified) return { email_verified: false };
+
+  const userRef = admin.firestore().collection('users').doc(uid);
+  const userSnap = await userRef.get();
+  if (userSnap.exists && userSnap.data().email_verified !== true) {
+    await userRef.update({ email_verified: true, updated_at: admin.firestore.FieldValue.serverTimestamp() });
+  }
+  return { email_verified: true };
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SYNC AFFILIATE TIER — evaluates criteria and upgrades to affiliate if met
+// (ambassador is assigned by admin only and preserved)
+// ═══════════════════════════════════════════════════════════════════════════
+exports.syncAffiliateTier = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Must be signed in.');
+  const db = admin.firestore();
+  await checkAndUpgradeAffiliateTier(db, request.auth.uid);
+  const uDoc = await db.collection('users').doc(request.auth.uid).get();
+  return { affiliate_tier: uDoc.data()?.affiliate_tier || 'newbie' };
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -817,6 +1107,8 @@ exports.syncReferralRewards = onDocumentWritten('referrals/{referralId}', async 
     const batch = admin.firestore().batch();
     batch.update(admin.firestore().collection('users').doc(referrerUid), {
       xp_total: admin.firestore.FieldValue.increment(amount),
+      monthly_xp: admin.firestore.FieldValue.increment(amount),
+      xp_this_period: admin.firestore.FieldValue.increment(amount),
     });
     const xpRef = admin.firestore().collection('xp').doc();
     batch.set(xpRef, {
@@ -930,6 +1222,8 @@ exports.syncReferralSignupBonus = onDocumentWritten('users/{uid}', async (event)
     const batch = admin.firestore().batch();
     batch.update(admin.firestore().collection('users').doc(referrerUid), {
       xp_total: admin.firestore.FieldValue.increment(5),
+      monthly_xp: admin.firestore.FieldValue.increment(5),
+      xp_this_period: admin.firestore.FieldValue.increment(5),
     });
     batch.set(admin.firestore().collection('xp').doc(), {
       user_id: referrerUid,
@@ -1024,6 +1318,10 @@ exports.syncCourseCompletionXP = onDocumentWritten('enrolments/{enrolmentId}', a
         const flagField = milestone === 'foundation' ? 'foundation_complete' : 'career_enrolled';
         if (refDoc.data()[flagField] !== true) {
           await refDoc.ref.update({ [flagField]: true });
+          const referrerId = refDoc.data().referrer_id;
+          if (referrerId) {
+            await checkAndUpgradeAffiliateTier(admin.firestore(), referrerId);
+          }
         }
       }
     } catch (refErr) {
@@ -1088,7 +1386,15 @@ exports.resetMonthlyLeaderboard = onSchedule({
         current_period: getCurrentPeriodId(),
       }, { merge: true });
 
-      opsInBatch += 2;
+      const userRef = db.collection('users').doc(doc.id);
+      batch.set(userRef, {
+        xp_this_period: 0,
+        monthly_xp: 0,
+        commission_this_period: 0,
+        validated_referrals_this_period: 0,
+      }, { merge: true });
+
+      opsInBatch += 3;
       archived++;
 
       if (opsInBatch >= 400) {
@@ -1107,9 +1413,9 @@ exports.resetMonthlyLeaderboard = onSchedule({
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// ONE-TIME BACKFILL — CURRENT PERIOD STATS
+// ONE-TIME BACKFILL — CURRENT PERIOD STATS ACROSS ALL USERS
 // ═══════════════════════════════════════════════════════════════════════════
-exports.backfillCurrentPeriodStats = onRequest(async (req, res) => {
+exports.backfillCurrentPeriodStats = onRequest({ timeoutSeconds: 300, memory: '512MiB' }, async (req, res) => {
   const expectedSecret = process.env.BACKFILL_SECRET;
   if (!expectedSecret || req.query.secret !== expectedSecret) {
     res.status(403).send('Forbidden');
@@ -1119,58 +1425,314 @@ exports.backfillCurrentPeriodStats = onRequest(async (req, res) => {
   const db = admin.firestore();
   const periodId = getCurrentPeriodId();
   const [year, month] = periodId.split('-').map(Number);
-  const periodStartUTC = new Date(Date.UTC(year, month - 1, 1, -1, 0, 0)); 
+  // Period start (UTC): 1st of month (with 1-hr offset for WAT UTC+1)
+  const periodStartUTC = new Date(Date.UTC(year, month - 1, 1, -1, 0, 0));
+
+  const XP_TIERS = [
+    { name: 'Genesis Scout',   min: 0     },
+    { name: 'Validator',       min: 500   },
+    { name: 'Crypto Knight',   min: 1500  },
+    { name: 'Chain Architect', min: 4000  },
+    { name: 'Node Operator',   min: 8000  },
+    { name: 'Node Sovereign',  min: 15000 },
+  ];
 
   try {
-    const xpSnap = await db.collection('xp')
-      .where('claimed_at', '>=', periodStartUTC)
-      .get();
+    // 1. Fetch all users
+    const usersSnap = await db.collection('users').get();
+    const userMap = {};
+    const refCodeToUid = {};
 
+    usersSnap.docs.forEach(d => {
+      const u = d.data();
+      userMap[d.id] = u;
+      if (u.referral_code) {
+        refCodeToUid[u.referral_code] = d.id;
+      }
+    });
+
+    // 2. Fetch all existing leaderboard records
+    const lbSnap = await db.collection('leaderboard').get();
+    const lbMap = {};
+    lbSnap.docs.forEach(d => {
+      lbMap[d.id] = d.data();
+    });
+
+    // 3. Fetch period claims from xp collection
     const xpByUser = {};
-    xpSnap.docs.forEach(d => {
-      const x = d.data();
-      if (!x.user_id) return;
-      xpByUser[x.user_id] = (xpByUser[x.user_id] || 0) + (Number(x.xp_earned) || 0);
-    });
+    try {
+      const xpSnap = await db.collection('xp').where('claimed_at', '>=', periodStartUTC).get();
+      xpSnap.docs.forEach(d => {
+        const x = d.data();
+        if (!x.user_id) return;
+        xpByUser[x.user_id] = (xpByUser[x.user_id] || 0) + (Number(x.xp_earned) || 0);
+      });
+    } catch (e) {
+      console.warn('[backfillCurrentPeriodStats] xp query warning:', e.message);
+    }
 
-    const commSnap = await db.collection('commissions')
-      .where('created_at', '>=', periodStartUTC)
-      .get();
+    // 4. Fetch commissions
+    const commPeriodByUser = {};
+    const commTotalByUser = {};
+    try {
+      const commSnap = await db.collection('commissions').get();
+      commSnap.docs.forEach(d => {
+        const c = d.data();
+        const uid = c.user_id || (c.referrer_code ? refCodeToUid[c.referrer_code] : null);
+        if (!uid) return;
+        const amt = Number(c.amount) || 0;
+        commTotalByUser[uid] = (commTotalByUser[uid] || 0) + amt;
 
-    const commByUser = {};
-    commSnap.docs.forEach(d => {
-      const c = d.data();
-      if (!c.user_id) return;
-      commByUser[c.user_id] = (commByUser[c.user_id] || 0) + (Number(c.amount) || 0);
-    });
+        let cDate = null;
+        if (c.created_at?.toDate) cDate = c.created_at.toDate();
+        else if (c.created_at) cDate = new Date(c.created_at);
+        else if (c.timestamp?.toDate) cDate = c.timestamp.toDate();
+        else if (c.timestamp) cDate = new Date(c.timestamp);
 
-    const allUids = new Set([...Object.keys(xpByUser), ...Object.keys(commByUser)]);
+        if (cDate && cDate >= periodStartUTC) {
+          commPeriodByUser[uid] = (commPeriodByUser[uid] || 0) + amt;
+        }
+      });
+    } catch (e) {
+      console.warn('[backfillCurrentPeriodStats] comm query warning:', e.message);
+    }
+
+    // 5. Fetch and compute referrals accurately across collection('referrals') and collection('users')
+    const refCodeNormalized = {};
+    for (const [uid, u] of Object.entries(userMap)) {
+      if (u.referral_code) {
+        const clean = String(u.referral_code).trim().toUpperCase().replace(/[\s\-_]/g, '');
+        refCodeNormalized[clean] = uid;
+      }
+    }
+
+    const resolveReferrerUid = (refCodeOrUid) => {
+      if (!refCodeOrUid) return null;
+      if (userMap[refCodeOrUid]) return refCodeOrUid;
+      if (refCodeToUid[refCodeOrUid]) return refCodeToUid[refCodeOrUid];
+      const clean = String(refCodeOrUid).trim().toUpperCase().replace(/[\s\-_]/g, '');
+      if (refCodeNormalized[clean]) return refCodeNormalized[clean];
+      return null;
+    };
+
+    const processedReferrals = new Set();
+    const verifiedRefsByReferrer = {};
+    const validatedRefsByReferrer = {};
+    const totalRefsByReferrer = {};
+
+    // 5a. Process all users who were referred by someone
+    for (const [refereeUid, u] of Object.entries(userMap)) {
+      const rawRef = u.referred_by || u.referrer_id || u.referrer_code;
+      if (!rawRef) continue;
+      const referrerUid = resolveReferrerUid(rawRef);
+      if (!referrerUid || referrerUid === refereeUid) continue;
+
+      const dedupeKey = `${refereeUid}_${referrerUid}`;
+      processedReferrals.add(dedupeKey);
+      totalRefsByReferrer[referrerUid] = (totalRefsByReferrer[referrerUid] || 0) + 1;
+
+      // Rule: Unverified emails are NOT counted on the leaderboard!
+      if (u.email_verified === true) {
+        verifiedRefsByReferrer[referrerUid] = (verifiedRefsByReferrer[referrerUid] || 0) + 1;
+
+        // Validated = completed foundation
+        const isFoundationDone = u.foundation_completed === true || u.foundation_complete === true || Number(u.xp_total) >= 500;
+        if (isFoundationDone) {
+          validatedRefsByReferrer[referrerUid] = (validatedRefsByReferrer[referrerUid] || 0) + 1;
+        }
+      }
+    }
+
+    // 5b. Process collection('referrals') documents as well
+    try {
+      const refsSnap = await db.collection('referrals').get();
+      refsSnap.docs.forEach(d => {
+        const r = d.data();
+        const refereeUid = r.referred_user_id || r.referee_id || d.id.split('_')[0];
+        const rawRef = r.referrer_id || r.referrer_code || d.id.split('_')[1];
+        const referrerUid = resolveReferrerUid(rawRef);
+        if (!referrerUid || referrerUid === refereeUid) return;
+
+        const dedupeKey = `${refereeUid}_${referrerUid}`;
+        if (processedReferrals.has(dedupeKey)) {
+          if (r.foundation_complete === true) {
+            validatedRefsByReferrer[referrerUid] = Math.max(validatedRefsByReferrer[referrerUid] || 0, 1);
+          }
+          return;
+        }
+        processedReferrals.add(dedupeKey);
+        totalRefsByReferrer[referrerUid] = (totalRefsByReferrer[referrerUid] || 0) + 1;
+
+        const refereeUser = userMap[refereeUid];
+        const isEmailVerified = refereeUser ? refereeUser.email_verified === true : r.email_verified === true;
+
+        if (isEmailVerified) {
+          verifiedRefsByReferrer[referrerUid] = (verifiedRefsByReferrer[referrerUid] || 0) + 1;
+          const isFoundationDone = (refereeUser && (refereeUser.foundation_completed === true || refereeUser.foundation_complete === true || Number(refereeUser.xp_total) >= 500)) || r.foundation_complete === true;
+          if (isFoundationDone) {
+            validatedRefsByReferrer[referrerUid] = (validatedRefsByReferrer[referrerUid] || 0) + 1;
+          }
+        }
+      });
+    } catch (e) {
+      console.warn('[backfillCurrentPeriodStats] refs query warning:', e.message);
+    }
+
+    // 6. Gather all non-admin UIDs across users & leaderboard
+    const allUids = new Set([
+      ...Object.keys(userMap),
+      ...Object.keys(lbMap),
+      ...Object.keys(xpByUser),
+      ...Object.keys(commTotalByUser),
+      ...Object.keys(totalRefsByReferrer),
+      ...Object.keys(verifiedRefsByReferrer)
+    ]);
+
     let written = 0;
     let batch = db.batch();
     let opsInBatch = 0;
+    const summary = [];
 
     for (const uid of allUids) {
+      const u = userMap[uid] || null;
+      const lb = lbMap[uid] || null;
+
+      // Skip and purge admins from leaderboard
+      if (u?.role === 'admin') {
+        if (lb) {
+          batch.delete(db.collection('leaderboard').doc(uid));
+          opsInBatch++;
+        }
+        continue;
+      }
+
+      // Compute lifetime total XP
+      const totalXp = Math.max(Number(u?.xp_total) || 0, Number(lb?.xp_total) || 0);
+
+      // Account creation date check
+      let userCreatedAt = null;
+      if (u?.created_at?.toDate) userCreatedAt = u.created_at.toDate();
+      else if (u?.created_at) userCreatedAt = new Date(u.created_at);
+      const userCreatedInPeriod = userCreatedAt && userCreatedAt >= periodStartUTC;
+
+      // Monthly period XP resolution:
+      const claimsXp = xpByUser[uid] || 0;
+      const lbXp = Number(lb?.xp_this_period) || 0;
+      const uXpPeriod = Number(u?.xp_this_period) || 0;
+      const uMonthlyXp = Number(u?.monthly_xp) || 0;
+
+      let resolvedPeriodXp = Math.max(
+        claimsXp,
+        lbXp,
+        uXpPeriod,
+        uMonthlyXp,
+        userCreatedInPeriod ? totalXp : 0
+      );
+
+      if (totalXp > 0 && resolvedPeriodXp > totalXp) {
+        resolvedPeriodXp = totalXp;
+      }
+
+      // Monthly commissions resolution
+      const resolvedComm = Math.max(
+        commPeriodByUser[uid] || 0,
+        Number(lb?.commission_this_period) || 0,
+        Number(u?.commission_this_period) || 0
+      );
+
+      // Monthly referrals resolution:
+      // Combines verified referrals (email confirmed) & preserves any higher existing records (like Shedrack's 39)
+      const existingLbRefs = Number(lb?.validated_referrals_this_period) || 0;
+      const existingUserRefs = Number(u?.validated_referrals_this_period) || 0;
+      const computedVerified = verifiedRefsByReferrer[uid] || 0;
+      const computedValidated = validatedRefsByReferrer[uid] || 0;
+      const computedTotal = totalRefsByReferrer[uid] || 0;
+
+      const resolvedPeriodRefs = Math.max(
+        existingLbRefs,
+        existingUserRefs,
+        computedVerified,
+        computedValidated
+      );
+      const resolvedValidatedCount = Math.max(computedValidated, Number(lb?.validated_referrals) || 0);
+      const resolvedVerifiedCount = Math.max(computedVerified, Number(lb?.verified_referrals) || 0);
+      const resolvedTotalRefs = Math.max(computedTotal, resolvedPeriodRefs);
+
+      // Tier calculation
+      const tier = (u?.foundation_completed === true)
+        ? ([...XP_TIERS].reverse().find(t => totalXp >= t.min) || XP_TIERS[0])
+        : XP_TIERS[0];
+
+      const firstName = u?.first_name || lb?.first_name || 'Sofian';
+      const lastInitial = u?.last_name
+        ? (u.last_name[0].toUpperCase() + '.')
+        : (lb?.last_initial || '');
+
+      // 1) Write to leaderboard/{uid}
       const lbRef = db.collection('leaderboard').doc(uid);
       batch.set(lbRef, {
-        xp_this_period:         xpByUser[uid] || 0,
-        commission_this_period: commByUser[uid] || 0,
-        current_period:         periodId,
-        updated_at:             admin.firestore.FieldValue.serverTimestamp(),
+        first_name:                      firstName,
+        last_initial:                    lastInitial,
+        tier:                            tier.name,
+        xp_total:                        totalXp,
+        xp_this_period:                  resolvedPeriodXp,
+        commission_this_period:          resolvedComm,
+        validated_referrals_this_period: resolvedPeriodRefs,
+        verified_referrals_this_period:  resolvedVerifiedCount,
+        validated_referrals:             resolvedValidatedCount,
+        total_referrals:                 resolvedTotalRefs,
+        current_period:                  periodId,
+        updated_at:                      admin.firestore.FieldValue.serverTimestamp(),
       }, { merge: true });
-      written++;
       opsInBatch++;
-      if (opsInBatch >= 400) {
+
+      // 2) Synchronize to users/{uid} if user document exists
+      if (u) {
+        const userRef = db.collection('users').doc(uid);
+        batch.set(userRef, {
+          xp_total:                        totalXp,
+          xp_this_period:                  resolvedPeriodXp,
+          monthly_xp:                      resolvedPeriodXp,
+          commission_this_period:          resolvedComm,
+          validated_referrals_this_period: resolvedPeriodRefs,
+          verified_referrals_this_period:  resolvedVerifiedCount,
+          validated_referrals:             resolvedValidatedCount,
+          total_referrals:                 resolvedTotalRefs,
+          updated_at:                      admin.firestore.FieldValue.serverTimestamp(),
+        }, { merge: true });
+        opsInBatch++;
+      }
+
+      written++;
+      summary.push({
+        uid,
+        name: `${firstName} ${lastInitial}`.trim(),
+        total_xp: totalXp,
+        period_xp: resolvedPeriodXp,
+        commission: resolvedComm,
+        referrals: resolvedPeriodRefs,
+        verified_referrals: resolvedVerifiedCount,
+        validated_referrals: resolvedValidatedCount,
+        tier: tier.name
+      });
+
+      if (opsInBatch >= 350) {
         await batch.commit();
         batch = db.batch();
         opsInBatch = 0;
       }
     }
-    if (opsInBatch > 0) await batch.commit();
+
+    if (opsInBatch > 0) {
+      await batch.commit();
+    }
 
     res.status(200).json({
       success: true,
-      message: `Backfilled ${written} users' current-period XP and commission stats for ${periodId}. Validated referrals were NOT backfilled (no reliable timestamp in existing data) — they start at 0 and build forward accurately.`,
+      message: `Successfully synchronized both 'users' and 'leaderboard' collections for ${written} users in period ${periodId}.`,
       period: periodId,
+      usersUpdated: written,
+      summary
     });
   } catch (error) {
     console.error('[backfillCurrentPeriodStats]', error);
@@ -1255,39 +1817,188 @@ exports.backfillLeaderboard = onRequest(async (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// ONE-TIME BACKFILL — PAST ENROLMENTS
+// BACKFILL & RESTRICT FOUNDATION ACCESS BASED ON CONFIRMED PAYMENTS
 // ═══════════════════════════════════════════════════════════════════════════
 exports.backfillPastEnrollments = onRequest(async (req, res) => {
   const expectedSecret = process.env.BACKFILL_SECRET;
-  if (req.query.secret !== expectedSecret) { res.status(403).send('Forbidden'); return; }
+  if (!expectedSecret || req.query.secret !== expectedSecret) { res.status(403).send('Forbidden'); return; }
 
   const db = admin.firestore();
   try {
+    // 1. Gather all confirmed/approved payments
     const paymentsSnap = await db.collection('payments')
-      .where('status', '==', 'confirmed')
-      .where('payment_type', '==', 'enrolment')
+      .where('status', 'in', ['confirmed', 'approved'])
       .get();
 
-    let count = 0;
-    const batch = db.batch();
+    const paidUsers = new Set();
+    const paidCareerUsers = new Set();
+    const paidFoundationUsers = new Set();
+    const paidVipUsers = new Set();
 
-    for (const doc of paymentsSnap.docs) {
+    paymentsSnap.docs.forEach((doc) => {
       const p = doc.data();
-      const enrolId = `${p.user_id}_${p.course_id}`;
-      
-      batch.set(db.collection('enrolments').doc(enrolId), {
-        user_id: p.user_id,
-        course_id: p.course_id,
-        status: 'active',
-        enrolled_at: admin.firestore.FieldValue.serverTimestamp(),
-      }, { merge: true });
-      count++;
+      const uid = p.user_id;
+      if (!uid) return;
+
+      if (p.payment_type === 'vip' || p.tier === 'vip') {
+        paidUsers.add(uid);
+        paidVipUsers.add(uid);
+      } else if (p.course_id === 'foundation' || p.payment_type === 'foundation_enrolment') {
+        paidUsers.add(uid);
+        paidFoundationUsers.add(uid);
+      } else if (p.course_id && p.course_id !== 'foundation' && p.course_id !== 'cbie') {
+        // Career track includes Foundation
+        paidUsers.add(uid);
+        paidCareerUsers.add(uid);
+      } else if (p.payment_type === 'enrolment') {
+        paidUsers.add(uid);
+        if (p.course_id === 'foundation') paidFoundationUsers.add(uid);
+        else paidCareerUsers.add(uid);
+      }
+    });
+
+    // 2. Add staff, admin, bypass users, and active VIP members
+    const usersSnap = await db.collection('users').get();
+    const staffOrBypassUsers = new Set();
+
+    usersSnap.docs.forEach((doc) => {
+      const u = doc.data();
+      const uid = doc.id;
+      const isAdmin = u.role === 'admin' || ['super_admin', 'chief_operations', 'course_manager', 'admin', 'tutor'].includes(u.admin_role);
+      const isBypass = u.bypass_foundation === true;
+      const isPremium = u.is_premium === true;
+
+      if (isAdmin || isBypass || isPremium) {
+        paidUsers.add(uid);
+        staffOrBypassUsers.add(uid);
+      }
+    });
+
+    // 3. Scan all enrolments for Foundation
+    const enrolmentsSnap = await db.collection('enrolments').get();
+    let lockedCount = 0;
+    let activePaidCount = 0;
+    let careerBackfilledCount = 0;
+
+    let batch = db.batch();
+    let opsInBatch = 0;
+
+    const commitBatchIfNeeded = async (force = false) => {
+      if (opsInBatch >= 400 || (force && opsInBatch > 0)) {
+        await batch.commit();
+        batch = db.batch();
+        opsInBatch = 0;
+      }
+    };
+
+    // First: enforce locks on unpaid foundation enrolments and active status on paid ones
+    for (const doc of enrolmentsSnap.docs) {
+      const e = doc.data();
+      const eid = doc.id;
+      const cid = e.course_id;
+
+      if (cid === 'foundation' || eid.endsWith('_foundation')) {
+        const uid = e.user_id;
+        const isAuthorized = paidUsers.has(uid);
+
+        if (isAuthorized) {
+          // User has paid or is authorized — keep/set active or completed
+          activePaidCount++;
+          if (e.status !== 'active' && e.status !== 'completed') {
+            batch.update(doc.ref, {
+              status: 'active',
+              updated_at: admin.firestore.FieldValue.serverTimestamp()
+            });
+            opsInBatch++;
+            await commitBatchIfNeeded();
+          }
+        } else {
+          // User has NOT paid for Foundation — lock their enrolment!
+          if (e.status !== 'locked') {
+            batch.update(doc.ref, {
+              status: 'locked',
+              locked_reason: 'unpaid_subsidized_course',
+              updated_at: admin.firestore.FieldValue.serverTimestamp()
+            });
+            opsInBatch++;
+            await commitBatchIfNeeded();
+          }
+          lockedCount++;
+        }
+      }
     }
 
-    await batch.commit();
-    res.status(200).send(`Success: Backfilled ${count} enrolments.`);
+    // Second: for any user who paid for a Career Track that includes Foundation, ensure they have their active Foundation enrolment
+    for (const uid of paidCareerUsers) {
+      const fEnrolId = `${uid}_foundation`;
+      const fRef = db.collection('enrolments').doc(fEnrolId);
+      const fSnap = await fRef.get();
+
+      if (!fSnap.exists) {
+        batch.set(fRef, {
+          user_id: uid,
+          course_id: 'foundation',
+          course_title: 'Blockchain & Cryptocurrency Foundation',
+          tier: 'foundation',
+          status: 'active',
+          progress_pct: 0,
+          granted_via: 'career_track_payment',
+          enrolled_at: admin.firestore.FieldValue.serverTimestamp(),
+          updated_at: admin.firestore.FieldValue.serverTimestamp()
+        });
+        opsInBatch++;
+        careerBackfilledCount++;
+        await commitBatchIfNeeded();
+      } else if (fSnap.data().status === 'locked') {
+        batch.update(fRef, {
+          status: 'active',
+          granted_via: 'career_track_payment',
+          updated_at: admin.firestore.FieldValue.serverTimestamp()
+        });
+        opsInBatch++;
+        await commitBatchIfNeeded();
+      }
+    }
+
+    // Also check if any users were marked career_enrolled: true without any confirmed payment or admin status, and fix them
+    let revokedCareerEnrolledCount = 0;
+    for (const doc of usersSnap.docs) {
+      const u = doc.data();
+      const uid = doc.id;
+      const isAdmin = u.role === 'admin' || ['super_admin', 'chief_operations', 'course_manager', 'admin', 'tutor'].includes(u.admin_role);
+      
+      if (u.career_enrolled === true && !paidCareerUsers.has(uid) && !isAdmin) {
+        batch.update(doc.ref, {
+          career_enrolled: false,
+          updated_at: admin.firestore.FieldValue.serverTimestamp()
+        });
+        opsInBatch++;
+        revokedCareerEnrolledCount++;
+        await commitBatchIfNeeded();
+      }
+    }
+
+    await commitBatchIfNeeded(true);
+
+    res.status(200).json({
+      success: true,
+      message: `Foundation backfill complete. Identified ${paidUsers.size} authorized/paid users. Restricted/locked ${lockedCount} unpaid enrolments. Maintained/activated ${activePaidCount} paid foundation enrolments. Granted foundation to ${careerBackfilledCount} career track students. Revoked unearned career_enrolled on ${revokedCareerEnrolledCount} users.`,
+      stats: {
+        totalConfirmedPayments: paymentsSnap.size,
+        paidFoundationUsers: paidFoundationUsers.size,
+        paidCareerUsers: paidCareerUsers.size,
+        paidVipUsers: paidVipUsers.size,
+        staffOrBypassUsers: staffOrBypassUsers.size,
+        totalAuthorizedUsers: paidUsers.size,
+        lockedCount,
+        activePaidCount,
+        careerBackfilledCount,
+        revokedCareerEnrolledCount
+      }
+    });
   } catch (err) {
-    res.status(500).send(err.message);
+    console.error('Error in backfillPastEnrollments:', err);
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
@@ -1580,21 +2291,7 @@ exports.submitQuizAnswers = onCall(async (request) => {
   }
 
   const courseId = session.course_id;
-  const enrolSnap = await db.collection('enrolments')
-    .where('user_id', '==', uid)
-    .where('status', '==', 'active')
-    .get();
-    
-  const hasDirectEnrolment = enrolSnap.docs.some(d => d.data().course_id === courseId);
-  const hasAnyActiveEnrolment = !enrolSnap.empty;
-  const isFoundationSession = courseId === 'foundation';
-
-  const userSnap = await db.collection('users').doc(uid).get();
-  const isAdminUser = userSnap.exists && userSnap.data().role === 'admin';
-
-  const allowed = isAdminUser
-    || hasDirectEnrolment
-    || (isFoundationSession && hasAnyActiveEnrolment);
+  const { allowed, enrolSnap } = await getCourseAccess(db, uid, courseId);
 
   if (!allowed) {
     throw new HttpsError('permission-denied', 'You do not have an active enrolment for this course.');
@@ -1633,9 +2330,22 @@ exports.submitQuizAnswers = onCall(async (request) => {
     throw new HttpsError('invalid-argument', `Expected ${correctAnswers.length} answers, got ${answers.length}.`);
   }
 
+  const examTopic = session.topic || session.module_topic || (session.title ? session.title.toLowerCase().replace(/[^a-z0-9]+/g, '-') : 'blockchain-fundamentals');
+
   let correctCount = 0;
   correctAnswers.forEach((correctIdx, i) => {
-    if (answers[i] === correctIdx) correctCount++;
+    if (answers[i] === correctIdx) {
+      correctCount++;
+    } else {
+      // Bridge standard exam failed questions to quiz_attempts for AI personalization
+      const attemptRef = db.collection('quiz_attempts').doc();
+      batch.set(attemptRef, {
+        student_id: uid,
+        topic: examTopic,
+        correct: false,
+        created_at: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    }
   });
   const totalQuestions = correctAnswers.length;
   const score = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
@@ -1647,7 +2357,10 @@ exports.submitQuizAnswers = onCall(async (request) => {
   batch.set(subRef, {
     user_id:    uid,
     session_id: sessionId,
+    course_id:  courseId || '',
+    module_id:  session.module_id || '',
     type:       'quiz',
+    score:      score,
     quiz_score: score,
     quiz_answers: answers,
     correct_count: correctCount,
@@ -1701,7 +2414,11 @@ exports.submitQuizAnswers = onCall(async (request) => {
               batch.set(progressRef, newProgressData);
           }
 
-          batch.update(db.collection('users').doc(uid), { xp_total: admin.firestore.FieldValue.increment(5) });
+          batch.update(db.collection('users').doc(uid), {
+              xp_total: admin.firestore.FieldValue.increment(5),
+              monthly_xp: admin.firestore.FieldValue.increment(5),
+              xp_this_period: admin.firestore.FieldValue.increment(5)
+          });
 
           batch.set(db.collection('xp').doc(), {
               user_id: uid,
@@ -2600,4 +3317,71 @@ ${safeUrl ? `<meta http-equiv="refresh" content="1.5;url=${safeUrl}"/>` : ''}
       isError: true,
     });
   }
+});
+// ═══════════════════════════════════════════════════════════════════════════
+// ASSIGNMENT GRADED XP & PROGRESS SYNC
+// ═══════════════════════════════════════════════════════════════════════════
+exports.syncAssignmentGradedXP = onDocumentWritten('session_submissions/{submissionId}', async (event) => {
+  const before = event.data.before.exists ? event.data.before.data() : null;
+  const after  = event.data.after.exists  ? event.data.after.data()  : null;
+  if (!after) return null;
+
+  // Only tutor-graded work. Quiz docs are client-written (rules allow passed:true on create)
+  // and already earn XP through markSessionComplete.
+  if (!['assignment', 'project'].includes(after.type)) return null;
+
+  const wasPassed = before?.passed === true || before?.status === 'approved';
+  const isPassed  = after.passed === true  || after.status === 'approved';
+
+  if (wasPassed || !isPassed) return null;
+  if (after.xp_awarded === true) return null;
+
+  const uid = after.user_id;
+  const sessionId = after.session_id;
+  const courseId = after.course_id;
+  const moduleId = after.module_id;
+  if (!uid || !sessionId) return null;
+
+  const db = admin.firestore();
+  const batch = db.batch();
+
+  // Award 5 XP
+  batch.update(db.collection('users').doc(uid), {
+    xp_total: admin.firestore.FieldValue.increment(5),
+    monthly_xp: admin.firestore.FieldValue.increment(5),
+    xp_this_period: admin.firestore.FieldValue.increment(5),
+  });
+
+  // Log XP
+  batch.set(db.collection('xp').doc(), {
+    user_id: uid,
+    xp_earned: 5,
+    source: 'session_completion',
+    bonus_label: `Assignment Approved: ${sessionId}`,
+    claimed_at: admin.firestore.FieldValue.serverTimestamp(),
+    streak_day: 0,
+    bonus_xp: 0,
+  });
+
+  // Mark in submission
+  batch.update(event.data.after.ref, { xp_awarded: true });
+
+  // Update module_progress if moduleId present
+  if (moduleId) {
+    const progressRef = db.collection('module_progress').doc(`${uid}_${moduleId}`);
+    batch.set(progressRef, {
+      user_id: uid,
+      module_id: moduleId,
+      course_id: courseId || '',
+      sessions_completed: { [sessionId]: true },
+      updated_at: admin.firestore.FieldValue.serverTimestamp(),
+    }, { merge: true });
+  }
+
+  await batch.commit();
+
+  if (courseId) {
+    recalcEnrolmentProgress(uid, courseId).catch(console.error);
+  }
+  return null;
 });

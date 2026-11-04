@@ -31,8 +31,10 @@ export default function AcademyClient() {
       if (user) {
         try {
           const snap = await getDocs(query(collection(db, 'enrolments'), where('user_id', '==', user.uid)));
-          const ids = snap.docs.map((d) => d.data().course_id);
-          if (ids.length > 0 && !ids.includes('foundation')) {
+          const activeDocs = snap.docs.filter((d) => d.data().status === 'active' || d.data().status === 'completed');
+          const ids = activeDocs.map((d) => d.data().course_id);
+          const hasTrack = activeDocs.some((d) => d.data().course_id !== 'foundation' && d.data().tier !== 'executive');
+          if (hasTrack && !ids.includes('foundation')) {
             ids.push('foundation');
           }
           setUserEnrolments(ids);
@@ -127,6 +129,7 @@ export default function AcademyClient() {
         </div>
       </section>
 
+
       {/* COURSES GRID */}
       <section style={{ maxWidth: 1240, margin: '0 auto', padding: '2rem 1.5rem 5rem' }}>
         {loading ? (
@@ -143,12 +146,12 @@ export default function AcademyClient() {
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
             {filteredCourses.map((c) => {
-              const tier = c.tier || 'track';
-              const price = c.price !== undefined ? c.price : 0;
-              const isFree = price === 0;
-              const priceMain = isFree ? 'FREE' : `₦${Number(price).toLocaleString('en-NG')}`;
+              const tier = c.tier || (c.is_foundation ? 'foundation' : 'track');
+              const price = c.price !== undefined ? c.price : (tier === 'foundation' ? 50000 : 200000);
+              const priceMain = `₦${Number(price).toLocaleString('en-NG')}`;
               const isEnrolled = userEnrolments.includes(c.id);
-              const tierLabel = tier === 'foundation' ? '★ Foundation' : tier === 'executive' ? '👑 Executive Program' : '◆ Career Track';
+              const includesFoundation = tier !== 'foundation' && (c.includes_foundation !== false);
+              const tierLabel = tier === 'foundation' ? '★ Foundation (Subsidized)' : tier === 'executive' ? '👑 Executive Program' : '◆ Career Track';
               const href = isEnrolled ? '/dashboard' : tier === 'executive' ? `/cbie-application?course=${c.id}` : `/course-detail?id=${c.id}`;
 
               return (
@@ -167,7 +170,7 @@ export default function AcademyClient() {
                   }}
                 >
                   <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                       <span style={{
                         background: 'rgba(20,40,255,0.12)',
                         color: 'var(--blue)',
@@ -179,7 +182,23 @@ export default function AcademyClient() {
                       }}>
                         {tierLabel}
                       </span>
-                      {isEnrolled && <span style={{ color: '#00c864', fontSize: '0.72rem', fontWeight: 700 }}>✓ Enrolled</span>}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        {includesFoundation && (
+                          <span style={{
+                            background: 'rgba(255,138,0,0.12)',
+                            color: '#FF8A00',
+                            border: '1px solid rgba(255,138,0,0.3)',
+                            padding: '0.2rem 0.5rem',
+                            borderRadius: 4,
+                            fontSize: '0.64rem',
+                            fontWeight: 700,
+                            letterSpacing: '0.04em'
+                          }}>
+                            + Foundation Included
+                          </span>
+                        )}
+                        {isEnrolled && <span style={{ color: '#00c864', fontSize: '0.72rem', fontWeight: 700 }}>✓ Enrolled</span>}
+                      </div>
                     </div>
 
                     <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--white)', marginBottom: '0.5rem' }}>
@@ -190,18 +209,36 @@ export default function AcademyClient() {
                       {c.description ? c.description.slice(0, 120) + (c.description.length > 120 ? '...' : '') : ''}
                     </p>
 
-                    <div style={{ display: 'flex', gap: '0.8rem', fontSize: '0.72rem', color: 'var(--muted)', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
+                    <div style={{ display: 'flex', gap: '0.8rem', fontSize: '0.72rem', color: 'var(--muted)', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
                       {c.duration_weeks && <span>📅 {c.duration_weeks} weeks</span>}
                       {c.module_count && <span>📚 {c.module_count} modules</span>}
                       <span>{c.cohort_based ? '👥 Cohort-based' : '⏱ Self-paced'}</span>
                     </div>
+
+                    {includesFoundation && (
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.45rem',
+                        background: 'rgba(20,40,255,0.06)',
+                        border: '1px dashed rgba(20,40,255,0.25)',
+                        borderRadius: 6,
+                        padding: '0.45rem 0.75rem',
+                        fontSize: '0.7rem',
+                        color: '#8DA6FF',
+                        marginBottom: '1.25rem'
+                      }}>
+                        <span style={{ color: '#FF8A00', fontWeight: 800 }}>✓</span>
+                        <span><strong>Foundation Course included</strong> with this track</span>
+                      </div>
+                    )}
                   </div>
 
                   <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
                       <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--orange)' }}>{priceMain}</div>
                       <div style={{ fontSize: '0.66rem', color: 'var(--muted)' }}>
-                        {isFree ? 'self-paced access' : 'one-time payment'}
+                        {tier === 'foundation' ? 'subsidized rate' : 'one-time payment'}
                       </div>
                     </div>
 

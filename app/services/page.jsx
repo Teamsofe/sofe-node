@@ -41,7 +41,7 @@ export default function ServicesPage() {
                 Master blockchain fundamentals, earn industry-accredited certifications (CBIE), participate in paid protocol bounties, and secure vetted remote Web3 career placements.
               </p>
               <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 2rem 0', display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.8rem', color: 'rgba(200,215,240,0.85)' }}>
-                <li>✓ Free Foundation Course</li>
+                <li>✓ Subsidized Foundation Course</li>
                 <li>✓ 2-Tier Referral Commissions</li>
                 <li>✓ Campus Chapter Communities</li>
                 <li>✓ Verified On-Chain Credentials</li>
