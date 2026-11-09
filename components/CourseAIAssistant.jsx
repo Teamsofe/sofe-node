@@ -66,6 +66,7 @@ export default function CourseAIAssistant({
   const [quizError, setQuizError] = useState('');
 
   const chatEndRef = useRef(null);
+  const chatContainerRef = useRef(null);
 
   // Setup Chat Transport with Vercel AI SDK
   const chatTransport = useMemo(() => {
@@ -109,8 +110,8 @@ export default function CourseAIAssistant({
 
   // Auto-scroll chat to bottom
   useEffect(() => {
-    if (currentTab === 'chat') {
-      chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (currentTab === 'chat' && chatContainerRef?.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
   }, [messages, currentTab, isLoading]);
 
@@ -652,6 +653,7 @@ export default function CourseAIAssistant({
 
           {/* Messages Stream Container */}
           <div
+            ref={chatContainerRef}
             style={{
               flex: 1,
               overflowY: 'auto',

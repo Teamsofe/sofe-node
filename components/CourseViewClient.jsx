@@ -21,28 +21,82 @@ import {
 import qrcode from '@/lib/qrcodeGenerator';
 import CourseAIAssistant from './CourseAIAssistant';
 
+const DEMO_MODULES = [
+  { id: 'mod-1', title: 'Module 1: Orientation & Blockchain Architecture', order: 1, course_id: 'foundation' },
+  { id: 'mod-2', title: 'Module 2: Cryptography & Smart Contracts', order: 2, course_id: 'foundation' }
+];
+
+const DEMO_SESSIONS = {
+  'mod-1': [
+    {
+      id: 'sess-orient',
+      module_id: 'mod-1',
+      title: 'Orientation',
+      type: 'video',
+      video_link: 'https://www.youtube.com/watch?v=SSo_EIwHSd4',
+      recording_link: 'https://www.youtube.com/watch?v=SSo_EIwHSd4',
+      video_url: 'https://www.youtube.com/watch?v=SSo_EIwHSd4',
+      duration_minutes: 25,
+      order: 1
+    },
+    {
+      id: 'sess-quiz-1',
+      module_id: 'mod-1',
+      title: 'Module 1 Assessment Exam',
+      type: 'quiz',
+      duration_minutes: 15,
+      passing_score: 70,
+      order: 2
+    }
+  ],
+  'mod-2': [
+    {
+      id: 'sess-crypto',
+      module_id: 'mod-2',
+      title: 'Public Key Cryptography & Wallets',
+      type: 'video',
+      video_link: 'https://www.youtube.com/watch?v=SSo_EIwHSd4',
+      recording_link: 'https://www.youtube.com/watch?v=SSo_EIwHSd4',
+      video_url: 'https://www.youtube.com/watch?v=SSo_EIwHSd4',
+      duration_minutes: 30,
+      order: 1
+    }
+  ]
+};
+
 export default function CourseViewClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const courseParam = searchParams.get('course') || 'foundation';
+  const isDemoMode = searchParams.get('demo') === 'true' || searchParams.get('mode') === 'demo';
 
-  const [loading, setLoading] = useState(true);
-  const [currentUser, setCurrentUser] = useState(null);
-  const [userData, setUserData] = useState(null);
+  const [loading, setLoading] = useState(!isDemoMode);
+  const [currentUser, setCurrentUser] = useState(
+    isDemoMode ? { uid: 'demo-student', email: 'demo@sofegroup.com', displayName: 'Sofe Demo Learner' } : null
+  );
+  const [userData, setUserData] = useState(
+    isDemoMode ? { first_name: 'Demo', last_name: 'Learner', role: 'student', is_premium: true } : null
+  );
   const [isLight, setIsLight] = useState(false);
-  const [courseId, setCourseId] = useState(null);
-  const [courseData, setCourseData] = useState(null);
-  const [modules, setModules] = useState([]);
-  const [sessionsByModule, setSessionsByModule] = useState({});
-  const [progress, setProgress] = useState({});
-  const [moduleProgress, setModuleProgress] = useState({});
-  const [enrolmentStatus, setEnrolmentStatus] = useState(null);
+  const [courseId, setCourseId] = useState(courseParam);
+  const [courseData, setCourseData] = useState(
+    isDemoMode ? { id: 'foundation', title: 'Blockchain & Cryptocurrency Foundation', is_foundation: true } : null
+  );
+  const [modules, setModules] = useState(isDemoMode ? DEMO_MODULES : []);
+  const [sessionsByModule, setSessionsByModule] = useState(isDemoMode ? DEMO_SESSIONS : {});
+  const [progress, setProgress] = useState(isDemoMode ? { 'sess-orient': { completed: true } } : {});
+  const [moduleProgress, setModuleProgress] = useState(
+    isDemoMode ? { 'mod-1': { completed_at: null, sessions_completed: { 'sess-orient': true } } } : {}
+  );
+  const [enrolmentStatus, setEnrolmentStatus] = useState(isDemoMode ? 'active' : null);
   const [isCourseLocked, setIsCourseLocked] = useState(false);
 
-  const [activeModuleId, setActiveModuleId] = useState(null);
-  const [activeSessionId, setActiveSessionId] = useState(null);
-  const [activeSession, setActiveSession] = useState(null);
-  const [lastVideoSession, setLastVideoSession] = useState(null);
+  const [activeModuleId, setActiveModuleId] = useState(isDemoMode ? 'mod-1' : null);
+  const [activeSessionId, setActiveSessionId] = useState(isDemoMode ? 'sess-orient' : null);
+  const [activeSession, setActiveSession] = useState(isDemoMode ? DEMO_SESSIONS['mod-1'][0] : null);
+  const [lastVideoSession, setLastVideoSession] = useState(
+    isDemoMode ? { sess: DEMO_SESSIONS['mod-1'][0], modId: 'mod-1' } : null
+  );
   const [sideTab, setSideTab] = useState('curr'); // 'curr' | 'ai'
   const [aiSubTab, setAiSubTab] = useState('chat'); // 'chat' | 'quiz' | 'summary' | 'weak'
   const [aiInitialPrompt, setAiInitialPrompt] = useState('');
@@ -706,6 +760,8 @@ export default function CourseViewClient() {
   }, [certModalOpen, certificate, courseData, userData]);
 
   useEffect(() => {
+    if (isDemoMode) return;
+
     const unsub = onAuthStateChanged(auth, async (user) => {
       if (!user) {
         router.replace('/login');
@@ -718,22 +774,35 @@ export default function CourseViewClient() {
     return () => unsub();
   }, [courseParam, router]);
 
-  const initCourse = async (user) => {
+  const initCourse = async (user, isDemoMode = false) => {
     setLoading(true);
     try {
       // 1. Resolve Course
       let cid = null;
       let cData = null;
-      const direct = await getDoc(doc(db, 'courses', courseParam.toLowerCase()));
-      if (direct.exists()) {
-        cid = direct.id;
-        cData = direct.data();
-      } else {
-        const snap = await getDocs(query(collection(db, 'courses'), where('is_foundation', '==', true)));
-        if (!snap.empty && courseParam === 'foundation') {
-          cid = snap.docs[0].id;
-          cData = snap.docs[0].data();
+      try {
+        const direct = await getDoc(doc(db, 'courses', courseParam.toLowerCase()));
+        if (direct.exists()) {
+          cid = direct.id;
+          cData = direct.data();
+        } else {
+          const snap = await getDocs(query(collection(db, 'courses'), where('is_foundation', '==', true)));
+          if (!snap.empty && courseParam === 'foundation') {
+            cid = snap.docs[0].id;
+            cData = snap.docs[0].data();
+          }
         }
+      } catch (err) {
+        console.warn('Firestore course fetch warning:', err.message);
+      }
+
+      if (!cid && isDemoMode) {
+        cid = 'foundation';
+        cData = {
+          id: 'foundation',
+          title: 'Blockchain & Cryptocurrency Foundation',
+          is_foundation: true
+        };
       }
 
       if (!cid) {
@@ -755,6 +824,10 @@ export default function CourseViewClient() {
       } catch (e) {
         console.warn('Could not load user profile:', e);
       }
+      if (!uProfile && isDemoMode) {
+        uProfile = { first_name: 'Demo', last_name: 'Learner', role: 'student', is_premium: true };
+        setUserData(uProfile);
+      }
 
       // 1c. Load existing Certificate for this course if issued
       try {
@@ -770,47 +843,53 @@ export default function CourseViewClient() {
 
       // 2. Check Enrolment & Authorization
       let isEnrolled = false;
-      const enrolSnap = await getDocs(
-        query(collection(db, 'enrolments'), where('user_id', '==', user.uid), where('course_id', '==', cid))
-      );
-      if (!enrolSnap.empty) {
-        const eData = enrolSnap.docs[0].data();
-        if (eData.status === 'active' || eData.status === 'completed') {
-          isEnrolled = true;
-          setEnrolmentStatus(eData.status);
-        } else if (eData.status === 'pending') {
-          setEnrolmentStatus('pending');
+      if (isDemoMode) {
+        isEnrolled = true;
+        setEnrolmentStatus('active');
+        setIsCourseLocked(false);
+      } else {
+        const enrolSnap = await getDocs(
+          query(collection(db, 'enrolments'), where('user_id', '==', user.uid), where('course_id', '==', cid))
+        );
+        if (!enrolSnap.empty) {
+          const eData = enrolSnap.docs[0].data();
+          if (eData.status === 'active' || eData.status === 'completed') {
+            isEnrolled = true;
+            setEnrolmentStatus(eData.status);
+          } else if (eData.status === 'pending') {
+            setEnrolmentStatus('pending');
+          }
         }
-      }
 
-      // If not directly enrolled, check unlocks for Foundation:
-      if (!isEnrolled && (cid === 'foundation' || courseParam === 'foundation')) {
-        const uRole = uProfile?.role;
-        const uAdminRole = uProfile?.admin_role;
-        const isAdminUser = uRole === 'admin' || ['super_admin', 'admin', 'course_manager', 'tutor', 'chief_operations'].includes(uAdminRole);
-        const hasBypass = !!uProfile?.bypass_foundation;
+        // If not directly enrolled, check unlocks for Foundation:
+        if (!isEnrolled && (cid === 'foundation' || courseParam === 'foundation')) {
+          const uRole = uProfile?.role;
+          const uAdminRole = uProfile?.admin_role;
+          const isAdminUser = uRole === 'admin' || ['super_admin', 'admin', 'course_manager', 'tutor', 'chief_operations'].includes(uAdminRole);
+          const hasBypass = !!uProfile?.bypass_foundation;
 
-        if (isAdminUser || hasBypass) {
-          isEnrolled = true;
-          setEnrolmentStatus('active');
-        } else {
-          // Check if user has enrolled in any career track course (which includes foundation)
-          try {
-            const allEnrolsSnap = await getDocs(
-              query(collection(db, 'enrolments'), where('user_id', '==', user.uid))
-            );
-            const hasCareerTrack = allEnrolsSnap.docs.some((d) => {
-              const data = d.data();
-              return data.course_id !== 'foundation' && data.tier !== 'executive' && (data.status === 'active' || data.status === 'completed');
-            });
-            if (hasCareerTrack || (uProfile?.is_premium === true)) {
-              // Enrolled in Career Track or VIP unlocks Foundation. The foundation enrolment record itself
-              // is created server-side when the payment is confirmed.
-              isEnrolled = true;
-              setEnrolmentStatus('active');
+          if (isAdminUser || hasBypass) {
+            isEnrolled = true;
+            setEnrolmentStatus('active');
+          } else {
+            // Check if user has enrolled in any career track course (which includes foundation)
+            try {
+              const allEnrolsSnap = await getDocs(
+                query(collection(db, 'enrolments'), where('user_id', '==', user.uid))
+              );
+              const hasCareerTrack = allEnrolsSnap.docs.some((d) => {
+                const data = d.data();
+                return data.course_id !== 'foundation' && data.tier !== 'executive' && (data.status === 'active' || data.status === 'completed');
+              });
+              if (hasCareerTrack || (uProfile?.is_premium === true)) {
+                // Enrolled in Career Track or VIP unlocks Foundation. The foundation enrolment record itself
+                // is created server-side when the payment is confirmed.
+                isEnrolled = true;
+                setEnrolmentStatus('active');
+              }
+            } catch (err) {
+              console.error('Error checking career enrolments:', err);
             }
-          } catch (err) {
-            console.error('Error checking career enrolments:', err);
           }
         }
       }
@@ -823,33 +902,96 @@ export default function CourseViewClient() {
       }
 
       // 3. Load Modules & Sessions
-      const modSnap = await getDocs(query(collection(db, 'modules'), where('course_id', '==', cid)));
-      const mods = modSnap.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => (a.order || 0) - (b.order || 0));
-      setModules(mods);
+      let mods = [];
+      try {
+        const modSnap = await getDocs(query(collection(db, 'modules'), where('course_id', '==', cid)));
+        mods = modSnap.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => (a.order || 0) - (b.order || 0));
+      } catch (err) {
+        console.warn('Could not fetch modules from Firestore:', err.message);
+      }
 
-      const sessMap = {};
-      await Promise.all(
-        mods.map(async (m) => {
-          const sessSnap = await getDocs(query(collection(db, 'sessions'), where('module_id', '==', m.id)));
-          sessMap[m.id] = sessSnap.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => (a.order || 0) - (b.order || 0));
-        })
-      );
+      let sessMap = {};
+      if (mods.length > 0) {
+        await Promise.all(
+          mods.map(async (m) => {
+            try {
+              const sessSnap = await getDocs(query(collection(db, 'sessions'), where('module_id', '==', m.id)));
+              sessMap[m.id] = sessSnap.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => (a.order || 0) - (b.order || 0));
+            } catch (e) {
+              sessMap[m.id] = [];
+            }
+          })
+        );
+      }
+
+      // Fallback for Demo Mode if Firestore returned no modules
+      if (isDemoMode && mods.length === 0) {
+        mods = [
+          { id: 'mod-1', title: 'Module 1: Orientation & Blockchain Architecture', order: 1, course_id: 'foundation' },
+          { id: 'mod-2', title: 'Module 2: Cryptography & Smart Contracts', order: 2, course_id: 'foundation' }
+        ];
+        sessMap = {
+          'mod-1': [
+            {
+              id: 'sess-orient',
+              module_id: 'mod-1',
+              title: 'Orientation',
+              type: 'video',
+              video_url: 'https://www.youtube.com/watch?v=kYJUp5Y4kLg',
+              duration_minutes: 25,
+              order: 1
+            },
+            {
+              id: 'sess-quiz-1',
+              module_id: 'mod-1',
+              title: 'Module 1 Assessment Exam',
+              type: 'quiz',
+              duration_minutes: 15,
+              passing_score: 70,
+              order: 2
+            }
+          ],
+          'mod-2': [
+            {
+              id: 'sess-crypto',
+              module_id: 'mod-2',
+              title: 'Public Key Cryptography & Wallets',
+              type: 'video',
+              video_url: 'https://www.youtube.com/watch?v=kYJUp5Y4kLg',
+              duration_minutes: 30,
+              order: 1
+            }
+          ]
+        };
+      }
+
+      setModules(mods);
       setSessionsByModule(sessMap);
 
       // 4. Load Progress
-      const progSnap = await getDocs(
-        query(collection(db, 'module_progress'), where('user_id', '==', user.uid), where('course_id', '==', cid))
-      );
       const modProgMap = {};
       const sessProgMap = {};
-      progSnap.docs.forEach((d) => {
-        const p = d.data();
-        modProgMap[p.module_id] = p;
-        const sc = p.sessions_completed || {};
-        Object.keys(sc).forEach((sid) => {
-          if (sc[sid]) sessProgMap[sid] = { completed: true };
+      try {
+        const progSnap = await getDocs(
+          query(collection(db, 'module_progress'), where('user_id', '==', user.uid), where('course_id', '==', cid))
+        );
+        progSnap.docs.forEach((d) => {
+          const p = d.data();
+          modProgMap[p.module_id] = p;
+          const sc = p.sessions_completed || {};
+          Object.keys(sc).forEach((sid) => {
+            if (sc[sid]) sessProgMap[sid] = { completed: true };
+          });
         });
-      });
+      } catch (e) {
+        console.warn('Progress load fallback:', e);
+      }
+
+      if (isDemoMode && Object.keys(sessProgMap).length === 0) {
+        sessProgMap['sess-orient'] = { completed: true };
+        modProgMap['mod-1'] = { completed_at: null, sessions_completed: { 'sess-orient': true } };
+      }
+
       setModuleProgress(modProgMap);
       setProgress(sessProgMap);
 
@@ -1215,7 +1357,7 @@ export default function CourseViewClient() {
 
   // Parse video URL
   let embedUrl = null;
-  const rawVideo = activeSession?.video_link || activeSession?.recording_link;
+  const rawVideo = activeSession?.video_link || activeSession?.recording_link || activeSession?.video_url;
   if (rawVideo) {
     if (rawVideo.includes('youtube.com') || rawVideo.includes('youtu.be')) {
       const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=|live\/)([^#&?]*).*/;
