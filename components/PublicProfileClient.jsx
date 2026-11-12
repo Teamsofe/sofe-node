@@ -48,7 +48,7 @@ export default function PublicProfileClient({ usernameParam }) {
           }
         }
 
-        // 4. Default fallback profile for demo / showcase if not in DB
+        // 4. Fallback demo showcase profile if not yet in DB
         if (!foundUser) {
           foundUser = {
             uid: 'demo-profile',
@@ -56,17 +56,17 @@ export default function PublicProfileClient({ usernameParam }) {
             last_name: 'Shedrack',
             username: cleanParam || 'shedrack',
             bio: 'Web3 Developer & Protocol Contributor. Scaling decentralized infrastructure and verified talent across Africa.',
-            node_label: 'FUTO Campus Node',
+            node_label: 'Sofe Node UNN',
             referral_code: cleanParam.startsWith('SOFE-') ? cleanParam : 'SOFE-SHEBDWJH7',
-            xp_total: 1420,
-            monthly_xp: 380,
-            daily_streak: 14,
-            leaderboard_wins_count: 3,
-            bounty_wins_count: 2,
-            season_rank: 2,
-            xp_tier: 'Pioneer Node',
-            completed_assessments_count: 6,
-            average_score: 96,
+            xp_total: 348,
+            monthly_xp: 348,
+            daily_streak: 6,
+            leaderboard_wins_count: 1,
+            bounty_wins_count: 0,
+            season_rank: 12,
+            xp_tier: 'Genesis',
+            completed_assessments_count: 4,
+            average_score: 95,
             created_at: new Date('2024-01-15')
           };
           userId = 'demo-profile';
@@ -132,373 +132,181 @@ export default function PublicProfileClient({ usernameParam }) {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', background: '#040812', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ fontSize: '0.95rem', color: 'rgba(200,215,240,0.7)' }}>Loading Verified Web3 CV...</p>
+      <div className="profile-page-wrapper loading-state">
+        <style dangerouslySetInnerHTML={{ __html: profileStyles }} />
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.85rem' }}>
+          <div className="profile-spinner" />
+          <p style={{ fontSize: '0.92rem', opacity: 0.8 }}>Loading Verified Web3 CV...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(180deg, #040812 0%, #060B17 50%, #091329 100%)',
-      color: '#FFFFFF',
-      fontFamily: 'Poppins, system-ui, -apple-system, sans-serif',
-      paddingBottom: '7rem',
-      position: 'relative'
-    }}>
-      {/* Top Header Bar */}
-      <header style={{
-        padding: '1.25rem 2rem',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        borderBottom: '1px solid rgba(20,40,255,0.2)',
-        background: 'rgba(6, 11, 23, 0.8)',
-        backdropFilter: 'blur(12px)',
-        position: 'sticky',
-        top: 0,
-        zIndex: 50
-      }}>
-        <Link href="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
-          <img
-            src="/images/Nodes/SofeLogoHome.png"
-            alt="Sofe Node"
-            style={{
-              height: 32,
-              width: 'auto',
-              filter: 'brightness(1.5) saturate(1.3) drop-shadow(0 0 8px rgba(0,180,255,0.4))'
-            }}
-          />
-        </Link>
+    <div className="profile-page-wrapper">
+      <style dangerouslySetInnerHTML={{ __html: profileStyles }} />
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <button
-            onClick={handleCopyProfileUrl}
-            style={{
-              background: 'rgba(255,255,255,0.08)',
-              border: '1px solid rgba(255,255,255,0.18)',
-              color: '#fff',
-              borderRadius: 8,
-              padding: '0.45rem 0.85rem',
-              fontSize: '0.76rem',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.4rem'
-            }}
-          >
-            <span>🔗</span> {copied ? 'Link Copied!' : 'Share Web3 CV'}
-          </button>
+      {/* Main Content Container - Clears floating Sofe Navbar */}
+      <main className="profile-main-container">
 
-          <Link
-            href={referralSignupUrl}
-            style={{
-              background: '#1428FF',
-              color: '#fff',
-              borderRadius: 8,
-              padding: '0.45rem 1rem',
-              fontSize: '0.76rem',
-              fontWeight: 700,
-              textDecoration: 'none',
-              boxShadow: '0 4px 15px rgba(20,40,255,0.4)'
-            }}
-          >
-            Join Sofe Node
-          </Link>
-        </div>
-      </header>
+        {/* ── PROFILE HERO CARD ────────────────────────────────────────── */}
+        <div className="profile-card profile-hero-card">
+          {/* Ambient Glow */}
+          <div className="profile-hero-ambient" />
 
-      {/* Profile Main Container */}
-      <main style={{ maxWidth: 960, margin: '2.5rem auto 0', padding: '0 1.25rem' }}>
-        
-        {/* Profile Header Card */}
-        <div style={{
-          background: 'rgba(9, 17, 36, 0.75)',
-          backdropFilter: 'blur(16px)',
-          border: '1px solid rgba(20,40,255,0.25)',
-          borderRadius: 20,
-          padding: '2rem',
-          boxShadow: '0 16px 40px rgba(0,0,0,0.5)',
-          marginBottom: '2rem',
-          position: 'relative',
-          overflow: 'hidden'
-        }}>
-          {/* Ambient Corner Accent */}
-          <div style={{
-            position: 'absolute',
-            top: -40,
-            right: -40,
-            width: 180,
-            height: 180,
-            background: 'radial-gradient(circle, rgba(255,138,0,0.2) 0%, transparent 70%)',
-            pointerEvents: 'none'
-          }} />
-
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1.5rem' }}>
-            {/* Avatar & Names */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-              <div style={{
-                width: 82,
-                height: 82,
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, #1428FF 0%, #FF8A00 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '2rem',
-                fontWeight: 800,
-                color: '#fff',
-                boxShadow: '0 8px 25px rgba(20,40,255,0.4)',
-                border: '3px solid rgba(255,255,255,0.2)'
-              }}>
+          <div className="profile-hero-content">
+            {/* Top row: Avatar & Identity Details */}
+            <div className="profile-identity-col">
+              {/* Avatar */}
+              <div className="profile-avatar">
                 {fullName.charAt(0).toUpperCase()}
               </div>
 
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-                  <h1 style={{ fontSize: '1.6rem', fontWeight: 800, margin: 0, color: '#fff' }}>
-                    {fullName}
-                  </h1>
-                  <span style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.25rem',
-                    background: 'rgba(16, 185, 129, 0.15)',
-                    border: '1px solid #10B981',
-                    color: '#10B981',
-                    borderRadius: 20,
-                    padding: '0.2rem 0.6rem',
-                    fontSize: '0.68rem',
-                    fontWeight: 700
-                  }}>
+              {/* Names & Badges */}
+              <div className="profile-identity-text">
+                <div className="profile-name-row">
+                  <h1 className="profile-name">{fullName}</h1>
+                  <span className="profile-verified-badge">
                     ✓ VERIFIED BUILDER
                   </span>
                 </div>
 
-                <div style={{ fontSize: '0.82rem', color: '#00E5FF', fontWeight: 600, marginTop: '0.25rem' }}>
-                  @{profile?.username || (profile?.referral_code ? profile.referral_code.toLowerCase() : 'sofian')} • {profile?.node_label || 'Distributed Campus Node'}
+                <div className="profile-handle">
+                  @{profile?.username || (profile?.referral_code ? profile.referral_code.toLowerCase() : 'sofian')} • {profile?.node_label || 'Sofe Node'}
                 </div>
 
                 {profile?.bio && (
-                  <p style={{ fontSize: '0.82rem', color: 'rgba(238,244,255,0.75)', lineHeight: 1.5, marginTop: '0.5rem', maxWidth: 540 }}>
+                  <p className="profile-bio">
                     {profile.bio}
                   </p>
                 )}
               </div>
             </div>
 
-            {/* Direct Challenge Button */}
-            <Link
-              href={challengeUrl}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                background: 'linear-gradient(135deg, #FF8A00 0%, #E65100 100%)',
-                color: '#fff',
-                borderRadius: 10,
-                padding: '0.75rem 1.25rem',
-                fontSize: '0.84rem',
-                fontWeight: 800,
-                textDecoration: 'none',
-                boxShadow: '0 4px 18px rgba(255,138,0,0.35)',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              <span>⚔️</span> Challenge on Web3 IQ
-            </Link>
+            {/* Action Buttons: Share & Challenge */}
+            <div className="profile-action-group">
+              <button
+                type="button"
+                onClick={handleCopyProfileUrl}
+                className="profile-btn-share"
+                title="Share this public Web3 CV"
+              >
+                <span>{copied ? '✓' : '🔗'}</span>
+                <span>{copied ? 'Link Copied!' : 'Share Profile'}</span>
+              </button>
+
+              <Link
+                href={challengeUrl}
+                className="profile-btn-challenge"
+                title="Challenge on Web3 IQ Arena"
+              >
+                <span>⚔️</span>
+                <span>Challenge on Web3 IQ</span>
+              </Link>
+            </div>
           </div>
 
-          {/* Dynamic Multiplier Status Badges */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.65rem',
-            marginTop: '1.5rem',
-            paddingTop: '1.25rem',
-            borderTop: '1px solid rgba(255,255,255,0.08)',
-            flexWrap: 'wrap'
-          }}>
-            <span style={{ fontSize: '0.74rem', color: 'rgba(200,215,240,0.6)', fontWeight: 600, textTransform: 'uppercase' }}>
+          {/* Honors & Multipliers Bottom Strip */}
+          <div className="profile-honors-strip">
+            <span className="profile-honors-label">
               Honors &amp; Multipliers:
             </span>
 
             {leaderboardWins > 0 && (
-              <WinnerMultiplierBadge type="leaderboard" count={leaderboardWins} size="md" />
+              <WinnerMultiplierBadge type="leaderboard" count={leaderboardWins} size="sm" />
             )}
 
             {bountyWins > 0 && (
-              <WinnerMultiplierBadge type="bounty" count={bountyWins} size="md" />
+              <WinnerMultiplierBadge type="bounty" count={bountyWins} size="sm" />
             )}
 
-            <span style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-              background: 'rgba(255,255,255,0.06)',
-              border: '1px solid rgba(255,255,255,0.15)',
-              color: '#EEF4FF',
-              borderRadius: 30,
-              padding: '0.35rem 0.85rem',
-              fontSize: '0.76rem',
-              fontWeight: 700
-            }}>
-              <span>🛡️</span> {profile?.xp_tier || 'Genesis Scout'}
+            <span className="profile-tier-badge">
+              <span>🛡️</span> {profile?.xp_tier || 'Genesis'}
             </span>
           </div>
         </div>
 
-        {/* Proof of Work Metrics Grid */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))',
-          gap: '1rem',
-          marginBottom: '2.5rem'
-        }}>
-          <div style={{
-            background: 'rgba(9, 17, 36, 0.7)',
-            border: '1px solid rgba(20,40,255,0.2)',
-            borderRadius: 14,
-            padding: '1.25rem'
-          }}>
-            <div style={{ fontSize: '0.7rem', color: 'rgba(200,215,240,0.6)', textTransform: 'uppercase', fontWeight: 700 }}>
-              Lifetime Proof-of-Work XP
-            </div>
-            <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#00E5FF', marginTop: '0.3rem' }}>
+        {/* ── PROOF OF WORK STATS GRID (2 per row on mobile) ─────────── */}
+        <div className="profile-stats-grid">
+          {/* Stat 1: Lifetime XP */}
+          <div className="profile-stat-box">
+            <div className="stat-label">Lifetime Proof-of-Work XP</div>
+            <div className="stat-val xp-val">
               {(profile?.xp_total || 0).toLocaleString()} XP
             </div>
-            <div style={{ fontSize: '0.7rem', color: 'rgba(238,244,255,0.5)', marginTop: '0.2rem' }}>
-              On-chain verifiable learning
-            </div>
+            <div className="stat-sub">On-chain verifiable learning</div>
           </div>
 
-          <div style={{
-            background: 'rgba(9, 17, 36, 0.7)',
-            border: '1px solid rgba(20,40,255,0.2)',
-            borderRadius: 14,
-            padding: '1.25rem'
-          }}>
-            <div style={{ fontSize: '0.7rem', color: 'rgba(200,215,240,0.6)', textTransform: 'uppercase', fontWeight: 700 }}>
-              Season Rank
-            </div>
-            <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#FF8A00', marginTop: '0.3rem' }}>
+          {/* Stat 2: Season Rank */}
+          <div className="profile-stat-box">
+            <div className="stat-label">Season Rank</div>
+            <div className="stat-val rank-val">
               #{profile?.season_rank || profile?.rank || '12'}
             </div>
-            <div style={{ fontSize: '0.7rem', color: 'rgba(238,244,255,0.5)', marginTop: '0.2rem' }}>
-              Monthly Leaderboard
-            </div>
+            <div className="stat-sub">Monthly Leaderboard</div>
           </div>
 
-          <div style={{
-            background: 'rgba(9, 17, 36, 0.7)',
-            border: '1px solid rgba(20,40,255,0.2)',
-            borderRadius: 14,
-            padding: '1.25rem'
-          }}>
-            <div style={{ fontSize: '0.7rem', color: 'rgba(200,215,240,0.6)', textTransform: 'uppercase', fontWeight: 700 }}>
-              Average Exam Score
-            </div>
-            <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#10B981', marginTop: '0.3rem' }}>
+          {/* Stat 3: Average Score */}
+          <div className="profile-stat-box">
+            <div className="stat-label">Average Exam Score</div>
+            <div className="stat-val score-val">
               {profile?.average_score || 95}%
             </div>
-            <div style={{ fontSize: '0.7rem', color: 'rgba(238,244,255,0.5)', marginTop: '0.2rem' }}>
-              Top 5% Assessment Percentile
-            </div>
+            <div className="stat-sub">Top 5% Assessment Percentile</div>
           </div>
 
-          <div style={{
-            background: 'rgba(9, 17, 36, 0.7)',
-            border: '1px solid rgba(20,40,255,0.2)',
-            borderRadius: 14,
-            padding: '1.25rem'
-          }}>
-            <div style={{ fontSize: '0.7rem', color: 'rgba(200,215,240,0.6)', textTransform: 'uppercase', fontWeight: 700 }}>
-              Active Learning Streak
+          {/* Stat 4: Learning Streak */}
+          <div className="profile-stat-box">
+            <div className="stat-label">Active Learning Streak</div>
+            <div className="stat-val streak-val">
+              🔥 {profile?.daily_streak || 6} Days
             </div>
-            <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#FFB03A', marginTop: '0.3rem' }}>
-              🔥 {profile?.daily_streak || 7} Days
-            </div>
-            <div style={{ fontSize: '0.7rem', color: 'rgba(238,244,255,0.5)', marginTop: '0.2rem' }}>
-              Continuous commitment
-            </div>
+            <div className="stat-sub">Continuous commitment</div>
           </div>
         </div>
 
-        {/* Verified Certifications Section */}
-        <section style={{ marginBottom: '3rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
-            <h2 style={{ fontSize: '1.15rem', fontWeight: 800, margin: 0 }}>
+        {/* ── VERIFIED COURSE CERTIFICATIONS ─────────────────────────── */}
+        <section className="profile-certs-section">
+          <div className="profile-certs-header">
+            <h2 className="profile-section-title">
               Verified Course Certifications ({certificates.length})
             </h2>
-            <span style={{ fontSize: '0.75rem', color: 'rgba(200,215,240,0.6)' }}>
+            <span className="profile-section-sub">
               Cryptographically verified by Sofe Node Foundation
             </span>
           </div>
 
           {certificates.length === 0 ? (
-            <div style={{
-              background: 'rgba(9, 17, 36, 0.5)',
-              border: '1px dashed rgba(20,40,255,0.3)',
-              borderRadius: 12,
-              padding: '2.5rem',
-              textAlign: 'center',
-              color: 'rgba(200,215,240,0.6)',
-              fontSize: '0.85rem'
-            }}>
+            <div className="profile-empty-certs">
               No published certificates yet. Currently preparing for module assessments.
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem' }}>
+            <div className="profile-certs-grid">
               {certificates.map((cert) => (
-                <div
-                  key={cert.id}
-                  style={{
-                    background: 'rgba(9, 17, 36, 0.8)',
-                    border: '1px solid rgba(255,138,0,0.3)',
-                    borderRadius: 14,
-                    padding: '1.25rem',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    boxShadow: '0 8px 24px rgba(0,0,0,0.4)'
-                  }}
-                >
+                <div key={cert.id} className="profile-cert-card">
                   <div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
-                      <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#FF8A00', textTransform: 'uppercase' }}>
+                    <div className="cert-top-row">
+                      <span className="cert-badge-tag">
                         Verified Credential
                       </span>
-                      <span style={{ fontSize: '0.7rem', color: '#10B981', fontWeight: 700 }}>
-                        Score: {cert.score || 97}%
+                      <span className="cert-score-tag">
+                        Score: {cert.score || 95}%
                       </span>
                     </div>
 
-                    <h3 style={{ fontSize: '0.98rem', fontWeight: 800, color: '#fff', marginBottom: '0.4rem', lineHeight: 1.4 }}>
+                    <h3 className="profile-cert-title">
                       {cert.course_title || 'Blockchain Foundation'}
                     </h3>
 
-                    <div style={{ fontSize: '0.74rem', color: 'rgba(200,215,240,0.6)', fontFamily: 'monospace', marginBottom: '1rem' }}>
+                    <div className="profile-cert-id">
                       ID: {cert.id}
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '0.8rem' }}>
+                  <div className="cert-actions-row">
                     <Link
                       href={`/verify/${cert.id}`}
-                      style={{
-                        flex: 1,
-                        textAlign: 'center',
-                        background: 'rgba(20,40,255,0.2)',
-                        border: '1px solid rgba(20,40,255,0.4)',
-                        color: '#6B8CFF',
-                        borderRadius: 8,
-                        padding: '0.5rem',
-                        fontSize: '0.76rem',
-                        fontWeight: 700,
-                        textDecoration: 'none'
-                      }}
+                      className="profile-verify-btn"
                     >
                       Verify On-Chain Seal ↗
                     </Link>
@@ -507,17 +315,7 @@ export default function PublicProfileClient({ usernameParam }) {
                       href={`https://www.linkedin.com/profile/add?startTask=CERTIFICATION_NAME&name=${encodeURIComponent(cert.course_title || 'Blockchain Foundation')}&organizationName=${encodeURIComponent('Sofe Node Academy')}&issueYear=2024&issueMonth=5&certId=${encodeURIComponent(cert.id)}&certUrl=${encodeURIComponent('https://node.sofegroup.com/verify/' + cert.id)}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      style={{
-                        padding: '0.5rem 0.8rem',
-                        background: 'rgba(255,255,255,0.08)',
-                        border: '1px solid rgba(255,255,255,0.2)',
-                        color: '#fff',
-                        borderRadius: 8,
-                        fontSize: '0.76rem',
-                        fontWeight: 700,
-                        textDecoration: 'none',
-                        whiteSpace: 'nowrap'
-                      }}
+                      className="profile-linkedin-btn"
                     >
                       + LinkedIn
                     </a>
@@ -529,31 +327,15 @@ export default function PublicProfileClient({ usernameParam }) {
         </section>
       </main>
 
-      {/* Sticky Bottom Viral CTA Banner */}
-      <div style={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        background: 'rgba(6, 11, 23, 0.94)',
-        backdropFilter: 'blur(16px)',
-        borderTop: '1px solid #1428FF',
-        padding: '0.9rem 1.5rem',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '1rem',
-        zIndex: 100,
-        boxShadow: '0 -8px 30px rgba(0,0,0,0.6)'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <span style={{ fontSize: '1.4rem' }}>🚀</span>
+      {/* ── STICKY BOTTOM VIRAL CTA BANNER ───────────────────────────── */}
+      <div className="sticky-cta-banner">
+        <div className="sticky-cta-left">
+          <span className="sticky-cta-icon">🚀</span>
           <div>
-            <div style={{ fontSize: '0.86rem', fontWeight: 800, color: '#FFFFFF' }}>
+            <div className="sticky-cta-title">
               Build your own verified Web3 portfolio on Sofe Node
             </div>
-            <div style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)' }}>
+            <div className="sticky-cta-sub">
               Join {fullName.split(' ')[0]} and 2,000+ builders mastering smart contracts, winning bounties, and getting deployed.
             </div>
           </div>
@@ -561,17 +343,7 @@ export default function PublicProfileClient({ usernameParam }) {
 
         <Link
           href={referralSignupUrl}
-          style={{
-            background: 'linear-gradient(135deg, #FF8A00 0%, #FE8206 50%, #E65100 100%)',
-            color: '#fff',
-            borderRadius: 10,
-            padding: '0.65rem 1.4rem',
-            fontSize: '0.82rem',
-            fontWeight: 800,
-            textDecoration: 'none',
-            boxShadow: '0 4px 18px rgba(255,138,0,0.4)',
-            whiteSpace: 'nowrap'
-          }}
+          className="sticky-cta-btn"
         >
           Create Your Free Portfolio →
         </Link>
@@ -579,3 +351,699 @@ export default function PublicProfileClient({ usernameParam }) {
     </div>
   );
 }
+
+// Scoped, resilient styling supporting both Dark and Light theme toggle
+const profileStyles = `
+  /* PAGE ROOT & TOP CLEARANCE */
+  .profile-page-wrapper {
+    min-height: 100vh;
+    background: linear-gradient(180deg, #040812 0%, #060B17 50%, #091329 100%);
+    color: #FFFFFF;
+    font-family: 'Poppins', system-ui, -apple-system, sans-serif;
+    padding-top: 105px;
+    padding-bottom: 7.5rem;
+    position: relative;
+    transition: background 0.25s ease, color 0.25s ease;
+  }
+  .profile-page-wrapper.loading-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .profile-spinner {
+    width: 38px;
+    height: 38px;
+    border: 3px solid rgba(20,40,255,0.2);
+    border-top-color: #FF8A00;
+    border-radius: 50%;
+    animation: profSpin 0.8s linear infinite;
+  }
+  @keyframes profSpin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* CONTAINER */
+  .profile-main-container {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 0 1.25rem;
+  }
+
+  /* HERO CARD */
+  .profile-card {
+    background: rgba(9, 17, 36, 0.78);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1px solid rgba(20,40,255,0.25);
+    border-radius: 20px;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.45);
+    transition: all 0.25s ease;
+  }
+  .profile-hero-card {
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .profile-hero-ambient {
+    position: absolute;
+    top: -40px;
+    right: -40px;
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, rgba(255,138,0,0.18) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .profile-hero-content {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1.5rem;
+  }
+  .profile-identity-col {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    flex: 1;
+    min-width: 0;
+  }
+  .profile-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #1428FF 0%, #FF8A00 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    font-weight: 800;
+    color: #fff;
+    box-shadow: 0 8px 25px rgba(20,40,255,0.4);
+    border: 3px solid rgba(255,255,255,0.25);
+    flex-shrink: 0;
+  }
+  .profile-identity-text {
+    flex: 1;
+    min-width: 0;
+  }
+  .profile-name-row {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    flex-wrap: wrap;
+  }
+  .profile-name {
+    font-size: 1.55rem;
+    font-weight: 800;
+    margin: 0;
+    color: #FFFFFF;
+    line-height: 1.2;
+    word-break: break-word;
+  }
+  .profile-verified-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    background: rgba(16, 185, 129, 0.15);
+    border: 1px solid #10B981;
+    color: #10B981;
+    border-radius: 20px;
+    padding: 0.2rem 0.6rem;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+  .profile-handle {
+    font-size: 0.82rem;
+    color: #00E5FF;
+    font-weight: 600;
+    margin-top: 0.35rem;
+    word-break: break-word;
+  }
+  .profile-bio {
+    font-size: 0.82rem;
+    color: rgba(238,244,255,0.75);
+    line-height: 1.55;
+    margin: 0.5rem 0 0 0;
+    max-width: 580px;
+  }
+
+  /* ACTION BUTTONS GROUP */
+  .profile-action-group {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    flex-shrink: 0;
+  }
+  .profile-btn-share {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.22);
+    color: #FFFFFF;
+    border-radius: 10px;
+    padding: 0.72rem 1.15rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+  }
+  .profile-btn-share:hover {
+    background: rgba(255,255,255,0.15);
+    border-color: rgba(255,255,255,0.35);
+    transform: translateY(-1px);
+  }
+  .profile-btn-challenge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background: linear-gradient(135deg, #FF8A00 0%, #E65100 100%);
+    color: #FFFFFF !important;
+    border-radius: 10px;
+    padding: 0.72rem 1.25rem;
+    font-size: 0.82rem;
+    font-weight: 800;
+    text-decoration: none !important;
+    box-shadow: 0 4px 18px rgba(255,138,0,0.35);
+    white-space: nowrap;
+    transition: all 0.2s ease;
+  }
+  .profile-btn-challenge:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 22px rgba(255,138,0,0.45);
+  }
+
+  /* HONORS STRIP */
+  .profile-honors-strip {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    margin-top: 1.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    flex-wrap: wrap;
+  }
+  .profile-honors-label {
+    font-size: 0.74rem;
+    color: rgba(200,215,240,0.6);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .profile-tier-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: #EEF4FF;
+    border-radius: 30px;
+    padding: 0.32rem 0.8rem;
+    font-size: 0.74rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  /* STATS GRID - 4 Cols Desktop, 2 Cols Mobile */
+  .profile-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 2.5rem;
+  }
+  .profile-stat-box {
+    background: rgba(9, 17, 36, 0.7);
+    border: 1px solid rgba(20,40,255,0.2);
+    border-radius: 14px;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: all 0.25s ease;
+  }
+  .profile-stat-box .stat-label {
+    font-size: 0.7rem;
+    color: rgba(200,215,240,0.6);
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  .profile-stat-box .stat-val {
+    font-size: 1.75rem;
+    font-weight: 800;
+    margin-top: 0.35rem;
+    line-height: 1.2;
+  }
+  .profile-stat-box .xp-val { color: #00E5FF; }
+  .profile-stat-box .rank-val { color: #FF8A00; }
+  .profile-stat-box .score-val { color: #10B981; }
+  .profile-stat-box .streak-val { color: #FFB03A; }
+  .profile-stat-box .stat-sub {
+    font-size: 0.7rem;
+    color: rgba(238,244,255,0.5);
+    margin-top: 0.25rem;
+  }
+
+  /* CERTIFICATIONS SECTION */
+  .profile-certs-section {
+    margin-bottom: 3rem;
+  }
+  .profile-certs-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.25rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .profile-section-title {
+    font-size: 1.15rem;
+    font-weight: 800;
+    margin: 0;
+    color: #FFFFFF;
+  }
+  .profile-section-sub {
+    font-size: 0.75rem;
+    color: rgba(200,215,240,0.6);
+  }
+  .profile-empty-certs {
+    background: rgba(9, 17, 36, 0.5);
+    border: 1px dashed rgba(20,40,255,0.3);
+    border-radius: 12px;
+    padding: 2.5rem;
+    text-align: center;
+    color: rgba(200,215,240,0.6);
+    font-size: 0.85rem;
+  }
+  .profile-certs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1rem;
+  }
+  .profile-cert-card {
+    background: rgba(9, 17, 36, 0.8);
+    border: 1px solid rgba(255,138,0,0.3);
+    border-radius: 14px;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    transition: all 0.25s ease;
+  }
+  .cert-top-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.6rem;
+  }
+  .cert-badge-tag {
+    font-size: 0.7rem;
+    font-weight: 800;
+    color: #FF8A00;
+    text-transform: uppercase;
+  }
+  .cert-score-tag {
+    font-size: 0.7rem;
+    color: #10B981;
+    font-weight: 700;
+  }
+  .profile-cert-title {
+    font-size: 0.98rem;
+    font-weight: 800;
+    color: #FFFFFF;
+    margin: 0 0 0.4rem 0;
+    line-height: 1.4;
+  }
+  .profile-cert-id {
+    font-size: 0.74rem;
+    color: rgba(200,215,240,0.6);
+    font-family: monospace;
+    margin-bottom: 1rem;
+  }
+  .cert-actions-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    padding-top: 0.8rem;
+  }
+  .profile-verify-btn {
+    flex: 1;
+    text-align: center;
+    background: rgba(20,40,255,0.2);
+    border: 1px solid rgba(20,40,255,0.4);
+    color: #6B8CFF !important;
+    border-radius: 8px;
+    padding: 0.5rem;
+    font-size: 0.76rem;
+    font-weight: 700;
+    text-decoration: none !important;
+    transition: all 0.2s ease;
+  }
+  .profile-verify-btn:hover {
+    background: rgba(20,40,255,0.3);
+  }
+  .profile-linkedin-btn {
+    padding: 0.5rem 0.8rem;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #FFFFFF !important;
+    border-radius: 8px;
+    font-size: 0.76rem;
+    font-weight: 700;
+    text-decoration: none !important;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+  }
+  .profile-linkedin-btn:hover {
+    background: rgba(255,255,255,0.14);
+  }
+
+  /* STICKY BOTTOM VIRAL CTA BANNER */
+  .sticky-cta-banner {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(6, 11, 23, 0.94);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-top: 1px solid #1428FF;
+    padding: 0.85rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+    z-index: 100;
+    box-shadow: 0 -8px 30px rgba(0,0,0,0.6);
+    transition: all 0.25s ease;
+  }
+  .sticky-cta-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+    flex: 1;
+  }
+  .sticky-cta-icon {
+    font-size: 1.4rem;
+    flex-shrink: 0;
+  }
+  .sticky-cta-title {
+    font-size: 0.86rem;
+    font-weight: 800;
+    color: #FFFFFF;
+    line-height: 1.3;
+  }
+  .sticky-cta-sub {
+    font-size: 0.72rem;
+    color: rgba(200,215,240,0.7);
+    line-height: 1.4;
+  }
+  .sticky-cta-btn {
+    background: linear-gradient(135deg, #FF8A00 0%, #FE8206 50%, #E65100 100%);
+    color: #FFFFFF !important;
+    border-radius: 10px;
+    padding: 0.65rem 1.35rem;
+    font-size: 0.82rem;
+    font-weight: 800;
+    text-decoration: none !important;
+    box-shadow: 0 4px 18px rgba(255,138,0,0.4);
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+  }
+  .sticky-cta-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 22px rgba(255,138,0,0.5);
+  }
+
+  /* ═════════════════════════════════════════════════════════════════════
+     LIGHT MODE OVERRIDES (Toggled by Sofe Nav theme button)
+     ═════════════════════════════════════════════════════════════════════ */
+  body.light .profile-page-wrapper {
+    background: #E8EEFF !important;
+    color: #0A0F24 !important;
+  }
+  body.light .profile-spinner {
+    border-color: rgba(20,40,255,0.15) !important;
+    border-top-color: #FF8A00 !important;
+  }
+  body.light .profile-card {
+    background: rgba(255, 255, 255, 0.94) !important;
+    border: 1px solid rgba(20,40,255,0.14) !important;
+    box-shadow: 0 10px 30px rgba(20,40,120,0.07) !important;
+    color: #0A0F24 !important;
+  }
+  body.light .profile-hero-ambient {
+    background: radial-gradient(circle, rgba(255,138,0,0.1) 0%, transparent 70%) !important;
+  }
+  body.light .profile-name {
+    color: #0A0F24 !important;
+  }
+  body.light .profile-handle {
+    color: #1428FF !important;
+  }
+  body.light .profile-bio {
+    color: #475569 !important;
+  }
+  body.light .profile-btn-share {
+    background: #F1F5F9 !important;
+    border-color: #CBD5E1 !important;
+    color: #0F172A !important;
+  }
+  body.light .profile-btn-share:hover {
+    background: #E2E8F0 !important;
+    border-color: #94A3B8 !important;
+  }
+  body.light .profile-honors-strip {
+    border-top-color: rgba(20,40,255,0.1) !important;
+  }
+  body.light .profile-honors-label {
+    color: #64748B !important;
+  }
+  body.light .profile-tier-badge {
+    background: #F1F5F9 !important;
+    border-color: #CBD5E1 !important;
+    color: #0F172A !important;
+  }
+  body.light .profile-stat-box {
+    background: rgba(255, 255, 255, 0.95) !important;
+    border: 1px solid rgba(20,40,255,0.12) !important;
+    box-shadow: 0 4px 14px rgba(20,40,120,0.04) !important;
+  }
+  body.light .profile-stat-box .stat-label {
+    color: #64748B !important;
+  }
+  body.light .profile-stat-box .xp-val { color: #0284C7 !important; }
+  body.light .profile-stat-box .score-val { color: #059669 !important; }
+  body.light .profile-stat-box .streak-val { color: #D97706 !important; }
+  body.light .profile-stat-box .stat-sub {
+    color: #64748B !important;
+  }
+  body.light .profile-section-title {
+    color: #0A0F24 !important;
+  }
+  body.light .profile-section-sub {
+    color: #64748B !important;
+  }
+  body.light .profile-empty-certs {
+    background: rgba(255, 255, 255, 0.7) !important;
+    border-color: rgba(20,40,255,0.18) !important;
+    color: #64748B !important;
+  }
+  body.light .profile-cert-card {
+    background: rgba(255, 255, 255, 0.95) !important;
+    border: 1px solid rgba(255,138,0,0.35) !important;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.04) !important;
+  }
+  body.light .profile-cert-title {
+    color: #0A0F24 !important;
+  }
+  body.light .profile-cert-id {
+    color: #64748B !important;
+  }
+  body.light .cert-actions-row {
+    border-top-color: rgba(20,40,255,0.08) !important;
+  }
+  body.light .profile-verify-btn {
+    background: rgba(20,40,255,0.08) !important;
+    border-color: rgba(20,40,255,0.25) !important;
+    color: #1428FF !important;
+  }
+  body.light .profile-verify-btn:hover {
+    background: rgba(20,40,255,0.14) !important;
+  }
+  body.light .profile-linkedin-btn {
+    background: #F1F5F9 !important;
+    border-color: #CBD5E1 !important;
+    color: #0F172A !important;
+  }
+  body.light .profile-linkedin-btn:hover {
+    background: #E2E8F0 !important;
+  }
+  body.light .sticky-cta-banner {
+    background: rgba(255, 255, 255, 0.96) !important;
+    border-top-color: rgba(20,40,255,0.18) !important;
+    box-shadow: 0 -8px 25px rgba(20,40,120,0.08) !important;
+  }
+  body.light .sticky-cta-title {
+    color: #0A0F24 !important;
+  }
+  body.light .sticky-cta-sub {
+    color: #475569 !important;
+  }
+
+  /* ═════════════════════════════════════════════════════════════════════
+     MOBILE RESPONSIVENESS (max-width: 768px)
+     - Compact Hero
+     - 2 STATS PER ROW IN GRID
+     - Sleek Bottom Sticky Banner
+     ═════════════════════════════════════════════════════════════════════ */
+  @media (max-width: 768px) {
+    .profile-page-wrapper {
+      padding-top: 80px;
+      padding-bottom: 6.5rem;
+    }
+    .profile-main-container {
+      padding: 0 0.85rem;
+    }
+    .profile-hero-card {
+      padding: 1.25rem 1rem;
+      border-radius: 16px;
+      margin-bottom: 1rem;
+    }
+    .profile-hero-content {
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .profile-identity-col {
+      gap: 0.9rem;
+      width: 100%;
+    }
+    .profile-avatar {
+      width: 58px;
+      height: 58px;
+      font-size: 1.4rem;
+      border-width: 2px;
+    }
+    .profile-name {
+      font-size: 1.25rem;
+    }
+    .profile-verified-badge {
+      font-size: 0.62rem;
+      padding: 0.15rem 0.5rem;
+    }
+    .profile-handle {
+      font-size: 0.74rem;
+      margin-top: 0.2rem;
+    }
+    .profile-bio {
+      font-size: 0.75rem;
+      margin-top: 0.35rem;
+      line-height: 1.45;
+    }
+    .profile-action-group {
+      width: 100%;
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.25rem;
+    }
+    .profile-btn-share,
+    .profile-btn-challenge {
+      flex: 1;
+      padding: 0.6rem 0.7rem;
+      font-size: 0.76rem;
+      border-radius: 8px;
+      justify-content: center;
+    }
+    .profile-honors-strip {
+      margin-top: 1rem;
+      padding-top: 0.85rem;
+      gap: 0.45rem;
+    }
+    .profile-honors-label {
+      font-size: 0.68rem;
+      width: 100%;
+      margin-bottom: 0.15rem;
+    }
+
+    /* EXACT USER SPEC: STATS BELOW IN GRID, 2 STAT PER ROW */
+    .profile-stats-grid {
+      grid-template-columns: repeat(2, 1fr) !important;
+      gap: 0.65rem !important;
+      margin-bottom: 1.5rem !important;
+    }
+    .profile-stat-box {
+      padding: 0.85rem 0.75rem !important;
+      border-radius: 12px !important;
+    }
+    .profile-stat-box .stat-label {
+      font-size: 0.62rem !important;
+      line-height: 1.2 !important;
+    }
+    .profile-stat-box .stat-val {
+      font-size: 1.3rem !important;
+      margin-top: 0.25rem !important;
+    }
+    .profile-stat-box .stat-sub {
+      font-size: 0.62rem !important;
+      line-height: 1.2 !important;
+    }
+
+    /* CERTIFICATIONS ON MOBILE */
+    .profile-certs-section {
+      margin-bottom: 2rem;
+    }
+    .profile-section-title {
+      font-size: 1.02rem;
+    }
+    .profile-certs-grid {
+      grid-template-columns: 1fr;
+      gap: 0.75rem;
+    }
+    .profile-cert-card {
+      padding: 1rem;
+      border-radius: 12px;
+    }
+
+    /* COMPACT STICKY BOTTOM BANNER ON MOBILE */
+    .sticky-cta-banner {
+      padding: 0.65rem 0.9rem;
+      gap: 0.65rem;
+    }
+    .sticky-cta-icon {
+      font-size: 1.15rem;
+    }
+    .sticky-cta-title {
+      font-size: 0.78rem;
+    }
+    .sticky-cta-sub {
+      display: none; /* Hide verbose subtitle on mobile so it doesn't crowd out the screen */
+    }
+    .sticky-cta-btn {
+      padding: 0.55rem 0.95rem;
+      font-size: 0.74rem;
+      border-radius: 8px;
+    }
+  }
+
+  @media (max-width: 420px) {
+    .profile-btn-share,
+    .profile-btn-challenge {
+      font-size: 0.72rem;
+      padding: 0.55rem 0.5rem;
+    }
+    .profile-stat-box .stat-val {
+      font-size: 1.15rem !important;
+    }
+  }
+`;

@@ -13,10 +13,10 @@ export default function Footer() {
     return null;
   }
 
-  const isDashboard = pathname?.startsWith('/dashboard');
+  const hasBottomDock = pathname?.startsWith('/dashboard') || pathname?.startsWith('/u/');
 
   return (
-    <footer style={isDashboard ? { paddingBottom: '95px' } : undefined}>
+    <footer style={hasBottomDock ? { paddingBottom: '95px' } : undefined}>
       <div className="footer-grid">
         <div className="footer-brand">
           <Link href="/" className="nav-logo" style={{ marginBottom: '.6rem' }} aria-label="Sofe Node">
