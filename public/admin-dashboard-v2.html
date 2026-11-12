@@ -6314,17 +6314,11 @@ window.settleLeaderboardPodium = async function() {
   }
 
   var isSettled = window._isCurrentMonthSettled;
-  var prefix = isSettled ? '⚠️ WARNING: ' + periodLabel + ' has ALREADY been settled! Re-executing will credit winners again.
+  var prefix = isSettled ? '⚠️ WARNING: ' + periodLabel + ' has ALREADY been settled! Re-executing will credit winners again.\n\n' : '';
 
-' : '';
-
-  var confirmMsg = prefix + 'Execute Monthly Leaderboard Settlement for ' + periodLabel + ' (Period: ' + targetPeriod + ')?
-
-' +
-    'Top 3 Winners to receive cash ($5, $3, $2 / ₦ equivalent), +1 multiplier counter, and 30-Day Affiliate Boost:
-' +
-    winners.slice(0, 3).map(function(w, i){ return (i + 1) + '. ' + (w.first_name || 'Sofian') + ' ' + (w.last_initial || '') + ' (' + (w.xp_this_period || 0) + ' XP)'; }).join('
-');
+  var confirmMsg = prefix + 'Execute Monthly Leaderboard Settlement for ' + periodLabel + ' (Period: ' + targetPeriod + ')?\n\n' +
+    'Top 3 Winners to receive cash (, ,  / ₦ equivalent), +1 multiplier counter, and 30-Day Affiliate Boost:\n' +
+    winners.slice(0, 3).map(function(w, i){ return (i + 1) + '. ' + (w.first_name || 'Sofian') + ' ' + (w.last_initial || '') + ' (' + (w.xp_this_period || 0) + ' XP)'; }).join('\n');
 
   if (!confirm(confirmMsg)) return;
 
