@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import VerifiedEarningsModal from '@/components/VerifiedEarningsModal';
 
 import {
   auth,
@@ -25,8 +26,11 @@ import {
   query,
   where,
   orderBy,
-  limit
+  limit,
+  increment
 } from '@/lib/firebase';
+import WinnerMultiplierBadge from '@/components/WinnerMultiplierBadge';
+import { getEffectiveAffiliateTier } from '@/lib/affiliateTiers';
 
 const XP_TIERS = [
   { name: 'Genesis Scout', min: 0, icon: '🌱' },
@@ -217,6 +221,10 @@ export default function DashboardClient() {
   const [payoutSubmitting, setPayoutSubmitting] = useState(false);
   const [payoutToast, setPayoutToast] = useState(null);
 
+  // Verified Earnings / Proof of Work Flex Modal
+  const [earningsModalOpen, setEarningsModalOpen] = useState(false);
+  const [earningsModalData, setEarningsModalData] = useState(null);
+
   // VIP Admin WhatsApp link
   const VIP_ADMIN_WA = 'https://wa.me/2349034201114?text=Hello%20Admin,%20I%20have%20completed%20my%20Sofe%20Node%20Premium%20Membership%20payment%20and%20would%20like%20to%20be%20added%20to%20the%20VIP%20executive%20group.';
 
@@ -240,7 +248,6 @@ export default function DashboardClient() {
       }
       setCurrentUser(user);
       await loadUserData(user);
-      setLoading(false);
     });
 
     return () => unsub();
@@ -262,6 +269,40 @@ export default function DashboardClient() {
       setWalletBalance(Number(u.wallet_balance) || 0);
       setXpTotal(Number(u.xp_total) || 0);
       setDailyStreak(Number(u.daily_streak) || 0);
+
+      // Unblock initial dashboard rendering immediately (<400ms)
+      setLoading(false);
+
+      // Check for Pending Celebration (Top 3 Leaderboard Season Win or Bounty Win)
+      if (u.pendingCelebration) {
+        const cel = u.pendingCelebration;
+        const sName = `${u.first_name || ''} ${u.last_name || ''}`.trim() || user.displayName || 'Sofian Builder';
+        const refC = u.referral_code || 'SOFE';
+        const origin = typeof window !== 'undefined' ? window.location.origin : 'https://node.sofegroup.com';
+        const winsCount = cel.type === 'bounty'
+          ? (Number(u.bountyWinsCount || u.bounty_wins_count || 1))
+          : (Number(u.leaderboardWinsCount || u.leaderboard_wins_count || 1));
+
+        setEarningsModalData({
+          studentName: sName,
+          type: cel.type || 'leaderboard',
+          rank: cel.rank || 1,
+          title: cel.type === 'bounty'
+            ? (cel.title || 'Verified Protocol Bounty')
+            : `Season Leaderboard Podium Finish (Rank #${cel.rank || 1})`,
+          subtitle: cel.type === 'bounty' ? 'Protocol Deliverable Approved' : 'Monthly Season XP Podium',
+          amount: cel.reward_ngn || ((cel.reward_usd || 5) * 1500),
+          multiplierCount: winsCount,
+          multiplierText: cel.multiplierText || (cel.type === 'bounty' ? `${winsCount}X Bounty Winner` : `${winsCount}X Top Leaderboard Winner`),
+          refCode: refC,
+          inviteUrl: `${origin}/challenge?ref=${refC}&score=95&student=${encodeURIComponent(sName)}`,
+          xpEarned: cel.xpEarned || 50
+        });
+        setEarningsModalOpen(true);
+
+        // Clear pending celebration flag atomically so modal does not repeat on refresh
+        updateDoc(doc(db, 'users', user.uid), { pendingCelebration: null }).catch(() => {});
+      }
 
       // Daily streak claim check
       if (u.last_daily_claim) {
@@ -288,43 +329,33 @@ export default function DashboardClient() {
         skills: Array.isArray(u.skills) ? u.skills.join(', ') : (u.skills || '')
       });
 
-      // Chapter lookup
+      // Chapter lookup (cached / async)
       if (u.chapter_id) {
-        try {
-          const chSnap = await getDoc(doc(db, 'chapters', u.chapter_id));
+        getDoc(doc(db, 'chapters', u.chapter_id)).then((chSnap) => {
           if (chSnap.exists()) {
             setMyChapter({ id: chSnap.id, ...chSnap.data() });
           }
-        } catch (e) {
-          console.error('Error fetching chapter:', e);
-        }
+        }).catch((e) => console.error('Error fetching chapter:', e));
       }
 
       // Auto-upgrade premium users to Level 2 — Affiliate if not already upgraded
       if (u.is_premium && u.affiliate_tier !== 'affiliate' && u.affiliate_tier !== 'ambassador' && u.role !== 'admin') {
-        try {
-          await updateDoc(doc(db, 'users', user.uid), {
-            affiliate_tier: 'affiliate',
-            updated_at: serverTimestamp()
-          });
+        updateDoc(doc(db, 'users', user.uid), {
+          affiliate_tier: 'affiliate',
+          updated_at: serverTimestamp()
+        }).then(() => {
           u.affiliate_tier = 'affiliate';
-        } catch (e) {}
+        }).catch(() => {});
       }
 
-      // Load Enrolments
-      await loadEnrolments(user.uid, u);
-
-      // Load Referrals & Commissions
-      await loadReferralsAndCommissions(user.uid, u.referral_code);
-
-      // Load Notifications
-      await loadNotifications(user.uid);
-
-      // Load Certificates
-      await loadCertificates(user.uid);
-
-      // Load Chapters for dropdown
-      loadAllChapters(u);
+      // Parallelize secondary datasets so user is not blocked
+      Promise.allSettled([
+        loadEnrolments(user.uid, u),
+        loadReferralsAndCommissions(user.uid, u.referral_code),
+        loadNotifications(user.uid),
+        loadCertificates(user.uid),
+        loadAllChapters(u)
+      ]);
 
       // Workspace context restore & initial data load
       const availableWorkspaces = computeWorkspaces(u);
@@ -355,13 +386,28 @@ export default function DashboardClient() {
       loadWorkspaceData(targetWs, user.uid, u);
     } catch (err) {
       console.error('Error loading user profile:', err);
+      setLoading(false);
     }
   };
 
   const loadAllChapters = async (uObj = userData) => {
     try {
-      const snap = await getDocs(collection(db, 'chapters'));
-      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      let list = [];
+      try {
+        const raw = typeof window !== 'undefined' ? sessionStorage.getItem('sofe_chapters_cache_v1') : null;
+        if (raw) list = JSON.parse(raw);
+      } catch (e) {}
+
+      if (!list || list.length === 0) {
+        const snap = await getDocs(collection(db, 'chapters'));
+        list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        try {
+          if (typeof window !== 'undefined') {
+            sessionStorage.setItem('sofe_chapters_cache_v1', JSON.stringify(list));
+          }
+        } catch (e) {}
+      }
+
       setChapters(list);
       const userNode = uObj?.node_label || uObj?.chapter_name || uObj?.node || '';
       const userChapId = uObj?.chapter_id;
@@ -416,13 +462,28 @@ export default function DashboardClient() {
 
       setEnrolments(allEnrols);
 
-      // Fetch metadata for these courses
+      // Fetch metadata for these courses (using session cache to minimize queries)
+      let cachedCourses = {};
+      try {
+        const raw = typeof window !== 'undefined' ? sessionStorage.getItem('sofe_courses_cache_v2') : null;
+        if (raw) cachedCourses = JSON.parse(raw);
+      } catch (e) {}
+
       const courseIds = [...new Set(allEnrols.map((e) => e.course_id || 'foundation'))];
-      const fetchedCourses = {};
-      for (const cid of courseIds) {
+      const fetchedCourses = { ...cachedCourses };
+      const missingCids = courseIds.filter((cid) => !fetchedCourses[cid]);
+
+      if (missingCids.length > 0) {
+        const snaps = await Promise.all(missingCids.map((cid) => getDoc(doc(db, 'courses', cid)).catch(() => null)));
+        snaps.forEach((cs, i) => {
+          if (cs && cs.exists && cs.exists()) {
+            fetchedCourses[missingCids[i]] = cs.data();
+          }
+        });
         try {
-          const cs = await getDoc(doc(db, 'courses', cid));
-          if (cs.exists()) fetchedCourses[cid] = cs.data();
+          if (typeof window !== 'undefined') {
+            sessionStorage.setItem('sofe_courses_cache_v2', JSON.stringify(fetchedCourses));
+          }
         } catch (e) {}
       }
       setCoursesData(fetchedCourses);
@@ -434,36 +495,22 @@ export default function DashboardClient() {
   const loadReferralsAndCommissions = async (uid, refCode) => {
     try {
       if (refCode) {
-        const refsSnap = await getDocs(query(collection(db, 'referrals'), where('referrer_code', '==', refCode)));
+        const refsSnap = await getDocs(query(collection(db, 'referrals'), where('referrer_code', '==', refCode), limit(100)));
         const rawRefs = refsSnap.docs.map((d) => d.data());
 
-        // Enrich with referee's live status
-        const enriched = await Promise.all(
-          rawRefs.map(async (r) => {
-            const refUserId = r.referred_user_id || r.referee_id;
-            if (refUserId) {
-              try {
-                const uDoc = await getDoc(doc(db, 'users', refUserId));
-                if (uDoc.exists()) {
-                  const uD = uDoc.data();
-                  return {
-                    ...r,
-                    foundation_complete: r.foundation_complete || uD.foundation_complete || false,
-                    career_enrolled: r.career_enrolled || uD.career_enrolled || false,
-                    email_verified: r.email_verified || uD.email_verified || false
-                  };
-                }
-              } catch (e) {}
-            }
-            return r;
-          })
-        );
+        // Fast mapping using data already synchronized on referral docs (no N+1 per-user query bottleneck)
+        const enriched = rawRefs.map((r) => ({
+          ...r,
+          foundation_complete: r.foundation_complete === true || r.status === 'qualified' || r.status === 'completed',
+          career_enrolled: r.career_enrolled === true || r.has_paid === true,
+          email_verified: r.email_verified === true || r.status === 'verified'
+        }));
         setReferrals(enriched);
       }
 
       let earned = 0;
       let unpaid = 0;
-      const commSnap = await getDocs(query(collection(db, 'commissions'), where('user_id', '==', uid), orderBy('created_at', 'desc')));
+      const commSnap = await getDocs(query(collection(db, 'commissions'), where('user_id', '==', uid), orderBy('created_at', 'desc'), limit(50)));
       const txList = [];
       commSnap.docs.forEach((d) => {
         const c = d.data();
@@ -475,7 +522,7 @@ export default function DashboardClient() {
 
       let bEarned = 0;
       try {
-        const bountySnap = await getDocs(query(collection(db, 'bounty_earnings'), where('user_id', '==', uid)));
+        const bountySnap = await getDocs(query(collection(db, 'bounty_earnings'), where('user_id', '==', uid), limit(50)));
         bountySnap.docs.forEach((d) => {
           bEarned += d.data().amount || 0;
         });
@@ -500,7 +547,7 @@ export default function DashboardClient() {
 
   const loadCertificates = async (uid) => {
     try {
-      const snap = await getDocs(query(collection(db, 'certificates'), where('user_id', '==', uid)));
+      const snap = await getDocs(query(collection(db, 'certificates'), where('user_id', '==', uid), limit(20)));
       setCertificates(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
     } catch (e) {}
   };
@@ -566,7 +613,7 @@ export default function DashboardClient() {
   const loadLeaderboardData = async (type = 'xp') => {
     setLbLoading(true);
     try {
-      const snap = await getDocs(collection(db, 'leaderboard'));
+      const snap = await getDocs(query(collection(db, 'leaderboard'), limit(50)));
       const sanitizeTier = (t) => (!t || t === 'Genesis Node') ? 'Genesis Scout' : t;
 
       let rows = snap.docs.map((d) => {
@@ -672,10 +719,10 @@ export default function DashboardClient() {
   };
 
   useEffect(() => {
-    if (currentUser) {
+    if (currentUser && activeTab === 'leaderboard') {
       loadLeaderboardData(lbTab);
     }
-  }, [currentUser, lbTab]);
+  }, [currentUser, lbTab, activeTab]);
 
   // Save Settings
   const handleSaveSettings = async (e) => {
@@ -848,6 +895,24 @@ export default function DashboardClient() {
       setPayoutNotes('');
       setPayoutToast('✓ Withdrawal request submitted! Processing takes 24-48 business hours.');
       setTimeout(() => setPayoutToast(null), 5000);
+
+      const sName = `${userData?.first_name || ''} ${userData?.last_name || ''}`.trim() || currentUser?.displayName || 'Sofian Builder';
+      const refC = userData?.referral_code || 'SOFE';
+      const origin = typeof window !== 'undefined' ? window.location.origin : 'https://node.sofegroup.com';
+      const multCount = (userData?.leaderboard_wins_count || 1);
+
+      setEarningsModalData({
+        studentName: sName,
+        type: 'payout',
+        title: 'Affiliate Commission Payout',
+        subtitle: 'Official Paystack Verified Settlement',
+        amount: amountNum,
+        multiplierText: `${multCount}X Top Leaderboard Winner`,
+        refCode: refC,
+        inviteUrl: `${origin}/challenge?ref=${refC}&score=95&student=${encodeURIComponent(sName)}`,
+        xpEarned: 25
+      });
+      setEarningsModalOpen(true);
     } catch (err) {
       alert('Could not submit withdrawal: ' + err.message);
     } finally {
@@ -1215,10 +1280,11 @@ export default function DashboardClient() {
   const totalSignups = referrals.length;
   const qualifiedCount = referrals.filter((r) => r.foundation_complete === true && (r.career_enrolled === true || r.has_paid === true)).length;
 
-  // Determine active affiliate tier
-  const isAmbassador = userData?.affiliate_tier === 'ambassador' || userData?.role === 'ambassador' || isNodeLead || userData?.role === 'admin';
-  const isAffiliate = isAmbassador || qualifiedCount >= 10 || userData?.affiliate_tier === 'affiliate' || isPremium;
-  const activeAffiliateLevel = isAmbassador ? 'ambassador' : (isAffiliate ? 'affiliate' : 'newbie');
+  // Determine active dynamic affiliate tier & boost status (3-tier engine: Newbie, Affiliate, Ambassador)
+  const effectiveAffiliate = getEffectiveAffiliateTier(userData, qualifiedCount);
+  const isAmbassador = effectiveAffiliate.tier === 'LEVEL_3';
+  const isAffiliate = effectiveAffiliate.tier === 'LEVEL_2' || isAmbassador;
+  const activeAffiliateLevel = effectiveAffiliate.tier === 'LEVEL_3' ? 'ambassador' : (effectiveAffiliate.tier === 'LEVEL_2' ? 'affiliate' : 'newbie');
 
   return (
     <div className="dash-root-wrapper" style={{ minHeight: '100vh', fontFamily: 'Poppins, sans-serif' }}>
@@ -1496,6 +1562,8 @@ export default function DashboardClient() {
                       {userData?.is_premium && <span style={{ background: 'linear-gradient(135deg, #FF8A00, #E07800)', padding: '0.2rem 0.6rem', borderRadius: 12, fontSize: '0.65rem', fontWeight: 700, color: '#fff' }}>Premium VIP</span>}
                       {userData?.account_type === 'protocol' && <span style={{ background: '#1428FF', padding: '0.2rem 0.6rem', borderRadius: 12, fontSize: '0.65rem', fontWeight: 700, color: '#fff' }}>Protocol Partner</span>}
                       {isNodeLead && <span style={{ background: '#10b981', padding: '0.2rem 0.6rem', borderRadius: 12, fontSize: '0.65rem', fontWeight: 700, color: '#fff' }}>Node Lead</span>}
+                      <WinnerMultiplierBadge type="leaderboard" count={userData?.leaderboardWinsCount || userData?.leaderboard_wins_count || 0} size="sm" />
+                      <WinnerMultiplierBadge type="bounty" count={userData?.bountyWinsCount || userData?.bounty_wins_count || 0} size="sm" />
                     </div>
                     <div style={{ fontSize: '0.74rem', color: 'rgba(200,215,240,0.6)', marginTop: '0.2rem' }}>
                       {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
@@ -1575,6 +1643,26 @@ export default function DashboardClient() {
                           🔗 {copyFeedback === 'Referral Link' ? '✓ Link Copied!' : 'Copy Link'}
                         </button>
                       )}
+
+                      <Link
+                        href={`/u/${userData?.username || userData?.referral_code || currentUser?.uid || 'builder'}`}
+                        target="_blank"
+                        style={{
+                          background: 'rgba(0, 229, 255, 0.12)',
+                          border: '1px solid #00E5FF',
+                          color: '#00E5FF',
+                          borderRadius: 6,
+                          padding: '0.38rem 0.85rem',
+                          fontSize: '0.74rem',
+                          fontWeight: 700,
+                          textDecoration: 'none',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.35rem'
+                        }}
+                      >
+                        🌐 View Web3 CV ↗
+                      </Link>
                     </div>
 
                     {/* Under Sofian ID line: Total Balance */}
@@ -1871,18 +1959,55 @@ export default function DashboardClient() {
           )}
 
           {activeTab === 'admin-iframe' && (
-            <iframe
-              src="/admin-dashboard-v2.html"
-              style={{
-                width: '100%',
-                height: 'calc(100vh - 65px)',
-                border: 'none',
-                background: '#04080F',
-                borderRadius: '8px',
-                overflow: 'hidden'
-              }}
-              title="Admin Console"
-            />
+            <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 85px)' }}>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                background: 'linear-gradient(135deg, rgba(20,40,255,0.25), #080E1A)',
+                border: '1px solid rgba(20,40,255,0.3)',
+                borderRadius: '8px 8px 0 0',
+                padding: '0.6rem 1.2rem',
+                flexShrink: 0
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                  <span style={{ fontSize: '1.1rem' }}>⚙️</span>
+                  <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#fff' }}>Admin Console Mode</span>
+                  <span style={{ fontSize: '0.7rem', color: 'rgba(200,215,240,0.6)' }}>• All Administrative Roles</span>
+                </div>
+                <button
+                  onClick={() => handleSwitchWorkspace('learner')}
+                  style={{
+                    background: 'linear-gradient(135deg, #FF8A00, #E07800)',
+                    color: '#fff',
+                    border: 'none',
+                    padding: '0.45rem 1.1rem',
+                    borderRadius: 6,
+                    fontWeight: 700,
+                    fontSize: '0.78rem',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.45rem',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 10px rgba(255,138,0,0.35)'
+                  }}
+                >
+                  <span>🎓</span> Return to User Dashboard →
+                </button>
+              </div>
+              <iframe
+                src="/admin-dashboard-v2.html"
+                style={{
+                  width: '100%',
+                  flex: 1,
+                  border: 'none',
+                  background: '#04080F',
+                  borderRadius: '0 0 8px 8px',
+                  overflow: 'hidden'
+                }}
+                title="Admin Console"
+              />
+            </div>
           )}
 
           {/* TAB 1: CLASSROOM (SOFE ACADEMY) */}
@@ -2007,9 +2132,50 @@ export default function DashboardClient() {
               <div style={{ marginBottom: '1.5rem' }}>
                 <h2 style={{ fontSize: '1.15rem', fontWeight: 700 }}>Affiliate & Ambassador Business</h2>
                 <p style={{ color: 'rgba(200,215,240,0.7)', fontSize: '0.78rem', marginTop: '0.2rem' }}>
-                  Earn 10% direct commission on career course enrollments, plus 5% indirect commissions from your referral network.
+                  Earn up to 10% direct commission on career course enrollments, plus 5% indirect commissions from your referral network.
                 </p>
               </div>
+
+              {/* Active 30-Day Leaderboard Boost Banner */}
+              {effectiveAffiliate.isBoostActive && (
+                <div style={{
+                  background: 'linear-gradient(135deg, rgba(255,138,0,0.18) 0%, rgba(20,40,255,0.15) 100%)',
+                  border: '1.5px solid rgba(255,138,0,0.5)',
+                  borderRadius: 10,
+                  padding: '1rem 1.25rem',
+                  marginBottom: '1.5rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '1rem',
+                  flexWrap: 'wrap',
+                  boxShadow: '0 4px 20px rgba(255,138,0,0.15)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                    <span style={{ fontSize: '1.6rem' }}>🔥</span>
+                    <div>
+                      <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#FFB800' }}>
+                        Top 3 Leaderboard Boost Active: {effectiveAffiliate.ratePercent}% Direct {effectiveAffiliate.indirectRatePercent > 0 ? '+ 5% Indirect ' : ''}Affiliate Commission
+                      </div>
+                      <div style={{ fontSize: '0.74rem', color: 'rgba(200,215,240,0.75)', marginTop: '0.2rem' }}>
+                        Your Top 3 leaderboard season placement elevated your status from {effectiveAffiliate.baseTierName} to {effectiveAffiliate.tierName}! (Expires in {effectiveAffiliate.daysRemaining} days)
+                      </div>
+                    </div>
+                  </div>
+                  <span style={{
+                    background: 'rgba(255,138,0,0.25)',
+                    border: '1px solid #FF8A00',
+                    color: '#FFB800',
+                    padding: '0.35rem 0.8rem',
+                    borderRadius: 20,
+                    fontSize: '0.72rem',
+                    fontWeight: 800,
+                    letterSpacing: '0.04em'
+                  }}>
+                    ⚡ {effectiveAffiliate.daysRemaining} DAYS REMAINING
+                  </span>
+                </div>
+              )}
 
               {/* Foundation Qualification Requirement Notice */}
               {!foundationDone && (
@@ -2123,19 +2289,19 @@ export default function DashboardClient() {
                   gap: '1.25rem'
                 }}>
                   {/* Level 1: Newbie */}
-                  <div className={`dash-card affiliate-tier-card ${activeAffiliateLevel === 'newbie' ? 'active' : ''}`} style={{
-                    background: activeAffiliateLevel === 'newbie'
+                  <div className={`dash-card affiliate-tier-card ${effectiveAffiliate.tier === 'LEVEL_1' ? 'active' : ''}`} style={{
+                    background: effectiveAffiliate.tier === 'LEVEL_1'
                       ? 'linear-gradient(135deg, rgba(255,138,0,0.08), rgba(20,40,255,0.05))'
                       : '#0D1526',
-                    border: activeAffiliateLevel === 'newbie'
+                    border: effectiveAffiliate.tier === 'LEVEL_1'
                       ? '2px solid #FF8A00'
                       : '1px solid rgba(200,215,240,0.15)',
                     borderRadius: 12,
                     padding: '1.5rem',
                     position: 'relative',
-                    boxShadow: activeAffiliateLevel === 'newbie' ? '0 4px 20px rgba(255,138,0,0.15)' : 'none'
+                    boxShadow: effectiveAffiliate.tier === 'LEVEL_1' ? '0 4px 20px rgba(255,138,0,0.15)' : 'none'
                   }}>
-                    {activeAffiliateLevel === 'newbie' && (
+                    {effectiveAffiliate.tier === 'LEVEL_1' && (
                       <span style={{
                         position: 'absolute',
                         top: '1rem',
@@ -2162,40 +2328,47 @@ export default function DashboardClient() {
                       Direct referral
                     </div>
                     <p className="affiliate-tier-desc" style={{ fontSize: '0.76rem', color: 'rgba(200,215,240,0.8)', lineHeight: 1.6 }}>
-                      Everyone starts here. You earn 5% commission on every successful referral — but you must <strong style={{ color: '#FF8A00' }}>complete the Foundation Course</strong> to receive payouts.
+                      Everyone starts here. You earn 5% commission on every successful referral — but you must complete the Foundation Course to receive payouts.
                     </p>
                   </div>
 
                   {/* Level 2: Affiliate */}
-                  <div className={`dash-card affiliate-tier-card ${activeAffiliateLevel === 'affiliate' ? 'active' : ''}`} style={{
-                    background: activeAffiliateLevel === 'affiliate'
-                      ? 'linear-gradient(135deg, rgba(255,138,0,0.08), rgba(20,40,255,0.05))'
+                  <div className={`dash-card affiliate-tier-card ${effectiveAffiliate.tier === 'LEVEL_2' ? 'active' : ''}`} style={{
+                    background: effectiveAffiliate.tier === 'LEVEL_2'
+                      ? 'linear-gradient(135deg, rgba(255,138,0,0.12), rgba(20,40,255,0.08))'
                       : '#0D1526',
-                    border: activeAffiliateLevel === 'affiliate'
+                    border: effectiveAffiliate.tier === 'LEVEL_2'
                       ? '2px solid #FF8A00'
                       : '1px solid rgba(200,215,240,0.15)',
                     borderRadius: 12,
                     padding: '1.5rem',
                     position: 'relative',
-                    boxShadow: activeAffiliateLevel === 'affiliate' ? '0 4px 20px rgba(255,138,0,0.15)' : 'none'
+                    opacity: (effectiveAffiliate.tier === 'LEVEL_2' || effectiveAffiliate.tier === 'LEVEL_3') ? 1 : 0.85,
+                    boxShadow: effectiveAffiliate.tier === 'LEVEL_2' ? '0 4px 24px rgba(255,138,0,0.2)' : 'none'
                   }}>
-                    {activeAffiliateLevel === 'affiliate' && (
-                      <span style={{
-                        position: 'absolute',
-                        top: '1rem',
-                        right: '1rem',
-                        background: 'rgba(0,200,100,0.15)',
-                        border: '1px solid rgba(0,200,100,0.3)',
-                        color: '#00c864',
-                        padding: '0.2rem 0.6rem',
-                        borderRadius: 4,
-                        fontSize: '0.65rem',
-                        fontWeight: 700,
-                        letterSpacing: '0.04em'
-                      }}>
-                        ✓ Active
-                      </span>
-                    )}
+                    <span style={{
+                      position: 'absolute',
+                      top: '1rem',
+                      right: '1rem',
+                      background: effectiveAffiliate.tier === 'LEVEL_2'
+                        ? (effectiveAffiliate.isBoostActive ? 'rgba(255,138,0,0.2)' : 'rgba(0,200,100,0.15)')
+                        : effectiveAffiliate.tier === 'LEVEL_3' ? 'rgba(0,200,100,0.12)' : 'rgba(200,215,240,0.08)',
+                      border: effectiveAffiliate.tier === 'LEVEL_2'
+                        ? (effectiveAffiliate.isBoostActive ? '1px solid #FF8A00' : '1px solid rgba(0,200,100,0.3)')
+                        : '1px solid rgba(200,215,240,0.15)',
+                      color: effectiveAffiliate.tier === 'LEVEL_2'
+                        ? (effectiveAffiliate.isBoostActive ? '#FFB800' : '#00c864')
+                        : effectiveAffiliate.tier === 'LEVEL_3' ? '#00c864' : 'rgba(200,215,240,0.6)',
+                      padding: '0.25rem 0.65rem',
+                      borderRadius: 4,
+                      fontSize: '0.65rem',
+                      fontWeight: 700,
+                      letterSpacing: '0.04em'
+                    }}>
+                      {effectiveAffiliate.tier === 'LEVEL_2'
+                        ? (effectiveAffiliate.isBoostActive ? `🔥 Active (${effectiveAffiliate.daysRemaining}d left)` : '✓ Active')
+                        : effectiveAffiliate.tier === 'LEVEL_3' ? '✓ Achieved' : '🔒 Locked'}
+                    </span>
                     <div className="affiliate-tier-title" style={{ fontSize: '0.88rem', fontWeight: 700, marginBottom: '0.6rem' }}>
                       🎯 Level 2 — Affiliate
                     </div>
@@ -2206,38 +2379,46 @@ export default function DashboardClient() {
                       Direct referral
                     </div>
                     <p className="affiliate-tier-desc" style={{ fontSize: '0.76rem', color: 'rgba(200,215,240,0.8)', lineHeight: 1.6 }}>
-                      Refer <strong>10 people</strong> who complete the Foundation Course <strong>and</strong> enrol in at least one Career Track course, or upgrade to <strong>Premium Membership</strong>. Commission rate doubles automatically once the milestone is reached. <strong style={{ color: '#FF8A00' }}>({qualifiedCount}/10 qualified)</strong>
+                      Refer 10 people who complete the Foundation Course and enrol in at least one Career Track course, or upgrade to Premium Membership. Commission rate doubles automatically once the milestone is reached. ({qualifiedCount}/10 qualified)
                     </p>
                   </div>
 
                   {/* Level 3: Ambassador */}
-                  <div className={`dash-card affiliate-tier-card ${activeAffiliateLevel === 'ambassador' ? 'active' : ''}`} style={{
-                    background: activeAffiliateLevel === 'ambassador'
-                      ? 'linear-gradient(135deg, rgba(255,138,0,0.08), rgba(20,40,255,0.05))'
+                  <div className={`dash-card affiliate-tier-card ${effectiveAffiliate.tier === 'LEVEL_3' ? 'active' : ''}`} style={{
+                    background: effectiveAffiliate.tier === 'LEVEL_3'
+                      ? 'linear-gradient(135deg, rgba(255,138,0,0.14), rgba(20,40,255,0.1))'
                       : '#0D1526',
-                    border: activeAffiliateLevel === 'ambassador'
+                    border: effectiveAffiliate.tier === 'LEVEL_3'
                       ? '2px solid #FF8A00'
                       : '1px solid rgba(200,215,240,0.15)',
                     borderRadius: 12,
                     padding: '1.5rem',
                     position: 'relative',
-                    opacity: activeAffiliateLevel === 'ambassador' ? 1 : 0.75,
-                    boxShadow: activeAffiliateLevel === 'ambassador' ? '0 4px 20px rgba(255,138,0,0.15)' : 'none'
+                    opacity: effectiveAffiliate.tier === 'LEVEL_3' ? 1 : 0.8,
+                    boxShadow: effectiveAffiliate.tier === 'LEVEL_3' ? '0 4px 24px rgba(255,138,0,0.25)' : 'none'
                   }}>
                     <span style={{
                       position: 'absolute',
                       top: '1rem',
                       right: '1rem',
-                      background: activeAffiliateLevel === 'ambassador' ? 'rgba(0,200,100,0.15)' : 'rgba(200,215,240,0.08)',
-                      border: activeAffiliateLevel === 'ambassador' ? '1px solid rgba(0,200,100,0.3)' : '1px solid rgba(200,215,240,0.15)',
-                      color: activeAffiliateLevel === 'ambassador' ? '#00c864' : 'rgba(200,215,240,0.6)',
-                      padding: '0.2rem 0.6rem',
+                      background: effectiveAffiliate.tier === 'LEVEL_3'
+                        ? (effectiveAffiliate.isBoostActive ? 'rgba(255,138,0,0.2)' : 'rgba(0,200,100,0.15)')
+                        : 'rgba(200,215,240,0.08)',
+                      border: effectiveAffiliate.tier === 'LEVEL_3'
+                        ? (effectiveAffiliate.isBoostActive ? '1px solid #FF8A00' : '1px solid rgba(0,200,100,0.3)')
+                        : '1px solid rgba(200,215,240,0.15)',
+                      color: effectiveAffiliate.tier === 'LEVEL_3'
+                        ? (effectiveAffiliate.isBoostActive ? '#FFB800' : '#00c864')
+                        : 'rgba(200,215,240,0.6)',
+                      padding: '0.25rem 0.65rem',
                       borderRadius: 4,
                       fontSize: '0.65rem',
                       fontWeight: 700,
                       letterSpacing: '0.04em'
                     }}>
-                      {activeAffiliateLevel === 'ambassador' ? '✓ Active' : '🔒 Locked'}
+                      {effectiveAffiliate.tier === 'LEVEL_3'
+                        ? (effectiveAffiliate.isBoostActive ? `🔥 Active (${effectiveAffiliate.daysRemaining}d left)` : '✓ Active')
+                        : '🔒 Locked'}
                     </span>
                     <div className="affiliate-tier-title" style={{ fontSize: '0.88rem', fontWeight: 700, marginBottom: '0.6rem' }}>
                       🏆 Level 3 — Ambassador
@@ -2249,7 +2430,7 @@ export default function DashboardClient() {
                       Direct + indirect
                     </div>
                     <p className="affiliate-tier-desc" style={{ fontSize: '0.76rem', color: 'rgba(200,215,240,0.8)', lineHeight: 1.6 }}>
-                      For exceptional Sofians, Node Heads, and long-term contributors. <strong>By invitation only</strong> — activated by the Sofe Node team. Earn 10% on direct referrals and 5% on indirect (your referrals&apos; referrals).
+                      For exceptional Sofians, Node Heads, and long-term contributors. By invitation only — activated by the Sofe Node team. Earn 10% on direct referrals and 5% on indirect (your referrals' referrals).
                     </p>
                   </div>
                 </div>
@@ -2257,18 +2438,24 @@ export default function DashboardClient() {
 
               {/* Commission Structure Explanation */}
               <div className="dash-card affiliate-info-card" style={{ background: '#0D1526', border: '1px solid rgba(20,40,255,0.18)', borderRadius: 10, padding: '1.25rem' }}>
-                <h3 className="affiliate-info-heading" style={{ fontSize: '0.92rem', fontWeight: 700, marginBottom: '0.8rem' }}>How 2-Tier Commissions Work</h3>
+                <h3 className="affiliate-info-heading" style={{ fontSize: '0.92rem', fontWeight: 700, marginBottom: '0.8rem' }}>How 3-Tier Commissions Work</h3>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem', fontSize: '0.76rem', color: 'rgba(200,215,240,0.8)' }}>
                   <div className="affiliate-info-box" style={{ padding: '0.8rem', background: 'rgba(20,40,255,0.06)', borderRadius: 6, border: '1px solid rgba(20,40,255,0.15)' }}>
-                    <strong className="affiliate-info-title">Direct Commissions</strong>
+                    <strong className="affiliate-info-title">⭐ Level 1: Newbie (5%)</strong>
                     <p style={{ marginTop: '0.3rem' }}>
-                      Earn 5% (Newbie) or 10% (Affiliate / Ambassador) on the net amount paid by anyone who signs up directly using your referral link.
+                      Earn 5% direct commission on career track enrolments. Complete the Foundation Course to unlock immediate commission payouts.
                     </p>
                   </div>
                   <div className="affiliate-info-box" style={{ padding: '0.8rem', background: 'rgba(255,138,0,0.06)', borderRadius: 6, border: '1px solid rgba(255,138,0,0.15)' }}>
-                    <strong className="affiliate-info-title">Indirect Network Override (Ambassadors)</strong>
+                    <strong className="affiliate-info-title">🎯 Level 2: Affiliate (10%)</strong>
                     <p style={{ marginTop: '0.3rem' }}>
-                      Ambassadors and Node Leads earn a 5% override on the net paid fees when their referrals refer other paying students.
+                      Earn 10% direct commission once you reach 10 qualified referrals (completed Foundation + enrolled in Career Track) or upgrade to VIP Premium.
+                    </p>
+                  </div>
+                  <div className="affiliate-info-box" style={{ padding: '0.8rem', background: 'rgba(16,185,129,0.06)', borderRadius: 6, border: '1px solid rgba(16,185,129,0.15)' }}>
+                    <strong className="affiliate-info-title">🏆 Level 3: Ambassador (10% + 5%)</strong>
+                    <p style={{ marginTop: '0.3rem' }}>
+                      Earn 10% on direct referrals plus a 5% network override on indirect referrals (your referrals' referrals). By invitation only.
                     </p>
                   </div>
                 </div>
@@ -2303,22 +2490,60 @@ export default function DashboardClient() {
                   </div>
                 </div>
 
-                <button
-                  onClick={() => setShowPayoutModal(true)}
-                  disabled={walletBalance < 10000}
-                  style={{
-                    background: walletBalance >= 10000 ? '#10b981' : 'rgba(200,215,240,0.1)',
-                    border: 'none',
-                    color: walletBalance >= 10000 ? '#fff' : 'rgba(200,215,240,0.4)',
-                    padding: '0.75rem 1.6rem',
-                    borderRadius: 8,
-                    fontSize: '0.82rem',
-                    fontWeight: 700,
-                    cursor: walletBalance >= 10000 ? 'pointer' : 'not-allowed'
-                  }}
-                >
-                  Request Payout →
-                </button>
+                <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap' }}>
+                  <button
+                    onClick={() => {
+                      const sName = `${userData?.first_name || ''} ${userData?.last_name || ''}`.trim() || currentUser?.displayName || 'Sofian Builder';
+                      const refC = userData?.referral_code || 'SOFE';
+                      const origin = typeof window !== 'undefined' ? window.location.origin : 'https://node.sofegroup.com';
+                      const multCount = (userData?.leaderboard_wins_count || 1);
+                      setEarningsModalData({
+                        studentName: sName,
+                        type: 'payout',
+                        title: 'Affiliate Commission Payout',
+                        subtitle: 'Official Paystack Verified Settlement',
+                        amount: walletBalance || 25000,
+                        multiplierText: `${multCount}X Top Leaderboard Winner`,
+                        refCode: refC,
+                        inviteUrl: `${origin}/challenge?ref=${refC}&score=95&student=${encodeURIComponent(sName)}`,
+                        xpEarned: 25
+                      });
+                      setEarningsModalOpen(true);
+                    }}
+                    style={{
+                      background: 'rgba(255,138,0,0.15)',
+                      border: '1.5px solid #FF8A00',
+                      color: '#FFB03A',
+                      padding: '0.75rem 1.25rem',
+                      borderRadius: 8,
+                      fontSize: '0.82rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.4rem'
+                    }}
+                  >
+                    <span>🚀</span> Flex Payout Card
+                  </button>
+
+                  <button
+                    onClick={() => setShowPayoutModal(true)}
+                    disabled={walletBalance < 10000}
+                    style={{
+                      background: walletBalance >= 10000 ? '#10b981' : 'rgba(200,215,240,0.1)',
+                      border: 'none',
+                      color: walletBalance >= 10000 ? '#fff' : 'rgba(200,215,240,0.4)',
+                      padding: '0.75rem 1.6rem',
+                      borderRadius: 8,
+                      fontSize: '0.82rem',
+                      fontWeight: 700,
+                      cursor: walletBalance >= 10000 ? 'pointer' : 'not-allowed'
+                    }}
+                  >
+                    Request Payout →
+                  </button>
+                </div>
               </div>
 
               {/* Transactions History */}
@@ -2424,22 +2649,35 @@ export default function DashboardClient() {
                         >
                           ⬇ Download PDF
                         </button>
-                        <a
-                          href="https://www.linkedin.com/profile/add"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{
-                            background: 'rgba(200,215,240,0.1)',
-                            border: '1px solid rgba(200,215,240,0.2)',
-                            color: '#fff',
-                            borderRadius: 6,
-                            padding: '0.45rem 0.9rem',
-                            fontSize: '0.74rem',
-                            textDecoration: 'none'
-                          }}
-                        >
-                          Share on LinkedIn
-                        </a>
+                        {(() => {
+                          const certNum = cert.cert_number || cert.certificate_number || `SOFE-CERT-${cert.id.slice(0, 6).toUpperCase()}`;
+                          const cTitle = cert.course_title || 'Blockchain & Cryptocurrency Foundation';
+                          const origin = typeof window !== 'undefined' ? window.location.origin : 'https://node.sofegroup.com';
+                          const vUrl = `${origin}/verify/${encodeURIComponent(certNum)}`;
+                          const liAddUrl = `https://www.linkedin.com/profile/add?startTask=CERTIFICATION_NAME&name=${encodeURIComponent(cTitle)}&organizationName=${encodeURIComponent('Sofe Node Academy')}&issueYear=2024&issueMonth=5&certId=${encodeURIComponent(certNum)}&certUrl=${encodeURIComponent(vUrl)}`;
+                          return (
+                            <a
+                              href={liAddUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                background: '#0077B5',
+                                border: 'none',
+                                color: '#fff',
+                                borderRadius: 6,
+                                padding: '0.45rem 0.9rem',
+                                fontSize: '0.74rem',
+                                fontWeight: 700,
+                                textDecoration: 'none',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.35rem'
+                              }}
+                            >
+                              <span>in</span> Add to LinkedIn (1-Click)
+                            </a>
+                          );
+                        })()}
                       </div>
                     </div>
                   ))}
@@ -2619,6 +2857,11 @@ export default function DashboardClient() {
                                         {avatarLetters}
                                       </div>
                                       <span style={{ fontWeight: isMe ? 700 : 500, color: 'var(--white, #fff)' }}>{name}</span>
+                                      {row && (
+                                        <span style={{ marginLeft: 6 }}>
+                                          <WinnerMultiplierBadge type="leaderboard" count={row.leaderboardWinsCount || row.leaderboard_wins_count || 0} size="sm" />
+                                        </span>
+                                      )}
                                       {isMe && (
                                         <span style={{
                                           background: '#FF8A00',
@@ -2702,6 +2945,9 @@ export default function DashboardClient() {
                                       </div>
                                       <span style={{ fontWeight: 700, color: 'var(--white, #fff)' }}>
                                         {`${userRow.first_name || ''} ${userRow.last_initial || ''}`.trim() || 'Sofian'}
+                                      </span>
+                                      <span style={{ marginLeft: 6 }}>
+                                        <WinnerMultiplierBadge type="leaderboard" count={userData?.leaderboardWinsCount || userData?.leaderboard_wins_count || 0} size="sm" />
                                       </span>
                                       <span style={{
                                         background: '#FF8A00',
@@ -3720,8 +3966,52 @@ export default function DashboardClient() {
                             {app.status || 'Under Review'}
                           </span>
                           <button
-                            onClick={() => {
-                              alert(`Deliverable for ${app.applicant_name || 'applicant'} approved! Reward disbursed.`);
+                            onClick={async () => {
+                              try {
+                                if (app.id) {
+                                  await updateDoc(doc(db, 'bounty_applications', app.id), {
+                                    status: 'approved',
+                                    approved_at: serverTimestamp()
+                                  });
+                                }
+                                const targetUid = app.applicant_uid || app.user_id;
+                                if (targetUid) {
+                                  const uSnap = await getDoc(doc(db, 'users', targetUid));
+                                  const uD = uSnap.exists() ? uSnap.data() : {};
+                                  const newWins = (Number(uD.bountyWinsCount || uD.bounty_wins_count || 0)) + 1;
+                                  const rewardUsd = Number(app.reward_usd || 100);
+                                  const rewardNgn = rewardUsd * 1500;
+
+                                  await updateDoc(doc(db, 'users', targetUid), {
+                                    bountyWinsCount: newWins,
+                                    bounty_wins_count: newWins,
+                                    wallet_balance: increment(rewardNgn),
+                                    pendingCelebration: {
+                                      type: 'bounty',
+                                      title: app.bounty_title || 'Web3 Engineering Bounty',
+                                      reward_usd: rewardUsd,
+                                      reward_ngn: rewardNgn,
+                                      multiplierCount: newWins,
+                                      multiplierText: `${newWins}X Bounty Winner`,
+                                      timestamp: Date.now()
+                                    }
+                                  });
+
+                                  await addDoc(collection(db, 'notifications'), {
+                                    user_id: targetUid,
+                                    type: 'bounty',
+                                    title: '🎯 Protocol Bounty Approved & Won!',
+                                    message: `Your deliverable for "${app.bounty_title || 'Bounty'}" has been approved! You earned $${rewardUsd} (₦${rewardNgn.toLocaleString('en-NG')}) and your ${newWins}X Bounty Winner status is now active.`,
+                                    read: false,
+                                    created_at: serverTimestamp()
+                                  });
+                                }
+                                setPayoutToast(`✓ Deliverable for ${app.applicant_name || 'applicant'} approved! Reward disbursed.`);
+                                setTimeout(() => setPayoutToast(null), 4000);
+                                setProtocolApplicants((prev) => prev.map((a) => a.id === app.id ? { ...a, status: 'approved' } : a));
+                              } catch (err) {
+                                alert('Error approving deliverable: ' + err.message);
+                              }
                             }}
                             style={{ background: '#10b981', border: 'none', color: '#fff', borderRadius: 6, padding: '0.35rem 0.8rem', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer' }}
                           >
@@ -4734,6 +5024,15 @@ export default function DashboardClient() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* ── VERIFIED EARNINGS & PROOF OF WORK FLEX MODAL ── */}
+      {earningsModalOpen && earningsModalData && (
+        <VerifiedEarningsModal
+          isOpen={earningsModalOpen}
+          onClose={() => setEarningsModalOpen(false)}
+          eventData={earningsModalData}
+        />
       )}
 
       {/* ── MOBILE FLOATING BOTTOM DOCK WITH TRACKING PILL ── */}

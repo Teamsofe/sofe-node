@@ -567,6 +567,91 @@ function getCurrentPeriodId() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// AFFILIATE RATE & DYNAMIC BOOST HELPER (3-TIER SYSTEM)
+// ═══════════════════════════════════════════════════════════════════════════
+function getAffiliateRate(userData) {
+  if (!userData) {
+    return {
+      tier: 1,
+      tierName: 'Level 1 — Newbie',
+      rate: 0.05,
+      indirectRate: 0,
+      isBoostActive: false,
+      baseTier: 1
+    };
+  }
+
+  const now = new Date();
+  let isBoostActive = false;
+  if (userData.affiliateBoostExpiresAt) {
+    const expiresAt = userData.affiliateBoostExpiresAt.toDate 
+      ? userData.affiliateBoostExpiresAt.toDate() 
+      : new Date(userData.affiliateBoostExpiresAt);
+    if (expiresAt && !isNaN(expiresAt.getTime()) && expiresAt > now) {
+      isBoostActive = true;
+    }
+  }
+
+  let baseTier = 1;
+  const isLevel3Base =
+    userData.affiliateBaseTier === 'LEVEL_3' ||
+    userData.affiliate_tier === 'ambassador' ||
+    userData.role === 'ambassador' ||
+    userData.is_ambassador === true ||
+    userData.affiliate_level === 3;
+
+  const isLevel2Base =
+    userData.affiliateBaseTier === 'LEVEL_2' ||
+    userData.affiliate_tier === 'affiliate' ||
+    userData.is_premium === true ||
+    userData.account_type === 'premium' ||
+    userData.affiliate_level === 2;
+
+  if (isLevel3Base) {
+    baseTier = 3;
+  } else if (isLevel2Base) {
+    baseTier = 2;
+  }
+
+  let effectiveTier = baseTier;
+  if (isBoostActive) {
+    if (baseTier === 1) effectiveTier = 2;
+    else if (baseTier === 2 || baseTier === 3) effectiveTier = 3;
+  }
+
+  if (effectiveTier === 3) {
+    return {
+      tier: 3,
+      tierName: 'Level 3 — Ambassador',
+      rate: 0.10, // 10% direct
+      indirectRate: 0.05, // 5% indirect
+      isBoostActive,
+      baseTier
+    };
+  }
+
+  if (effectiveTier === 2) {
+    return {
+      tier: 2,
+      tierName: 'Level 2 — Affiliate',
+      rate: 0.10, // 10% direct
+      indirectRate: 0,
+      isBoostActive,
+      baseTier
+    };
+  }
+
+  return {
+    tier: 1,
+    tierName: 'Level 1 — Newbie',
+    rate: 0.05, // 5% direct
+    indirectRate: 0,
+    isBoostActive: false,
+    baseTier: 1
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // PROCESS REFERRAL COMMISSION (3-TIER SYSTEM)
 // ═══════════════════════════════════════════════════════════════════════════
 exports.processPaymentCommission = onDocumentUpdated('payments/{paymentId}', async (event) => {
@@ -604,13 +689,12 @@ exports.processPaymentCommission = onDocumentUpdated('payments/{paymentId}', asy
     const referrerData = referrerDoc.data();
     const referrerUid = referrerDoc.id;
 
-    let directTier = 1;
-    let directRate = 0.05; 
+    const rateInfo = getAffiliateRate(referrerData);
+    let directTier = rateInfo.tier;
+    let directRate = rateInfo.rate; 
 
-    if (referrerData.affiliate_level === 3 || referrerData.is_ambassador === true) {
-      directTier = 3;
-      directRate = 0.10; 
-    } else {
+    // If still tier 1, check milestone for automatic permanent upgrade to level 2 (10 qualified referrals)
+    if (directTier === 1) {
       const qualifiedSnap = await db.collection('referrals')
         .where('referrer_code', '==', referrerData.referral_code)
         .where('foundation_complete', '==', true)
@@ -675,7 +759,8 @@ exports.processPaymentCommission = onDocumentUpdated('payments/{paymentId}', asy
           const grandReferrerData = grandReferrerDoc.data();
           const grandReferrerUid = grandReferrerDoc.id;
 
-          if (grandReferrerData.affiliate_level === 3 || grandReferrerData.is_ambassador === true) {
+          const grandRateInfo = getAffiliateRate(grandReferrerData);
+          if (grandRateInfo.tier === 3 || grandRateInfo.indirectRate > 0) {
             const indirectRate = 0.05;
             const indirectPayout = Math.round(after.amount * indirectRate);
 
@@ -1335,6 +1420,159 @@ exports.syncCourseCompletionXP = onDocumentWritten('enrolments/{enrolmentId}', a
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
+// MONTHLY LEADERBOARD SETTLEMENT ENGINE
+// ═══════════════════════════════════════════════════════════════════════════
+async function executeLeaderboardSettlement(db, options = {}) {
+  const now = new Date();
+  const prevMonthDate = new Date(now.getUTCFullYear(), now.getUTCMonth() - 1, 1);
+  const periodId = options.periodId || `${prevMonthDate.getUTCFullYear()}-${String(prevMonthDate.getUTCMonth() + 1).padStart(2, '0')}`;
+
+  // Fetch platform settings for configurable leaderboard rewards
+  const settingsSnap = await db.collection('settings').doc('platform').get();
+  const settings = settingsSnap.exists ? settingsSnap.data() : {};
+
+  const prize1stUsd = Number(options.prize1st ?? settings.leaderboard_prize_1st ?? 5);
+  const prize2ndUsd = Number(options.prize2nd ?? settings.leaderboard_prize_2nd ?? 3);
+  const prize3rdUsd = Number(options.prize3rd ?? settings.leaderboard_prize_3rd ?? 2);
+  const usdRate = Number(options.usdRate ?? settings.usd_to_ngn_rate ?? 1500);
+
+  const prizes = [
+    { rank: 1, usd: prize1stUsd, ngn: Math.round(prize1stUsd * usdRate) },
+    { rank: 2, usd: prize2ndUsd, ngn: Math.round(prize2ndUsd * usdRate) },
+    { rank: 3, usd: prize3rdUsd, ngn: Math.round(prize3rdUsd * usdRate) }
+  ];
+
+  // Fetch top 3 from leaderboard sorted by xp_this_period desc
+  const lbSnap = await db.collection('leaderboard')
+    .orderBy('xp_this_period', 'desc')
+    .limit(3)
+    .get();
+
+  if (lbSnap.empty) {
+    return { success: true, periodId, settledWinners: [] };
+  }
+
+  const results = [];
+  const batch = db.batch();
+
+  let rankIdx = 0;
+  for (const doc of lbSnap.docs) {
+    if (rankIdx >= 3) break;
+    const rank = rankIdx + 1;
+    const prize = prizes[rankIdx];
+    const lbData = doc.data();
+    const userId = doc.id;
+
+    const userRef = db.collection('users').doc(userId);
+    const userDoc = await userRef.get();
+    const userData = userDoc.exists ? userDoc.data() : {};
+
+    // 30 days boost: add 30 days to now or to existing boost if currently active
+    let boostBaseTime = Date.now();
+    if (userData.affiliateBoostExpiresAt) {
+      const currExp = userData.affiliateBoostExpiresAt.toDate
+        ? userData.affiliateBoostExpiresAt.toDate()
+        : new Date(userData.affiliateBoostExpiresAt);
+      if (currExp && !isNaN(currExp.getTime()) && currExp.getTime() > boostBaseTime) {
+        boostBaseTime = currExp.getTime();
+      }
+    }
+    const newBoostExpiresAt = new Date(boostBaseTime + 30 * 24 * 60 * 60 * 1000);
+
+    const updatedWins = (Number(userData.leaderboardWinsCount || userData.leaderboard_wins_count || 0)) + 1;
+
+    const historyEntry = {
+      month: periodId,
+      rank,
+      xp: Number(lbData.xp_this_period || 0),
+      reward_usd: prize.usd,
+      reward_ngn: prize.ngn,
+      rewardedAt: admin.firestore.Timestamp.now()
+    };
+
+    batch.update(userRef, {
+      wallet_balance: admin.firestore.FieldValue.increment(prize.ngn),
+      leaderboardWinsCount: updatedWins,
+      leaderboard_wins_count: updatedWins,
+      affiliateBoostExpiresAt: admin.firestore.Timestamp.fromDate(newBoostExpiresAt),
+      leaderboardHistory: admin.firestore.FieldValue.arrayUnion(historyEntry),
+      pendingCelebration: {
+        type: 'leaderboard',
+        rank,
+        reward_usd: prize.usd,
+        reward_ngn: prize.ngn,
+        xpEarned: Number(lbData.xp_this_period || 0),
+        multiplierCount: updatedWins,
+        multiplierText: `${updatedWins}X Top Leaderboard Winner`,
+        timestamp: Date.now()
+      }
+    });
+
+    // Record wallet transaction receipt
+    const txRef = db.collection('wallet_transactions').doc();
+    batch.set(txRef, {
+      user_id: userId,
+      type: 'credit',
+      category: 'leaderboard_prize',
+      title: `Rank #${rank} Leaderboard Season Prize`,
+      amount_usd: prize.usd,
+      amount_ngn: prize.ngn,
+      period_id: periodId,
+      created_at: admin.firestore.FieldValue.serverTimestamp()
+    });
+
+    // Send in-app notification
+    const notifRef = db.collection('notifications').doc();
+    batch.set(notifRef, {
+      user_id: userId,
+      type: 'reward',
+      title: '🏆 Top 3 Season Leaderboard Winner!',
+      message: `Congratulations! You placed #${rank} on the Monthly Leaderboard with ${lbData.xp_this_period || 0} XP. You received $${prize.usd} (₦${prize.ngn.toLocaleString('en-NG')}) in your wallet + an upgraded 30-Day Affiliate Commission Boost!`,
+      read: false,
+      created_at: admin.firestore.FieldValue.serverTimestamp()
+    });
+
+    results.push({
+      userId,
+      name: `${userData.first_name || lbData.first_name || ''} ${userData.last_name || lbData.last_initial || ''}`.trim(),
+      rank,
+      prizeUsd: prize.usd,
+      prizeNgn: prize.ngn,
+      xp: Number(lbData.xp_this_period || 0),
+      newMultiplierCount: updatedWins
+    });
+
+    rankIdx++;
+  }
+
+  await batch.commit();
+  return { success: true, periodId, settledWinners: results };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CALLABLE: SETTLE MONTHLY LEADERBOARD (Admin / Community Manager)
+// ═══════════════════════════════════════════════════════════════════════════
+exports.settleMonthlyLeaderboard = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'You must be signed in.');
+  }
+  const callerUid = request.auth.uid;
+  const db = admin.firestore();
+  const callerSnap = await db.collection('users').doc(callerUid).get();
+  const callerData = callerSnap.exists ? callerSnap.data() : {};
+  const isSuperAdminEmail = ['admin@sofenode.com', 'admin@sofegroup.com', 'superadmin@sofenode.com'].includes(callerData.email?.toLowerCase());
+  const isAuthorized = callerData.role === 'admin' ||
+    ['super_admin', 'community_manager'].includes(callerData.admin_role) ||
+    isSuperAdminEmail;
+
+  if (!isAuthorized) {
+    throw new HttpsError('permission-denied', 'Only Super Admins or Community Managers can settle the monthly leaderboard.');
+  }
+
+  return await executeLeaderboardSettlement(db, request.data || {});
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
 // MONTHLY LEADERBOARD RESET (scheduled)
 // ═══════════════════════════════════════════════════════════════════════════
 exports.resetMonthlyLeaderboard = onSchedule({
@@ -1352,6 +1590,13 @@ exports.resetMonthlyLeaderboard = onSchedule({
     const lbSnap = await db.collection('leaderboard').get();
     if (lbSnap.empty) {
       return null;
+    }
+
+    // 1. Settle Top 3 rewards and 30-day boosts before resetting
+    try {
+      await executeLeaderboardSettlement(db, { periodId: endingPeriodId });
+    } catch (settleErr) {
+      console.error('[resetMonthlyLeaderboard:settlement]', settleErr);
     }
 
     await db.collection('leaderboard_archive').doc(endingPeriodId).set({
@@ -2081,13 +2326,11 @@ exports.backfillPastCommissions = onRequest(async (req, res) => {
       const referrerData = referrerDoc.data();
       const referrerUid = referrerDoc.id;
 
-      let directTier = 1;
-      let directRate = 0.05;
+      const rateInfo = getAffiliateRate(referrerData);
+      let directTier = rateInfo.tier;
+      let directRate = rateInfo.rate;
 
-      if (referrerData.affiliate_level === 3 || referrerData.is_ambassador === true) {
-        directTier = 3;
-        directRate = 0.10;
-      } else {
+      if (directTier === 1) {
         const qualifiedSnap = await db.collection('referrals')
           .where('referrer_code', '==', referrerData.referral_code)
           .where('foundation_complete', '==', true)
@@ -2096,7 +2339,7 @@ exports.backfillPastCommissions = onRequest(async (req, res) => {
 
         if (qualifiedSnap.size >= 10) {
           directTier = 2;
-          directRate = 0.10;
+          directRate = 0.15;
         }
       }
 

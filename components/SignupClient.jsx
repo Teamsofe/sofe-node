@@ -109,6 +109,7 @@ export default function SignupClient() {
   const refCodeFromUrl = searchParams.get('ref') || '';
   const nodeFromUrl = searchParams.get('node') || '';
   const typeFromUrl = searchParams.get('type') || '';
+  const isChallengeVisitor = searchParams.get('challenge') === 'completed' || !!searchParams.get('discount');
 
   const initialType = ACCOUNT_TYPES.find(t => t.key === typeFromUrl) ? typeFromUrl : 'sofian';
 
@@ -476,6 +477,61 @@ export default function SignupClient() {
               </div>
             ) : null}
 
+            {/* ── 24-Hour 20% Discount Enrollment Banner ── */}
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(20,40,255,0.25) 0%, rgba(255,138,0,0.2) 100%)',
+              border: '1.5px solid #FF8A00',
+              borderRadius: 12,
+              padding: '1.25rem',
+              marginBottom: '1.5rem',
+              textAlign: 'left'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.4rem', flexWrap: 'wrap', gap: '0.4rem' }}>
+                <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#FF8A00', textTransform: 'uppercase' }}>
+                  ⚡ 24-Hour Limited Reward
+                </span>
+                <span style={{
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  background: 'rgba(255,85,85,0.2)',
+                  border: '1px solid #FF5555',
+                  color: '#FF8888',
+                  padding: '0.15rem 0.5rem',
+                  borderRadius: 8
+                }}>
+                  ⏱ Expires in 24:00:00
+                </span>
+              </div>
+              <div style={{ fontSize: '1rem', fontWeight: 800, color: '#fff', marginBottom: '0.3rem' }}>
+                20% Off: Blockchain &amp; Cryptocurrency Foundation
+              </div>
+              <p style={{ fontSize: '0.78rem', color: 'rgba(238,244,255,0.85)', lineHeight: 1.5, marginBottom: '1rem' }}>
+                {isChallengeVisitor
+                  ? 'Your +15 XP bonus is locked in. Use your 24-hour challenge discount to enroll in the Foundation Course and become a validated Web3 talent.'
+                  : 'Get subsidized admission with code CHALLENGE20 to master Web3, earn on-chain credentials, and deploy across our campus network.'}
+              </p>
+              <Link
+                href="/payment-flow?course=foundation&discount=CHALLENGE20"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem',
+                  padding: '0.75rem 1rem',
+                  background: 'linear-gradient(135deg, #FF8A00 0%, #FE8206 50%, #E65100 100%)',
+                  color: '#fff',
+                  borderRadius: 8,
+                  fontWeight: 800,
+                  fontSize: '0.86rem',
+                  textDecoration: 'none',
+                  boxShadow: '0 4px 15px rgba(255,138,0,0.3)',
+                  marginBottom: '0.5rem'
+                }}
+              >
+                <span>🎓</span> Enroll with 20% Discount (Become Validated) →
+              </Link>
+            </div>
+
             <Link
               href="/dashboard"
               style={{ display: 'block', padding: '.85rem', background: 'var(--blue)', color: '#fff', borderRadius: '8px', fontWeight: 700, textDecoration: 'none', fontSize: '.95rem' }}
@@ -537,6 +593,26 @@ export default function SignupClient() {
             </div>
             <h2 className="auth-form-title">Create your account 🚀</h2>
             <p className="auth-form-sub">Already have an account? <Link href="/login">Log in here</Link></p>
+
+            {isChallengeVisitor && (
+              <div style={{
+                background: 'rgba(255,138,0,0.12)',
+                border: '1px solid #FF8A00',
+                borderRadius: 8,
+                padding: '0.75rem 1rem',
+                marginBottom: '1.25rem',
+                fontSize: '0.8rem',
+                color: '#FFB03A',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.6rem'
+              }}>
+                <span style={{ fontSize: '1.1rem' }}>⚔️</span>
+                <span>
+                  <strong>Peer Challenge Verified:</strong> Your <strong>+15 XP</strong> and <strong>24-hour 20% discount</strong> on the Foundational Web3 Course will activate immediately upon signup!
+                </span>
+              </div>
+            )}
 
             {/* ── Account Type Selector ────────────────────────────── */}
             <div style={{ marginBottom: '1.5rem' }}>

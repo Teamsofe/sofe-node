@@ -113,6 +113,7 @@ export default function CourseViewClient() {
   const [quizShareModalOpen, setQuizShareModalOpen] = useState(false);
   const [quizShareData, setQuizShareData] = useState(null);
   const flyerCanvasRef = useRef(null);
+  const flyerLogoRef = useRef(null);
 
   // Certificate Modal State
   const [certModalOpen, setCertModalOpen] = useState(false);
@@ -156,13 +157,29 @@ export default function CourseViewClient() {
   };
 
   const getStudentName = () => {
+    if (userData?.first_name || userData?.last_name) {
+      return `${userData.first_name || ''} ${userData.last_name || ''}`.trim();
+    }
     return userData?.full_name || userData?.name || currentUser?.displayName || 'Sofian';
   };
 
-  const getInviteLink = () => {
+  const getReferralCode = () => {
+    return (
+      userData?.referral_code ||
+      userData?.referralCode ||
+      userData?.ref_code ||
+      (currentUser?.uid ? currentUser.uid.slice(0, 8).toUpperCase() : 'SOFE')
+    );
+  };
+
+  const getInviteLink = (customScore = null, customModId = null) => {
     const origin = typeof window !== 'undefined' ? window.location.origin : 'https://node.sofegroup.com';
-    const refCode = userData?.referral_code || (currentUser?.uid ? currentUser.uid.slice(0, 8).toUpperCase() : '');
-    return refCode ? `${origin}/signup?ref=${refCode}` : `${origin}/signup`;
+    const refCode = getReferralCode();
+    const activeMod = modules.find((m) => m.id === activeModuleId);
+    const mId = customModId || activeMod?.id || 'mod-1';
+    const scoreVal = customScore !== null ? customScore : (quizResult?.scorePct ?? existingSubmission?.score ?? 97);
+    const sName = encodeURIComponent(getStudentName());
+    return `${origin}/challenge?ref=${refCode}&module=${mId}&score=${scoreVal}&student=${sName}`;
   };
 
   const handleCopyText = (text, label = 'Text') => {
@@ -216,26 +233,117 @@ export default function CourseViewClient() {
     if (cert) setCertModalOpen(true);
   };
 
+  const getRelativeStatus = (scorePct, passed) => {
+    if (!passed) return '⚡ REVIEW & RETAKE';
+    if (scorePct >= 95) return '🔥 TOP 5% OF SOFIANS';
+    if (scorePct >= 90) return '⚡ TOP 10% OF SOFIANS';
+    if (scorePct >= 80) return '🚀 TOP 15% OF SOFIANS';
+    if (scorePct >= 70) return '🎯 TOP 25% OF SOFIANS';
+    return '🌟 VERIFIED BUILDER';
+  };
+
   const handleOpenQuizShare = (customScore = null, customPassed = null) => {
     const activeMod = modules.find((m) => m.id === activeModuleId);
     const scorePct = customScore !== null ? Number(customScore) : (quizResult?.scorePct ?? existingSubmission?.score ?? existingSubmission?.quiz_score ?? 0);
     const passed = customPassed !== null ? Boolean(customPassed) : (quizResult?.passed ?? existingSubmission?.passed ?? (scorePct >= (activeSession?.passing_score || 70)));
-    const refCode = userData?.referral_code || (currentUser?.uid ? currentUser.uid.slice(0, 8).toUpperCase() : '');
-    const inviteUrl = getInviteLink();
+    const refCode = getReferralCode();
+    const inviteUrl = getInviteLink(scorePct, activeMod?.id);
+    const xpEarned = activeSession?.xp_reward || 5;
 
     const data = {
       studentName: getStudentName(),
-      courseTitle: courseData?.title || 'Sofe Academy Course',
-      moduleTitle: activeMod?.title || activeSession?.title || 'Assessment',
+      courseTitle: courseData?.title || 'Blockchain & Cryptocurrency Foundation',
+      moduleTitle: activeMod?.title || activeSession?.title || 'Introduction to Blockchain',
       scorePct,
       passed,
       passMark: activeSession?.passing_score || 70,
+      xpEarned,
+      relativeStatus: getRelativeStatus(scorePct, passed),
       inviteUrl,
       refCode
     };
 
     setQuizShareData(data);
     setQuizShareModalOpen(true);
+  };
+
+  const getShareCaption = () => {
+    if (!quizShareData) return '';
+    const { moduleTitle, scorePct, xpEarned, inviteUrl } = quizShareData;
+    return `Just cleared the "${moduleTitle}" assessment on @SofeNode with a ${scorePct}% score (+${xpEarned || 5} XP). Pushing for the Top 3 spot on this month's leaderboard. Think you can beat ${scorePct}%? Test your Web3 IQ here: ${inviteUrl}`;
+  };
+
+  const getFlyerFile = async () => {
+    if (!flyerCanvasRef.current) return null;
+    return new Promise((resolve) => {
+      try {
+        flyerCanvasRef.current.toBlob((blob) => {
+          if (!blob) {
+            resolve(null);
+            return;
+          }
+          const safeName = (quizShareData?.studentName || 'Student').replace(/\s+/g, '_');
+          const file = new File([blob], `${safeName}_Sofe_Scorecard.png`, { type: 'image/png' });
+          resolve(file);
+        }, 'image/png');
+      } catch (err) {
+        console.warn('Could not generate scorecard blob:', err);
+        resolve(null);
+      }
+    });
+  };
+
+  const handleShareScorecard = async (platform = 'native') => {
+    const caption = getShareCaption();
+    const inviteUrl = quizShareData?.inviteUrl || 'https://node.sofegroup.com';
+
+    // 1. Mobile Web Share API with File attachment (one-tap native sharing)
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        const file = await getFlyerFile();
+        if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            title: 'Sofe Node Assessment Scorecard',
+            text: caption,
+            files: [file]
+          });
+          showToast('Scorecard shared successfully!', 'success');
+          return;
+        } else if (platform === 'native' && navigator.canShare && navigator.canShare({ text: caption, url: inviteUrl })) {
+          await navigator.share({
+            title: 'Sofe Node Assessment Scorecard',
+            text: caption,
+            url: inviteUrl
+          });
+          downloadFlyerImage();
+          showToast('Shared caption! Scorecard image downloaded.', 'info');
+          return;
+        }
+      } catch (err) {
+        if (err.name === 'AbortError') {
+          return; // user cancelled share sheet
+        }
+        console.warn('Web Share API error, using direct intent fallback:', err);
+      }
+    }
+
+    // 2. Desktop & intent fallbacks
+    if (platform === 'x' || platform === 'twitter') {
+      const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(caption)}`;
+      window.open(url, '_blank');
+      showToast('Opening X! Remember to attach your downloaded scorecard.', 'info');
+    } else if (platform === 'whatsapp') {
+      const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(caption)}`;
+      window.open(url, '_blank');
+    } else if (platform === 'linkedin') {
+      const url = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(inviteUrl)}`;
+      window.open(url, '_blank');
+      handleCopyText(caption, 'Challenge Post Text');
+    } else {
+      downloadFlyerImage();
+      handleCopyText(caption, 'Challenge Post Text');
+      showToast('Scorecard image downloaded & post text copied to clipboard!', 'success');
+    }
   };
 
   const downloadFlyerImage = () => {
@@ -365,39 +473,59 @@ export default function CourseViewClient() {
     ctx.stroke();
     ctx.restore();
 
-    // 5. Header Branding: Logo Lockup
+    // 5. Header Branding: Clean Logo + Academy Lockup (Zero Overlap!)
     ctx.save();
-    ctx.fillStyle = '#FFFFFF';
-    ctx.font = '800 32px Poppins, sans-serif';
-    ctx.fillText('SOFE NODE', 80, 110);
-    ctx.fillStyle = '#FF8A00';
-    ctx.font = '700 20px Poppins, sans-serif';
-    ctx.fillText('• ACADEMY', 290, 110);
+    const logoX = 80;
+    const logoY = 72;
+    const logoH = 44;
+    const logoImg = flyerLogoRef.current;
 
-    // Top-right Pill Badge: VERIFIED ASSESSMENT ✓
+    if (logoImg && logoImg.complete && logoImg.naturalWidth > 0) {
+      const logoW = Math.round(logoH * (logoImg.naturalWidth / logoImg.naturalHeight));
+      
+      // Draw brand logo image with boosted contrast & drop shadow for vivid visibility on dark navy
+      ctx.save();
+      ctx.filter = 'brightness(1.5) saturate(1.3) drop-shadow(0 0 12px rgba(0, 180, 255, 0.35))';
+      ctx.drawImage(logoImg, logoX, logoY, logoW, logoH);
+      ctx.restore();
+
+      // Position '• ACADEMY' cleanly separated after the logo
+      const academyX = logoX + logoW + 18;
+      ctx.fillStyle = '#FF8A00';
+      ctx.font = '700 22px Poppins, sans-serif';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('• ACADEMY', academyX, logoY + (logoH / 2));
+    } else {
+      // Safe non-overlapping text fallback while loading
+      ctx.fillStyle = '#FE8206';
+      ctx.font = '800 28px Poppins, sans-serif';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('SOFE', logoX, logoY + (logoH / 2));
+
+      ctx.fillStyle = '#5B8CFF';
+      ctx.font = '800 28px Poppins, sans-serif';
+      ctx.fillText('NODE', logoX + 85, logoY + (logoH / 2));
+
+      ctx.fillStyle = '#FF8A00';
+      ctx.font = '700 22px Poppins, sans-serif';
+      ctx.fillText('• ACADEMY', logoX + 185, logoY + (logoH / 2));
+    }
+
+    // Top-right Pill Badge: VERIFIED ASSESSMENT /
     ctx.fillStyle = 'rgba(16, 185, 129, 0.15)';
-    drawRoundedRect(ctx, width - 360, 76, 280, 44, 22);
+    drawRoundedRect(ctx, width - 360, 72, 280, 44, 22);
     ctx.fill();
     ctx.strokeStyle = '#10B981';
     ctx.lineWidth = 1.5;
-    drawRoundedRect(ctx, width - 360, 76, 280, 44, 22);
+    drawRoundedRect(ctx, width - 360, 72, 280, 44, 22);
     ctx.stroke();
 
     ctx.fillStyle = '#10B981';
     ctx.font = '700 15px Poppins, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('VERIFIED ASSESSMENT ✓', width - 220, 104);
+    ctx.textBaseline = 'middle';
+    ctx.fillText('VERIFIED ASSESSMENT /', width - 220, 94);
     ctx.restore();
-
-    // Try drawing logo image on header
-    try {
-      const logo = new Image();
-      logo.crossOrigin = 'anonymous';
-      logo.onload = () => {
-        ctx.drawImage(logo, 80, 75, 200, 32);
-      };
-      logo.src = '/images/Nodes/SofeNodeLogo.png';
-    } catch (e) {}
 
     // 6. Subtitle
     ctx.save();
@@ -473,20 +601,48 @@ export default function CourseViewClient() {
     ctx.textBaseline = 'alphabetic';
     const detailX = 380;
 
+    // EXAM PASSED / or EXAM ATTEMPT
+    const passedTitle = data.passed ? 'EXAM PASSED /' : 'EXAM ATTEMPT';
     ctx.fillStyle = data.passed ? '#10B981' : '#FF5555';
     ctx.font = '800 32px Poppins, sans-serif';
-    ctx.fillText(data.passed ? 'EXAM PASSED ✓' : 'EXAM ATTEMPT', detailX, scoreCardY + 80);
+    ctx.fillText(passedTitle, detailX, scoreCardY + 68);
 
+    // Dynamic Relative Status / Percentile Badge
+    const statusText = data.relativeStatus || getRelativeStatus(data.scorePct, data.passed);
+    ctx.font = '800 13px Poppins, sans-serif';
+    const badgeTextWidth = ctx.measureText(statusText).width;
+    const badgeWidth = badgeTextWidth + 24;
+    const titleWidth = ctx.measureText(passedTitle).width;
+    const badgeX = detailX + titleWidth + 20;
+    const badgeY = scoreCardY + 44;
+    const badgeH = 32;
+
+    ctx.fillStyle = data.passed ? 'rgba(255, 138, 0, 0.16)' : 'rgba(255, 85, 85, 0.16)';
+    drawRoundedRect(ctx, badgeX, badgeY, badgeWidth, badgeH, 16);
+    ctx.fill();
+    ctx.strokeStyle = data.passed ? '#FF8A00' : '#FF5555';
+    ctx.lineWidth = 1.5;
+    drawRoundedRect(ctx, badgeX, badgeY, badgeWidth, badgeH, 16);
+    ctx.stroke();
+
+    ctx.fillStyle = data.passed ? '#FFB03A' : '#FF7777';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(statusText, badgeX + badgeWidth / 2, badgeY + badgeH / 2 + 1);
+
+    // Detail text
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
     ctx.fillStyle = 'rgba(238, 244, 255, 0.85)';
     ctx.font = '500 19px Poppins, sans-serif';
     ctx.fillText(data.passed
       ? 'Demonstrated high competence in practical Web3 assessment.'
       : 'Review the module materials and retake to earn XP & completion.'
-    , detailX, scoreCardY + 125);
+    , detailX, scoreCardY + 120);
 
     ctx.fillStyle = '#FF8A00';
     ctx.font = '700 17px Poppins, sans-serif';
-    ctx.fillText('🏆 +5 XP Earned & Progress Synchronized', detailX, scoreCardY + 175);
+    ctx.fillText(`🏆 +${data.xpEarned || 5} XP Earned & Progress Synchronized`, detailX, scoreCardY + 172);
 
     ctx.fillStyle = 'rgba(200, 215, 240, 0.6)';
     ctx.font = '500 14px Poppins, sans-serif';
@@ -748,6 +904,18 @@ export default function CourseViewClient() {
   };
 
   useEffect(() => {
+    if (typeof window !== 'undefined' && !flyerLogoRef.current) {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.src = '/images/Nodes/SofeLogoHome.png';
+      img.onload = () => {
+        flyerLogoRef.current = img;
+        if (quizShareModalOpen && quizShareData && flyerCanvasRef.current) {
+          drawQuizFlyer(flyerCanvasRef.current, quizShareData);
+        }
+      };
+      flyerLogoRef.current = img;
+    }
     if (quizShareModalOpen && quizShareData && flyerCanvasRef.current) {
       drawQuizFlyer(flyerCanvasRef.current, quizShareData);
     }
@@ -1053,16 +1221,19 @@ export default function CourseViewClient() {
         setExistingSubmission(subData);
         if (subData.type === 'quiz') {
           const activeMod = modules.find((m) => m.id === activeModuleId);
-          const refCode = userData?.referral_code || (currentUser?.uid ? currentUser.uid.slice(0, 8).toUpperCase() : '');
-          const origin = typeof window !== 'undefined' ? window.location.origin : 'https://node.sofegroup.com';
-          const inviteUrl = refCode ? `${origin}/signup?ref=${refCode}` : `${origin}/signup`;
+          const refCode = getReferralCode();
+          const inviteUrl = getInviteLink(scorePct, activeMod?.id);
+          const scorePct = subData.score ?? subData.quiz_score ?? 0;
+          const passed = !!subData.passed;
           setQuizShareData({
             studentName: getStudentName(),
-            courseTitle: courseData?.title || 'Sofe Academy Course',
-            moduleTitle: activeMod?.title || activeSession?.title || 'Assessment',
-            scorePct: subData.score ?? subData.quiz_score ?? 0,
-            passed: !!subData.passed,
+            courseTitle: courseData?.title || 'Blockchain & Cryptocurrency Foundation',
+            moduleTitle: activeMod?.title || activeSession?.title || 'Introduction to Blockchain',
+            scorePct,
+            passed,
             passMark: activeSession?.passing_score || 70,
+            xpEarned: activeSession?.xp_reward || 5,
+            relativeStatus: getRelativeStatus(scorePct, passed),
             inviteUrl,
             refCode
           });
@@ -1199,16 +1370,17 @@ export default function CourseViewClient() {
           }),
         }).catch((err) => console.warn('Could not sync exam failures to AI assistant:', err));
       }
-      const refCode = userData?.referral_code || (currentUser?.uid ? currentUser.uid.slice(0, 8).toUpperCase() : '');
-      const origin = typeof window !== 'undefined' ? window.location.origin : 'https://node.sofegroup.com';
-      const inviteUrl = refCode ? `${origin}/signup?ref=${refCode}` : `${origin}/signup`;
+      const refCode = getReferralCode();
+      const inviteUrl = getInviteLink(scorePct, activeMod?.id);
       const sharePayload = {
         studentName: getStudentName(),
-        courseTitle: courseData?.title || 'Sofe Academy Course',
-        moduleTitle: activeMod?.title || activeSession?.title || 'Assessment',
+        courseTitle: courseData?.title || 'Blockchain & Cryptocurrency Foundation',
+        moduleTitle: activeMod?.title || activeSession?.title || 'Introduction to Blockchain',
         scorePct,
         passed,
         passMark,
+        xpEarned: activeSession?.xp_reward || 5,
+        relativeStatus: getRelativeStatus(scorePct, passed),
         inviteUrl,
         refCode
       };
@@ -2234,7 +2406,7 @@ export default function CourseViewClient() {
                 <div>
                   <h3 className="cv-modal-title" style={{ fontSize: '1.05rem', fontWeight: 800, color: '#fff' }}>Share Quiz Score Flyer</h3>
                   <p className="cv-modal-desc" style={{ fontSize: '0.74rem', color: 'rgba(200,215,240,0.65)' }}>
-                    Branded with your name, score, module, and referral invite QR code
+                    Branded with your score, peer status percentile, and referral invite QR code
                   </p>
                 </div>
               </div>
@@ -2277,6 +2449,32 @@ export default function CourseViewClient() {
                 />
               </div>
 
+              {/* Primary One-Tap Mobile / Native File Share Button */}
+              <button
+                onClick={() => handleShareScorecard('native')}
+                className="cv-social-btn cv-social-btn-native"
+                style={{
+                  width: '100%',
+                  padding: '0.85rem 1.25rem',
+                  fontSize: '0.92rem',
+                  fontWeight: 800,
+                  background: 'linear-gradient(135deg, #FF8A00 0%, #FE8206 50%, #E65100 100%)',
+                  color: '#FFFFFF',
+                  borderRadius: 10,
+                  border: 'none',
+                  boxShadow: '0 4px 20px rgba(255,138,0,0.35)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.55rem',
+                  marginBottom: '0.75rem',
+                  transition: 'transform 0.15s ease, box-shadow 0.15s ease'
+                }}
+              >
+                <span style={{ fontSize: '1.2rem' }}>📲</span> One-Tap Share Scorecard (Image + Caption)
+              </button>
+
               <div style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
@@ -2286,35 +2484,27 @@ export default function CourseViewClient() {
                 <button
                   onClick={downloadFlyerImage}
                   className="cv-social-btn cv-social-btn-dl"
-                  style={{ gridColumn: '1 / -1', padding: '0.75rem 1.2rem', fontSize: '0.85rem' }}
+                  style={{ padding: '0.75rem 1rem', fontSize: '0.82rem' }}
                 >
-                  <span>⬇</span> Download Flyer (PNG)
+                  <span>⬇</span> Download PNG
                 </button>
 
                 <button
-                  onClick={() => {
-                    const text = `🔥 Just scored ${quizShareData.scorePct}% on the "${quizShareData.moduleTitle}" assessment in ${quizShareData.courseTitle} at @SofeNode Academy! 🎓🚀\n\nLearn Web3, earn XP, and unlock global bounties with me:\n${quizShareData.inviteUrl}\n\n#SofeNode #Web3 #Blockchain #CryptoEducation`;
-                    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
-                  }}
+                  onClick={() => handleShareScorecard('x')}
                   className="cv-social-btn cv-social-btn-x"
                 >
                   <span>𝕏</span> Share on X
                 </button>
 
                 <button
-                  onClick={() => {
-                    window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(quizShareData.inviteUrl)}`, '_blank');
-                  }}
+                  onClick={() => handleShareScorecard('linkedin')}
                   className="cv-social-btn cv-social-btn-li"
                 >
                   <span>in</span> Share on LinkedIn
                 </button>
 
                 <button
-                  onClick={() => {
-                    const text = `🎉 I just scored ${quizShareData.scorePct}% on "${quizShareData.moduleTitle}" (${quizShareData.courseTitle}) on Sofe Node Academy!\n\nJoin me using my invite link:\n${quizShareData.inviteUrl}`;
-                    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
-                  }}
+                  onClick={() => handleShareScorecard('whatsapp')}
                   className="cv-social-btn cv-social-btn-wa"
                 >
                   <span>💬</span> WhatsApp
@@ -2340,13 +2530,13 @@ export default function CourseViewClient() {
                 flexWrap: 'wrap'
               }}>
                 <div className="cv-tip-text" style={{ fontSize: '0.76rem', color: 'rgba(238,244,255,0.85)', lineHeight: 1.5, flex: 1, minWidth: 200 }}>
-                  <strong>💡 Pro-tip:</strong> Download the flyer and attach it to your post on LinkedIn, X, or Instagram stories to attract referrals and earn commissions!
+                  <strong>💡 Pro-tip:</strong> One-tap share attaches your scorecard directly to X, WhatsApp, or Instagram Stories to challenge peers and earn referral XP!
                 </div>
                 <button
                   className="cv-tip-copy-btn"
                   onClick={() => {
-                    const text = `🔥 Just scored ${quizShareData.scorePct}% on the "${quizShareData.moduleTitle}" assessment in ${quizShareData.courseTitle} at Sofe Node Academy! 🎓🚀\n\nJoin me on Sofe Node to learn Web3, earn XP rewards, and unlock global career opportunities:\n${quizShareData.inviteUrl}\n\n#SofeNode #Web3 #Blockchain`;
-                    handleCopyText(text, 'Social Post Text');
+                    const caption = getShareCaption();
+                    handleCopyText(caption, 'Challenge Post Text');
                   }}
                   style={{
                     background: 'rgba(255,255,255,0.1)',
@@ -2360,7 +2550,7 @@ export default function CourseViewClient() {
                     whiteSpace: 'nowrap'
                   }}
                 >
-                  Copy Post Text
+                  Copy Challenge Text
                 </button>
               </div>
             </div>
@@ -2433,10 +2623,12 @@ export default function CourseViewClient() {
                 gap: '0.75rem',
                 marginBottom: '1.25rem'
               }}>
-                <button
-                  onClick={() => setLinkedinGuideOpen(true)}
+                <a
+                  href={`https://www.linkedin.com/profile/add?startTask=CERTIFICATION_NAME&name=${encodeURIComponent(courseData?.title || 'Blockchain & Cryptocurrency Foundation')}&organizationName=${encodeURIComponent('Sofe Node Academy')}&issueYear=${new Date().getFullYear()}&issueMonth=${new Date().getMonth() + 1}&certId=${encodeURIComponent(certificate?.certificate_number || certificate?.id || 'SOFE-CERT')}&certUrl=${encodeURIComponent((typeof window !== 'undefined' ? window.location.origin : 'https://node.sofegroup.com') + '/verify/' + (certificate?.certificate_number || certificate?.id || 'SOFE-CERT'))}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   style={{
-                    background: 'linear-gradient(135deg, #0A66C2, #0077B5)',
+                    background: '#0077B5',
                     color: '#fff',
                     border: 'none',
                     borderRadius: 8,
@@ -2448,10 +2640,31 @@ export default function CourseViewClient() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '0.5rem',
-                    boxShadow: '0 4px 15px rgba(10,102,194,0.35)'
+                    textDecoration: 'none',
+                    boxShadow: '0 4px 15px rgba(0,119,181,0.4)'
                   }}
                 >
-                  <span>📘</span> How to Add to LinkedIn
+                  <span style={{ fontSize: '1.05rem' }}>in</span> Add to LinkedIn Profile (1-Click)
+                </a>
+
+                <button
+                  onClick={() => setLinkedinGuideOpen(true)}
+                  style={{
+                    background: 'rgba(255,255,255,0.08)',
+                    color: '#fff',
+                    border: '1px solid rgba(255,255,255,0.18)',
+                    borderRadius: 8,
+                    padding: '0.75rem 1.2rem',
+                    fontWeight: 700,
+                    fontSize: '0.82rem',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem'
+                  }}
+                >
+                  <span>📘</span> View Guide
                 </button>
 
                 <button

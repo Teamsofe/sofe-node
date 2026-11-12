@@ -20,8 +20,12 @@ import {
   where,
   orderBy,
   serverTimestamp,
-  limit
+  limit,
+  writeBatch,
+  increment
 } from '@/lib/firebase';
+import WinnerMultiplierBadge from '@/components/WinnerMultiplierBadge';
+import { getEffectiveAffiliateTier } from '@/lib/affiliateTiers';
 
 export default function AdminDashboardClient() {
   const router = useRouter();
@@ -85,6 +89,8 @@ export default function AdminDashboardClient() {
   const [settingsSubTab, setSettingsSubTab] = useState('roles');
   const [inviteAdminEmail, setInviteAdminEmail] = useState('');
   const [inviteAdminRole, setInviteAdminRole] = useState('tutor');
+  const [leaderboardEntries, setLeaderboardEntries] = useState([]);
+  const [settlingLeaderboard, setSettlingLeaderboard] = useState(false);
   const [platformSettings, setPlatformSettings] = useState({
     bank_name: 'GTBank',
     account_number: '0123456789',
@@ -93,7 +99,11 @@ export default function AdminDashboardClient() {
     min_withdrawal: 10000,
     paystack_public_key: 'pk_test_xxxxxxxxxxxxxxxxxxxxx',
     cbie_price: 100000,
-    default_scholarship: 50
+    default_scholarship: 50,
+    leaderboard_prize_1st: 5,
+    leaderboard_prize_2nd: 3,
+    leaderboard_prize_3rd: 2,
+    usd_to_ngn_rate: 1500
   });
 
   const showToast = (msg, type = 'info') => {
@@ -147,60 +157,71 @@ export default function AdminDashboardClient() {
 
   const loadAllAdminData = async () => {
     try {
+      // Parallelize admin datasets fetching to drastically reduce load time
+      const [
+        uSnap,
+        cSnap,
+        sSnap,
+        dSnap,
+        appSnap,
+        chSnap,
+        bSnap,
+        setSnap,
+        pSnap,
+        lbSnap
+      ] = await Promise.all([
+        getDocs(collection(db, 'users')),
+        getDocs(collection(db, 'courses')),
+        getDocs(query(collection(db, 'session_submissions'), orderBy('submitted_at', 'desc'), limit(50))),
+        getDocs(query(collection(db, 'disbursement_requests'), orderBy('created_at', 'desc'), limit(50))),
+        getDocs(query(collection(db, 'applications'), orderBy('created_at', 'desc'), limit(50))),
+        getDocs(collection(db, 'chapters')),
+        getDocs(collection(db, 'bounties')),
+        getDoc(doc(db, 'settings', 'platform')).catch(() => null),
+        getDocs(query(collection(db, 'payments'), orderBy('created_at', 'desc'), limit(50))).catch(() => ({ docs: [] })),
+        getDocs(query(collection(db, 'leaderboard'), orderBy('xp_this_period', 'desc'), limit(10))).catch(() => ({ docs: [] }))
+      ]);
+
       // 1. Users
-      const uSnap = await getDocs(collection(db, 'users'));
       const uList = uSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
       setUsers(uList);
 
       // 2. Courses
-      const cSnap = await getDocs(collection(db, 'courses'));
       const cList = cSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
       setCourses(cList);
 
       // 3. Submissions (Assignments / Projects)
-      const sSnap = await getDocs(query(collection(db, 'session_submissions'), orderBy('submitted_at', 'desc'), limit(50)));
       const sList = sSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
       setSubmissions(sList);
 
       // 4. Disbursements (Withdrawals & Node Treasury)
-      const dSnap = await getDocs(query(collection(db, 'disbursement_requests'), orderBy('created_at', 'desc'), limit(50)));
       const dList = dSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
       setDisbursements(dList);
 
       // 5. CBIE Applications
-      const appSnap = await getDocs(query(collection(db, 'applications'), orderBy('created_at', 'desc'), limit(50)));
       const aList = appSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
       setCbieApps(aList);
 
       // 6. Chapters / Campus Nodes
-      const chSnap = await getDocs(collection(db, 'chapters'));
       const chList = chSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
       setChapters(chList);
 
       // 7. Bounties
-      const bSnap = await getDocs(collection(db, 'bounties'));
       const bList = bSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
       setBounties(bList);
 
       // 8. Platform Settings
-      try {
-        const setSnap = await getDoc(doc(db, 'settings', 'platform'));
-        if (setSnap.exists()) {
-          setPlatformSettings((prev) => ({ ...prev, ...setSnap.data() }));
-        }
-      } catch (err) {
-        console.warn('Settings load notice:', err.message);
+      if (setSnap && setSnap.exists && setSnap.exists()) {
+        setPlatformSettings((prev) => ({ ...prev, ...setSnap.data() }));
       }
 
       // 9. Payments (Bank Transfers & VIP Memberships)
-      let pList = [];
-      try {
-        const pSnap = await getDocs(query(collection(db, 'payments'), orderBy('created_at', 'desc'), limit(50)));
-        pList = pSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
-        setPayments(pList);
-      } catch (pErr) {
-        console.warn('Payments load notice:', pErr.message);
-      }
+      const pList = pSnap && pSnap.docs ? pSnap.docs.map((d) => ({ id: d.id, ...d.data() })) : [];
+      setPayments(pList);
+
+      // 10. Current Monthly Leaderboard Standings
+      const lbList = lbSnap && lbSnap.docs ? lbSnap.docs.map((d) => ({ id: d.id, ...d.data() })) : [];
+      setLeaderboardEntries(lbList);
 
       // Compute Overview Metrics
       const validated = uList.filter((u) => u.foundation_complete === true).length;
@@ -333,6 +354,166 @@ export default function AdminDashboardClient() {
     }
   };
 
+  // Settle Monthly Season Leaderboard (Top 3 Rewards & 30-Day Boosts)
+  const handleSettleLeaderboard = async () => {
+    const prize1st = Number(platformSettings.leaderboard_prize_1st ?? 5);
+    const prize2nd = Number(platformSettings.leaderboard_prize_2nd ?? 3);
+    const prize3rd = Number(platformSettings.leaderboard_prize_3rd ?? 2);
+    const usdRate = Number(platformSettings.usd_to_ngn_rate ?? 1500);
+
+    const msg = `Settle current Monthly Leaderboard season?\n\nTop 3 Podium Rewards:\n• 1st Place: $${prize1st} (₦${(prize1st * usdRate).toLocaleString('en-NG')})\n• 2nd Place: $${prize2nd} (₦${(prize2nd * usdRate).toLocaleString('en-NG')})\n• 3rd Place: $${prize3rd} (₦${(prize3rd * usdRate).toLocaleString('en-NG')})\n\nThis will atomically credit winners' wallets, increment their leaderboard winner counters (+1), grant a 30-Day 15% Affiliate Commission Boost, and queue their shareable Flex Cards.`;
+
+    if (!window.confirm(msg)) return;
+
+    setSettlingLeaderboard(true);
+    try {
+      const lbSnap = await getDocs(query(collection(db, 'leaderboard'), orderBy('xp_this_period', 'desc'), limit(3)));
+      if (lbSnap.empty) {
+        showToast('No active participants found on the leaderboard to settle.', 'warning');
+        return;
+      }
+
+      const prizes = [
+        { rank: 1, usd: prize1st, ngn: Math.round(prize1st * usdRate) },
+        { rank: 2, usd: prize2nd, ngn: Math.round(prize2nd * usdRate) },
+        { rank: 3, usd: prize3rd, ngn: Math.round(prize3rd * usdRate) }
+      ];
+
+      const batch = writeBatch(db);
+      const now = new Date();
+      const periodId = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
+      let settledCount = 0;
+
+      for (let i = 0; i < lbSnap.docs.length && i < 3; i++) {
+        const d = lbSnap.docs[i];
+        const prize = prizes[i];
+        const lbD = d.data();
+        const uId = d.id;
+
+        const uSnap = await getDoc(doc(db, 'users', uId));
+        const uData = uSnap.exists() ? uSnap.data() : {};
+
+        let boostBaseTime = Date.now();
+        if (uData.affiliateBoostExpiresAt) {
+          const currExp = uData.affiliateBoostExpiresAt.toDate
+            ? uData.affiliateBoostExpiresAt.toDate()
+            : new Date(uData.affiliateBoostExpiresAt);
+          if (currExp && !isNaN(currExp.getTime()) && currExp.getTime() > boostBaseTime) {
+            boostBaseTime = currExp.getTime();
+          }
+        }
+        const newBoostExpiresAt = new Date(boostBaseTime + 30 * 24 * 60 * 60 * 1000);
+        const updatedWins = (Number(uData.leaderboardWinsCount || uData.leaderboard_wins_count || 0)) + 1;
+
+        const historyEntry = {
+          month: periodId,
+          rank: prize.rank,
+          xp: Number(lbD.xp_this_period || 0),
+          reward_usd: prize.usd,
+          reward_ngn: prize.ngn,
+          rewardedAt: new Date().toISOString()
+        };
+
+        const existingHistory = Array.isArray(uData.leaderboardHistory) ? uData.leaderboardHistory : [];
+
+        batch.update(doc(db, 'users', uId), {
+          wallet_balance: increment(prize.ngn),
+          leaderboardWinsCount: updatedWins,
+          leaderboard_wins_count: updatedWins,
+          affiliateBoostExpiresAt: newBoostExpiresAt.toISOString(),
+          leaderboardHistory: [...existingHistory, historyEntry],
+          pendingCelebration: {
+            type: 'leaderboard',
+            rank: prize.rank,
+            reward_usd: prize.usd,
+            reward_ngn: prize.ngn,
+            xpEarned: Number(lbD.xp_this_period || 0),
+            multiplierCount: updatedWins,
+            multiplierText: `${updatedWins}X Top Leaderboard Winner`,
+            timestamp: Date.now()
+          }
+        });
+
+        // Record wallet transaction receipt
+        const txRef = doc(collection(db, 'wallet_transactions'));
+        batch.set(txRef, {
+          user_id: uId,
+          type: 'credit',
+          category: 'leaderboard_prize',
+          title: `Rank #${prize.rank} Leaderboard Season Prize`,
+          amount_usd: prize.usd,
+          amount_ngn: prize.ngn,
+          period_id: periodId,
+          created_at: serverTimestamp()
+        });
+
+        // In-app notification
+        const notifRef = doc(collection(db, 'notifications'));
+        batch.set(notifRef, {
+          user_id: uId,
+          type: 'reward',
+          title: '🏆 Top 3 Season Leaderboard Winner!',
+          message: `Congratulations! You placed #${prize.rank} on the Monthly Leaderboard with ${lbD.xp_this_period || 0} XP. You received $${prize.usd} (₦${prize.ngn.toLocaleString('en-NG')}) in your wallet + an active 30-Day 15% Affiliate Commission Boost!`,
+          read: false,
+          created_at: serverTimestamp()
+        });
+
+        settledCount++;
+      }
+
+      await batch.commit();
+      showToast(`🏆 Successfully settled Season Leaderboard! Top ${settledCount} winners credited & boosted.`, 'success');
+      loadAllAdminData();
+    } catch (err) {
+      console.error('Error settling leaderboard:', err);
+      showToast('Settlement failed: ' + err.message, 'error');
+    } finally {
+      setSettlingLeaderboard(false);
+    }
+  };
+
+  // Grant 30-Day Temporal Affiliate Boost (Community Manager / Admin action)
+  const handleGrantAffiliateBoost = async (u) => {
+    if (!u) return;
+    const name = `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email;
+    if (!window.confirm(`Grant 30-Day 15% Affiliate Commission Boost to ${name}?`)) {
+      return;
+    }
+    try {
+      let boostBaseTime = Date.now();
+      if (u.affiliateBoostExpiresAt) {
+        const currExp = u.affiliateBoostExpiresAt.toDate
+          ? u.affiliateBoostExpiresAt.toDate()
+          : new Date(u.affiliateBoostExpiresAt);
+        if (currExp && !isNaN(currExp.getTime()) && currExp.getTime() > boostBaseTime) {
+          boostBaseTime = currExp.getTime();
+        }
+      }
+      const newBoostExpiresAt = new Date(boostBaseTime + 30 * 24 * 60 * 60 * 1000);
+
+      await updateDoc(doc(db, 'users', u.id), {
+        affiliateBoostExpiresAt: newBoostExpiresAt.toISOString(),
+        affiliate_boost_granted_by: adminUser?.email || 'admin',
+        affiliate_boost_granted_at: serverTimestamp(),
+        updated_at: serverTimestamp()
+      });
+
+      await addDoc(collection(db, 'notifications'), {
+        user_id: u.id,
+        type: 'personal',
+        title: '🔥 30-Day 15% Affiliate Commission Boost Granted!',
+        message: 'A Community Manager has granted your account a temporal Level 2 Ambassador upgrade! You will earn 15% commission on all direct career enrollments for the next 30 days.',
+        read: false,
+        created_at: serverTimestamp()
+      });
+
+      showToast(`🔥 30-day 15% Affiliate boost granted to ${name}!`, 'success');
+      loadAllAdminData();
+    } catch (err) {
+      showToast('Error granting boost: ' + err.message, 'error');
+    }
+  };
+
   // Open User Edit Modal
   const handleOpenUserModal = (u) => {
     setSelectedUser(u);
@@ -341,6 +522,7 @@ export default function AdminDashboardClient() {
       admin_role: u.admin_role || '',
       account_type: u.account_type || 'sofian',
       affiliate_tier: u.affiliate_tier || 'newbie',
+      affiliateBaseTier: u.affiliateBaseTier || (u.affiliate_tier === 'ambassador' ? 'LEVEL_3' : u.affiliate_tier === 'affiliate' ? 'LEVEL_2' : 'LEVEL_1'),
       is_premium: !!u.is_premium,
       bypass_foundation: !!u.bypass_foundation,
       foundation_complete: !!u.foundation_complete,
@@ -357,12 +539,15 @@ export default function AdminDashboardClient() {
     try {
       const primaryRole = userRoleForm.role;
       const adminRole = userRoleForm.admin_role || null;
+      const baseTier = userRoleForm.affiliateBaseTier || (userRoleForm.affiliate_tier === 'ambassador' ? 'LEVEL_3' : userRoleForm.affiliate_tier === 'affiliate' ? 'LEVEL_2' : 'LEVEL_1');
 
       await updateDoc(doc(db, 'users', selectedUser.id), {
         role: primaryRole,
         admin_role: adminRole,
         account_type: userRoleForm.account_type,
-        affiliate_tier: userRoleForm.affiliate_tier,
+        affiliate_tier: baseTier === 'LEVEL_3' ? 'ambassador' : baseTier === 'LEVEL_2' ? 'affiliate' : 'newbie',
+        affiliateBaseTier: baseTier,
+        affiliate_level: baseTier === 'LEVEL_3' ? 3 : baseTier === 'LEVEL_2' ? 2 : 1,
         is_premium: userRoleForm.is_premium,
         bypass_foundation: userRoleForm.bypass_foundation,
         foundation_complete: userRoleForm.foundation_complete,
@@ -422,6 +607,35 @@ export default function AdminDashboardClient() {
         graded_by: adminUser.email,
         graded_at: serverTimestamp()
       });
+
+      // If approved deliverable is a bounty, increment bountyWinsCount and queue celebration
+      if (gradePassed && (selectedSub.type === 'bounty' || selectedSub.bounty_id) && selectedSub.user_id) {
+        try {
+          const winnerRef = doc(db, 'users', selectedSub.user_id);
+          const winnerSnap = await getDoc(winnerRef);
+          const winnerData = winnerSnap.exists() ? winnerSnap.data() : {};
+          const currentBountyWins = (Number(winnerData.bountyWinsCount || winnerData.bounty_wins_count || 0)) + 1;
+          const rewardUsd = Number(selectedSub.reward_usd || 100);
+          const rewardNgn = rewardUsd * Number(platformSettings.usd_to_ngn_rate || 1500);
+
+          await updateDoc(winnerRef, {
+            bountyWinsCount: currentBountyWins,
+            bounty_wins_count: currentBountyWins,
+            wallet_balance: increment(rewardNgn),
+            pendingCelebration: {
+              type: 'bounty',
+              title: selectedSub.bounty_title || 'Web3 Engineering Bounty',
+              reward_usd: rewardUsd,
+              reward_ngn: rewardNgn,
+              multiplierCount: currentBountyWins,
+              multiplierText: `${currentBountyWins}X Bounty Winner`,
+              timestamp: Date.now()
+            }
+          });
+        } catch (bountyErr) {
+          console.warn('Could not update bounty winner counts:', bountyErr);
+        }
+      }
 
       showToast('Submission graded and saved!', 'success');
       setShowGradingModal(false);
@@ -637,6 +851,32 @@ export default function AdminDashboardClient() {
           </div>
 
           <div>
+            <a
+              href="/dashboard"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem',
+                padding: '0.65rem 0.8rem',
+                borderRadius: 6,
+                border: '1px solid rgba(255,138,0,0.35)',
+                background: 'linear-gradient(135deg, rgba(255,138,0,0.15), rgba(20,40,255,0.15))',
+                color: '#FFB800',
+                fontSize: '0.78rem',
+                fontWeight: 700,
+                textDecoration: 'none',
+                width: '100%',
+                marginBottom: '0.6rem',
+                boxShadow: '0 2px 10px rgba(255,138,0,0.15)',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+              title="Return to User Dashboard"
+            >
+              <span style={{ fontSize: '1rem' }}>🎓</span>
+              {sidebarExpanded && <span>User Dashboard</span>}
+            </a>
+
             <button
               onClick={handleLogout}
               style={{
@@ -663,7 +903,7 @@ export default function AdminDashboardClient() {
         {/* MAIN WORKSPACE */}
         <main style={{ flex: 1, padding: '2rem', overflowX: 'hidden' }}>
           {/* HEADER STRIP */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
             <div>
               <h1 style={{ fontSize: '1.4rem', fontWeight: 800 }}>
                 {activePanel.toUpperCase()} CONTROL PANEL
@@ -673,21 +913,44 @@ export default function AdminDashboardClient() {
               </p>
             </div>
 
-            <button
-              onClick={loadAllAdminData}
-              style={{
-                background: 'rgba(20,40,255,0.15)',
-                border: '1px solid rgba(20,40,255,0.3)',
-                color: '#6b8cff',
-                borderRadius: 6,
-                padding: '0.45rem 1rem',
-                fontSize: '0.74rem',
-                fontWeight: 600,
-                cursor: 'pointer'
-              }}
-            >
-              ↻ Refresh Data
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <a
+                href="/dashboard"
+                style={{
+                  background: 'linear-gradient(135deg, #FF8A00, #E07800)',
+                  color: '#fff',
+                  border: 'none',
+                  padding: '0.48rem 1.15rem',
+                  borderRadius: 6,
+                  fontWeight: 700,
+                  fontSize: '0.78rem',
+                  textDecoration: 'none',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  boxShadow: '0 2px 10px rgba(255,138,0,0.35)',
+                  cursor: 'pointer'
+                }}
+              >
+                <span>🎓</span> Return to User Dashboard →
+              </a>
+
+              <button
+                onClick={loadAllAdminData}
+                style={{
+                  background: 'rgba(20,40,255,0.15)',
+                  border: '1px solid rgba(20,40,255,0.3)',
+                  color: '#6b8cff',
+                  borderRadius: 6,
+                  padding: '0.48rem 1rem',
+                  fontSize: '0.74rem',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                ↻ Refresh Data
+              </button>
+            </div>
           </div>
 
           {/* PANEL 1: OVERVIEW */}
@@ -748,6 +1011,114 @@ export default function AdminDashboardClient() {
                   >
                     Manage Sofian Roles & VIPs →
                   </button>
+                </div>
+              </div>
+
+              {/* Monthly Season Settlement & Rewards Podium */}
+              <div style={{ background: '#0D1526', border: '1px solid rgba(255,184,0,0.3)', borderRadius: 10, padding: '1.5rem', marginTop: '1.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.8rem', marginBottom: '1rem' }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span style={{ fontSize: '1.2rem' }}>🏆</span>
+                      <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#FFB800', margin: 0 }}>
+                        Monthly Season Leaderboard Settlement & Rewards
+                      </h3>
+                    </div>
+                    <p style={{ fontSize: '0.74rem', color: 'rgba(200,215,240,0.7)', marginTop: '0.2rem' }}>
+                      Super Admin &amp; Community Manager authority. Rewards Top 3 podium winners with cash, increments cumulative multiplier counters (+1), grants a 30-Day Affiliate Boost (+1 Tier), and triggers shareable Flex Cards.
+                    </p>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
+                    <button
+                      onClick={() => {
+                        setActivePanel('settings');
+                        setSettingsSubTab('pricing');
+                      }}
+                      style={{
+                        background: 'rgba(200,215,240,0.08)',
+                        border: '1px solid rgba(200,215,240,0.2)',
+                        color: 'rgba(200,215,240,0.85)',
+                        borderRadius: 6,
+                        padding: '0.55rem 0.9rem',
+                        fontSize: '0.74rem',
+                        fontWeight: 600,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      ⚙️ Modify Prize Rates
+                    </button>
+                    <button
+                      onClick={handleSettleLeaderboard}
+                      disabled={settlingLeaderboard}
+                      style={{
+                        background: settlingLeaderboard ? 'rgba(255,138,0,0.4)' : 'linear-gradient(135deg, #FF8A00, #E07800)',
+                        border: 'none',
+                        color: '#fff',
+                        borderRadius: 6,
+                        padding: '0.55rem 1.25rem',
+                        fontSize: '0.76rem',
+                        fontWeight: 800,
+                        cursor: settlingLeaderboard ? 'not-allowed' : 'pointer',
+                        boxShadow: '0 4px 16px rgba(255,138,0,0.25)',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.4rem'
+                      }}
+                    >
+                      {settlingLeaderboard ? '⏳ Settling Podium...' : '🏆 Settle Top 3 Podium & Credit Rewards'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Top 3 Standings Preview */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem', marginTop: '1.25rem' }}>
+                  {[
+                    { rank: 1, label: '1st Place Winner', prizeUsd: platformSettings.leaderboard_prize_1st ?? 5, badgeColor: '#fbbf24', icon: '🥇' },
+                    { rank: 2, label: '2nd Place Winner', prizeUsd: platformSettings.leaderboard_prize_2nd ?? 3, badgeColor: '#38bdf8', icon: '🥈' },
+                    { rank: 3, label: '3rd Place Winner', prizeUsd: platformSettings.leaderboard_prize_3rd ?? 2, badgeColor: '#34d399', icon: '🥉' }
+                  ].map((podium, pIdx) => {
+                    const entry = leaderboardEntries[pIdx];
+                    const prizeNgn = podium.prizeUsd * (platformSettings.usd_to_ngn_rate || 1500);
+                    return (
+                      <div
+                        key={podium.rank}
+                        style={{
+                          background: '#080E1A',
+                          border: `1px solid ${podium.badgeColor}40`,
+                          borderRadius: 8,
+                          padding: '1rem',
+                          position: 'relative'
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                          <span style={{ fontSize: '0.72rem', fontWeight: 800, color: podium.badgeColor }}>
+                            {podium.icon} {podium.label}
+                          </span>
+                          <span style={{ fontSize: '0.7rem', color: '#10b981', fontWeight: 700 }}>
+                            ${podium.prizeUsd} (₦{prizeNgn.toLocaleString('en-NG')})
+                          </span>
+                        </div>
+                        {entry ? (
+                          <div>
+                            <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#fff' }}>
+                              {entry.first_name || 'Sofian'} {entry.last_initial || ''}
+                            </div>
+                            <div style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.65)', marginTop: '0.2rem' }}>
+                              Monthly XP: <strong style={{ color: '#FF8A00' }}>{Number(entry.xp_this_period || 0).toLocaleString()} XP</strong>
+                            </div>
+                            <div style={{ fontSize: '0.66rem', color: '#38bdf8', marginTop: '0.25rem' }}>
+                              + 30-Day 15% Affiliate Boost &amp; Multiplier Counter
+                            </div>
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: '0.74rem', color: 'rgba(200,215,240,0.45)', fontStyle: 'italic', padding: '0.4rem 0' }}>
+                            Awaiting student to reach Rank #{podium.rank}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -864,7 +1235,13 @@ export default function AdminDashboardClient() {
                       const name = `${u.first_name || ''} ${u.last_name || ''}`.trim() || 'Sofian';
                       return (
                         <tr key={u.id} style={{ borderBottom: '1px solid rgba(200,215,240,0.06)' }}>
-                          <td style={{ padding: '0.6rem', fontWeight: 600 }}>{name}</td>
+                          <td style={{ padding: '0.6rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', flexWrap: 'wrap' }}>
+                              <span style={{ fontWeight: 600 }}>{name}</span>
+                              <WinnerMultiplierBadge type="leaderboard" count={u.leaderboardWinsCount || u.leaderboard_wins_count || 0} size="sm" />
+                              <WinnerMultiplierBadge type="bounty" count={u.bountyWinsCount || u.bounty_wins_count || 0} size="sm" />
+                            </div>
+                          </td>
                           <td style={{ padding: '0.6rem', color: 'rgba(200,215,240,0.7)' }}>{u.email}</td>
                           <td style={{ padding: '0.6rem' }}>
                             <span style={{
@@ -888,6 +1265,22 @@ export default function AdminDashboardClient() {
                           <td style={{ padding: '0.6rem' }}>{u.node_label || u.chapter_id || '—'}</td>
                           <td style={{ padding: '0.6rem', textAlign: 'right' }}>
                                     <div style={{ display: 'inline-flex', gap: '0.4rem', alignItems: 'center' }}>
+                                      <button
+                                        onClick={() => handleGrantAffiliateBoost(u)}
+                                        title="Grant 30-Day 15% Affiliate Commission Boost"
+                                        style={{
+                                          background: 'rgba(255,138,0,0.18)',
+                                          border: '1px solid rgba(255,138,0,0.4)',
+                                          color: '#FFB800',
+                                          borderRadius: 4,
+                                          padding: '0.25rem 0.55rem',
+                                          fontSize: '0.7rem',
+                                          fontWeight: 700,
+                                          cursor: 'pointer'
+                                        }}
+                                      >
+                                        🔥 Boost
+                                      </button>
                                       <button
                                         onClick={() => handleOpenUserModal(u)}
                                         style={{
@@ -1796,6 +2189,64 @@ export default function AdminDashboardClient() {
                           style={{ width: '100%', background: '#080E1A', border: '1px solid rgba(20,40,255,0.25)', borderRadius: 6, padding: '0.55rem', color: '#fff', fontSize: '0.78rem', marginTop: 4 }}
                         />
                       </div>
+
+                      {/* Super Admin Configurable Leaderboard Season Rewards */}
+                      <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(200,215,240,0.1)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.3rem' }}>
+                          <span style={{ fontSize: '1rem' }}>🏆</span>
+                          <strong style={{ fontSize: '0.82rem', color: '#FFB800' }}>Monthly Season Leaderboard Rewards (Top 3)</strong>
+                        </div>
+                        <p style={{ fontSize: '0.68rem', color: 'rgba(200,215,240,0.6)', marginBottom: '0.8rem' }}>
+                          Customizable prize pool for monthly season podium finishes. Credited to student wallets upon settlement.
+                        </p>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.6rem', marginBottom: '0.8rem' }}>
+                          <div>
+                            <label style={{ fontSize: '0.68rem', color: '#fbbf24', fontWeight: 700 }}>🥇 1st Place ($)</label>
+                            <input
+                              type="number"
+                              min={0}
+                              value={platformSettings.leaderboard_prize_1st ?? 5}
+                              onChange={(e) => setPlatformSettings({ ...platformSettings, leaderboard_prize_1st: Number(e.target.value) })}
+                              style={{ width: '100%', background: '#080E1A', border: '1px solid rgba(251,191,36,0.4)', borderRadius: 6, padding: '0.5rem', color: '#fff', fontSize: '0.76rem', marginTop: 3 }}
+                            />
+                          </div>
+                          <div>
+                            <label style={{ fontSize: '0.68rem', color: '#38bdf8', fontWeight: 700 }}>🥈 2nd Place ($)</label>
+                            <input
+                              type="number"
+                              min={0}
+                              value={platformSettings.leaderboard_prize_2nd ?? 3}
+                              onChange={(e) => setPlatformSettings({ ...platformSettings, leaderboard_prize_2nd: Number(e.target.value) })}
+                              style={{ width: '100%', background: '#080E1A', border: '1px solid rgba(56,189,248,0.4)', borderRadius: 6, padding: '0.5rem', color: '#fff', fontSize: '0.76rem', marginTop: 3 }}
+                            />
+                          </div>
+                          <div>
+                            <label style={{ fontSize: '0.68rem', color: '#34d399', fontWeight: 700 }}>🥉 3rd Place ($)</label>
+                            <input
+                              type="number"
+                              min={0}
+                              value={platformSettings.leaderboard_prize_3rd ?? 2}
+                              onChange={(e) => setPlatformSettings({ ...platformSettings, leaderboard_prize_3rd: Number(e.target.value) })}
+                              style={{ width: '100%', background: '#080E1A', border: '1px solid rgba(52,211,153,0.4)', borderRadius: 6, padding: '0.5rem', color: '#fff', fontSize: '0.76rem', marginTop: 3 }}
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label style={{ fontSize: '0.68rem', color: 'rgba(200,215,240,0.7)' }}>USD to NGN Settlement Rate (₦/$)</label>
+                          <input
+                            type="number"
+                            min={100}
+                            value={platformSettings.usd_to_ngn_rate ?? 1500}
+                            onChange={(e) => setPlatformSettings({ ...platformSettings, usd_to_ngn_rate: Number(e.target.value) })}
+                            style={{ width: '100%', background: '#080E1A', border: '1px solid rgba(20,40,255,0.25)', borderRadius: 6, padding: '0.5rem', color: '#fff', fontSize: '0.76rem', marginTop: 3 }}
+                          />
+                          <span style={{ fontSize: '0.65rem', color: 'rgba(200,215,240,0.5)', marginTop: 2, display: 'block' }}>
+                            Calculated settlement: 1st: ₦{((platformSettings.leaderboard_prize_1st ?? 5) * (platformSettings.usd_to_ngn_rate ?? 1500)).toLocaleString('en-NG')} • 2nd: ₦{((platformSettings.leaderboard_prize_2nd ?? 3) * (platformSettings.usd_to_ngn_rate ?? 1500)).toLocaleString('en-NG')} • 3rd: ₦{((platformSettings.leaderboard_prize_3rd ?? 2) * (platformSettings.usd_to_ngn_rate ?? 1500)).toLocaleString('en-NG')}
+                          </span>
+                        </div>
+                      </div>
                       <button
                         type="submit"
                         style={{ alignSelf: 'flex-start', background: '#1428FF', color: '#fff', border: 'none', borderRadius: 6, padding: '0.5rem 1rem', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', marginTop: 6 }}
@@ -1899,16 +2350,63 @@ export default function AdminDashboardClient() {
               </div>
 
               <div>
-                <label style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)' }}>Affiliate Program Level</label>
+                <label style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.7)' }}>Permanent Affiliate Base Tier</label>
                 <select
-                  value={userRoleForm.affiliate_tier || 'newbie'}
-                  onChange={(e) => setUserRoleForm({ ...userRoleForm, affiliate_tier: e.target.value })}
+                  value={userRoleForm.affiliateBaseTier || (userRoleForm.affiliate_tier === 'ambassador' ? 'LEVEL_3' : userRoleForm.affiliate_tier === 'affiliate' ? 'LEVEL_2' : 'LEVEL_1')}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setUserRoleForm({
+                      ...userRoleForm,
+                      affiliateBaseTier: val,
+                      affiliate_tier: val === 'LEVEL_3' ? 'ambassador' : val === 'LEVEL_2' ? 'affiliate' : 'newbie'
+                    });
+                  }}
                   style={{ width: '100%', background: '#080E1A', border: '1px solid rgba(20,40,255,0.25)', borderRadius: 6, padding: '0.55rem', color: '#fff', fontSize: '0.8rem', marginTop: 4 }}
                 >
-                  <option value="newbie">Level 1 — Newbie (5% Direct)</option>
-                  <option value="affiliate">Level 2 — Affiliate (10% Direct)</option>
-                  <option value="ambassador">Level 3 — Ambassador (10% Direct + 5% Indirect)</option>
+                  <option value="LEVEL_1">⭐ Level 1 — Newbie (5% Direct)</option>
+                  <option value="LEVEL_2">🎯 Level 2 — Affiliate (10% Direct)</option>
+                  <option value="LEVEL_3">🏆 Level 3 — Ambassador (10% Direct + 5% Indirect)</option>
                 </select>
+              </div>
+
+              {/* Honors & Multipliers Status */}
+              <div style={{ background: '#080E1A', border: '1px solid rgba(200,215,240,0.15)', borderRadius: 8, padding: '0.8rem' }}>
+                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'rgba(200,215,240,0.7)', marginBottom: '0.4rem' }}>
+                  🏆 Honors &amp; Multipliers
+                </div>
+                <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '0.6rem' }}>
+                  <WinnerMultiplierBadge type="leaderboard" count={selectedUser.leaderboardWinsCount || selectedUser.leaderboard_wins_count || 0} size="sm" />
+                  <WinnerMultiplierBadge type="bounty" count={selectedUser.bountyWinsCount || selectedUser.bounty_wins_count || 0} size="sm" />
+                  {(!selectedUser.leaderboardWinsCount && !selectedUser.bountyWinsCount && !selectedUser.leaderboard_wins_count && !selectedUser.bounty_wins_count) && (
+                    <span style={{ fontSize: '0.68rem', color: 'rgba(200,215,240,0.45)', fontStyle: 'italic' }}>
+                      No podium wins or bounties recorded yet.
+                    </span>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.5rem', borderTop: '1px solid rgba(200,215,240,0.08)' }}>
+                  <div style={{ fontSize: '0.68rem', color: selectedUser.affiliateBoostExpiresAt && new Date(selectedUser.affiliateBoostExpiresAt.toDate ? selectedUser.affiliateBoostExpiresAt.toDate() : selectedUser.affiliateBoostExpiresAt) > new Date() ? '#FF8A00' : 'rgba(200,215,240,0.6)', fontWeight: 700 }}>
+                    {selectedUser.affiliateBoostExpiresAt && new Date(selectedUser.affiliateBoostExpiresAt.toDate ? selectedUser.affiliateBoostExpiresAt.toDate() : selectedUser.affiliateBoostExpiresAt) > new Date()
+                      ? '🔥 30-Day 15% Boost Active'
+                      : '⚡ Standard Affiliate Commission'}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleGrantAffiliateBoost(selectedUser)}
+                    style={{
+                      background: 'rgba(255,138,0,0.2)',
+                      border: '1px solid #FF8A00',
+                      color: '#FFB800',
+                      borderRadius: 4,
+                      padding: '0.25rem 0.6rem',
+                      fontSize: '0.68rem',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    + Grant / Extend 30 Days
+                  </button>
+                </div>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', margin: '0.5rem 0' }}>

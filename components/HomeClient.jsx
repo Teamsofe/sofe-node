@@ -22,7 +22,7 @@ export default function HomeClient() {
     },
     {
       q: 'How does the affiliate program work?',
-      a: 'Once registered, you get a unique referral link. Earn 10% at Level 1 (Newbie) and 15% at Level 2 (Ambassador) on every successful signup. Commissions are paid directly to your Nigerian bank account via Paystack.',
+      a: 'Once registered, you get a unique referral link. Earn 5% at Level 1 (Newbie), 10% at Level 2 (Affiliate), and up to 10% + 5% at Level 3 (Ambassador) on every successful signup. Commissions are paid directly to your Nigerian bank account via Paystack.',
     },
     {
       q: 'How can my brand partner with Sofe Node?',

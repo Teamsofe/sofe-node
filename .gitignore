@@ -28,6 +28,9 @@ firebase-debug.*.log
 *.bak
 * - Copy.*
 /scratch/node_modules/
+/public/test_*.png
+/public/tutor_opened.png
+/public/videos/
 
 .env.local
 *firebase-adminsdk*.json

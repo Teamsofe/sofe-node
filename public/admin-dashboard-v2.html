@@ -82,6 +82,9 @@
   </nav>
 
   <div class="sb-bottom">
+    <a href="/dashboard" class="sb-item" onclick="if(window.top){window.top.location.href='/dashboard';return false;}" style="color:#FFB800;text-decoration:none;display:flex;align-items:center;gap:0.6rem;padding:0.6rem 0.8rem;border-radius:6px;background:rgba(255,138,0,0.12);border:1px solid rgba(255,138,0,0.3);margin-bottom:0.5rem;" title="Return to User Dashboard">
+      <span class="sb-icon">🎓</span><span class="sb-label" style="font-weight:700;">User Dashboard</span>
+    </a>
     <button class="sb-item" onclick="handleLogout()">
       <span class="sb-icon">↩</span><span class="sb-label">Logout</span>
     </button>
@@ -94,6 +97,9 @@
   <div class="topbar">
     <span class="topbar-title" id="topbarTitle">Dashboard</span>
     <div class="topbar-right">
+      <a href="/dashboard" class="btn btn-primary btn-sm" onclick="if(window.top){window.top.location.href='/dashboard';return false;}" style="background:linear-gradient(135deg,#FF8A00,#E07800);border:none;color:#fff;font-weight:700;display:inline-flex;align-items:center;gap:0.4rem;padding:0.4rem 0.85rem;border-radius:6px;text-decoration:none;font-size:0.75rem;box-shadow:0 2px 10px rgba(255,138,0,0.3);margin-right:0.6rem;cursor:pointer;">
+        <span>🎓</span> Return to User Dashboard →
+      </a>
       <span class="topbar-role-badge" id="topbarRoleBadge">—</span>
       <div class="topbar-avatar" id="adminAvatar">A</div>
     </div>
@@ -116,6 +122,61 @@
       <div class="stat-card purple"><div class="stat-label">Badges awarded</div><div class="stat-num" id="statBadges">—</div></div>
       <div class="stat-card"><div class="stat-label">Blog posts</div><div class="stat-num" id="statPosts">—</div></div>
     </div>
+
+    <!-- Monthly Season Settlement & Rewards Podium Card -->
+    <div class="card" style="border: 1px solid rgba(255,184,0,0.4); background: linear-gradient(135deg, rgba(255,138,0,0.08), rgba(13,21,38,0.95)); margin-bottom: 1.5rem; padding: 1.35rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.8rem; margin-bottom: 1.1rem;">
+        <div>
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span style="font-size: 1.3rem;">🏆</span>
+            <span style="font-size: 1rem; font-weight: 800; color: #FFB800;">Monthly Season Leaderboard Settlement &amp; Rewards</span>
+          </div>
+          <div style="font-size: 0.73rem; color: var(--muted); margin-top: 0.25rem;">
+            Super Admin &amp; Community Manager authority. Rewards Top 3 podium winners with cash ($5, $3, $2 / ₦ equivalent), increments cumulative multiplier counters (+1), grants a 30-Day Affiliate Boost (+1 Tier), and triggers shareable Flex Cards.
+          </div>
+        </div>
+        <div style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;">
+          <button class="btn btn-ghost btn-sm" onclick="switchSettingsTab('platform', document.querySelector('#settingsSubTabs button:first-child')); if(window.showPanel) window.showPanel('settings', document.querySelector('[data-panel="settings"]'));" style="border: 1px solid rgba(200,215,240,0.25);">
+            ⚙️ Modify Prize Rates
+          </button>
+          <button class="btn btn-primary btn-sm" id="btnSettleLeaderboard" onclick="settleLeaderboardPodium()" style="background: linear-gradient(135deg, #FF8A00, #E07800); border: none; font-weight: 700; box-shadow: 0 4px 15px rgba(255,138,0,0.35);">
+            🏆 Settle Top 3 Podium &amp; Credit Rewards
+          </button>
+        </div>
+      </div>
+
+      <!-- Live Top 3 Podium Winners Grid -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;" id="leaderboardPodiumCards">
+        <div style="background: rgba(255,184,0,0.08); border: 1px solid rgba(255,184,0,0.3); border-radius: 8px; padding: 0.85rem 1rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-weight: 800; font-size: 0.82rem; color: #FFB800;">🥇 1st Place Winner</span>
+            <span style="font-weight: 800; font-size: 0.82rem; color: #10b981;" id="podiumPrize1st">$5 (₦7,500)</span>
+          </div>
+          <div style="font-size: 0.72rem; color: var(--muted); margin-top: 0.35rem;" id="podiumWinner1st">
+            Loading standings…
+          </div>
+        </div>
+        <div style="background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.3); border-radius: 8px; padding: 0.85rem 1rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-weight: 800; font-size: 0.82rem; color: #38bdf8;">🥈 2nd Place Winner</span>
+            <span style="font-weight: 800; font-size: 0.82rem; color: #10b981;" id="podiumPrize2nd">$3 (₦4,500)</span>
+          </div>
+          <div style="font-size: 0.72rem; color: var(--muted); margin-top: 0.35rem;" id="podiumWinner2nd">
+            Loading standings…
+          </div>
+        </div>
+        <div style="background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.3); border-radius: 8px; padding: 0.85rem 1rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-weight: 800; font-size: 0.82rem; color: #34d399;">🥉 3rd Place Winner</span>
+            <span style="font-weight: 800; font-size: 0.82rem; color: #10b981;" id="podiumPrize3rd">$2 (₦3,000)</span>
+          </div>
+          <div style="font-size: 0.72rem; color: var(--muted); margin-top: 0.35rem;" id="podiumWinner3rd">
+            Loading standings…
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
       <div class="card"><div class="card-title">Recent activity</div><div id="activityFeed"><div class="empty-state"><div class="empty-state-text">Connect Firebase to load activity</div></div></div></div>
       <div class="card"><div class="card-title">Pending bank transfers</div><div id="pendingOverview"><div class="empty-state"><div class="empty-state-text">No pending approvals</div></div></div></div>
@@ -829,6 +890,24 @@
         </div>
       </div>
 
+
+        <!-- Temporal 30-Day Affiliate Boost Card (Community Manager & Super Admin) -->
+        <div class="card" style="border: 1px solid rgba(255,138,0,0.35); background: rgba(255,138,0,0.04); margin-top: 1.2rem;">
+          <div class="card-title" style="color: #FFB800;">🔥 Grant 30-Day Temporal Affiliate Boost</div>
+          <div style="font-size: 0.7rem; color: var(--muted); margin-bottom: 0.85rem; line-height: 1.5;">
+            Community Manager &amp; Super Admin privilege. Upgrades student's affiliate tier by 1 Level for 30 days. Level 1 Newbie (5%) upgrades to Level 2 Affiliate (10%). Level 2 Affiliate (10%) upgrades to Level 3 Ambassador (10% + 5%). Reverts automatically after 30 days.
+          </div>
+          <div class="form-group" style="margin-bottom: 0.85rem;">
+            <label class="form-label">Student (Search Name, Email, or UID)</label>
+            <input class="form-input" id="boostStudentSearch" placeholder="Type name or email…" oninput="searchStudentForBoost(this.value)" />
+            <div id="boostStudentResults" style="display:none; background:var(--deep); border:1px solid var(--border); border-radius:6px; margin-top:.3rem; max-height:160px; overflow-y:auto;"></div>
+            <div id="boostSelectedStudent" style="display:none; background:rgba(255,138,0,0.12); border:1px solid rgba(255,138,0,0.3); border-radius:6px; padding:.6rem .85rem; margin-top:.3rem; font-size:.78rem; color:var(--white); align-items:center; justify-content:space-between;"></div>
+          </div>
+          <button class="btn btn-primary" id="btnGrantBoost" style="width:100%; background: linear-gradient(135deg, #FF8A00, #E07800); border:none; font-weight:700;" onclick="submitTemporalAffiliateBoost()">
+            🔥 Grant 30-Day Tier Upgrade
+          </button>
+        </div>
+
       <!-- Tier reference -->
       <div class="card" style="margin-top:1.2rem;">
         <div class="card-title">XP tier reference</div>
@@ -1084,6 +1163,34 @@
           </label>
         </div>
         <button class="btn btn-primary btn-sm" onclick="saveSettings('cbie')">Save CBIE settings</button>
+      </div>
+
+
+      <!-- Leaderboard Season Rewards Config (Super Admin) -->
+      <div class="card" style="margin-top:1.2rem; border: 1px solid rgba(255,184,0,0.3);">
+        <div class="card-title" style="color: #FFB800;">🏆 Monthly Leaderboard Season Rewards &amp; Prizes (Super Admin)</div>
+        <div style="font-size:.7rem; color:var(--muted); margin-bottom:.85rem; line-height: 1.5;">
+          Configure the baseline cash prizes awarded to the Top 3 winners at each monthly leaderboard settlement. These values are automatically converted to Naira using the active USD/NGN exchange rate.
+        </div>
+        <div class="form-grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:.85rem;margin-bottom:.85rem;">
+          <div class="form-group">
+            <label class="form-label">🥇 1st Place Prize ($ USD)</label>
+            <input class="form-input" id="settingPrize1st" type="number" min="0" placeholder="5" value="5" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">🥈 2nd Place Prize ($ USD)</label>
+            <input class="form-input" id="settingPrize2nd" type="number" min="0" placeholder="3" value="3" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">🥉 3rd Place Prize ($ USD)</label>
+            <input class="form-input" id="settingPrize3rd" type="number" min="0" placeholder="2" value="2" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">💱 USD to NGN Rate (₦)</label>
+            <input class="form-input" id="settingUsdRate" type="number" min="1" placeholder="1500" value="1500" />
+          </div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="saveLeaderboardRewardsSettings()">Save Leaderboard Rewards</button>
       </div>
 
       <!-- Bank account for CBIE bank transfer payments -->
@@ -2507,6 +2614,7 @@ function toggleSidebar() {
 // DATA LOADERS (stub — wire to Firebase)
 // ════════════════════════════════════════════════════
 async function loadOverview() {
+  if (typeof window.renderPodiumWinners === "function") window.renderPodiumWinners();
   try {
     const [usersSnap, enrolSnap, paymentsSnap, appsSnap, postsSnap] = await Promise.all([
       getDocs(collection(db, 'users')),
@@ -2792,6 +2900,7 @@ function filterXpLogTable() {
 }
 
 async function loadAdminLeaderboard() {
+  if (typeof window.renderPodiumWinners === "function") window.renderPodiumWinners();
   var listEl = document.getElementById('leaderboardList');
   var tierEl  = document.getElementById('tierDistribution');
   if (!listEl) return;
@@ -4215,6 +4324,17 @@ window.renderStudents = function() {
     if (s._isVerified) badges.push('<span class="badge badge-green" title="Email Verified">Verified</span>');
     else badges.push('<span class="badge badge-orange" title="Email Unverified">Unverified</span>');
     if (s._isActive) badges.push('<span class="badge badge-blue">Active</span>');
+    if (s.leaderboardWinsCount || s.leaderboard_wins_count) {
+      const lWins = s.leaderboardWinsCount || s.leaderboard_wins_count;
+      badges.push(`<span class="badge" style="background:rgba(255,184,0,0.18);color:#FFB800;border:1px solid rgba(255,184,0,0.45);font-weight:700;">🏆 ${lWins}X Top Winner</span>`);
+    }
+    if (s.bountyWinsCount || s.bounty_wins_count) {
+      const bWins = s.bountyWinsCount || s.bounty_wins_count;
+      badges.push(`<span class="badge" style="background:rgba(52,211,153,0.18);color:#34d399;border:1px solid rgba(52,211,153,0.45);font-weight:700;">🎯 ${bWins}X Bounty Winner</span>`);
+    }
+    if (s.affiliateBoostExpiresAt && new Date(s.affiliateBoostExpiresAt.toDate ? s.affiliateBoostExpiresAt.toDate() : s.affiliateBoostExpiresAt) > new Date()) {
+      badges.push('<span class="badge" style="background:rgba(255,138,0,0.22);color:#FF8A00;border:1px solid #FF8A00;font-weight:700;">🔥 Boost Active</span>');
+    }
 
     return `<tr>
       <td><code style="color:var(--orange);font-size:.7rem;">${sofId}</code></td>
@@ -4224,7 +4344,10 @@ window.renderStudents = function() {
       <td style="font-size:.75rem;color:var(--muted);">${joined}</td>
       <td><div>${xp} XP</div><div style="font-size:.65rem;color:var(--muted);">${tier}</div></td>
       <td><div style="display:flex;flex-wrap:wrap;gap:.25rem;">${badges.join(' ')}</div></td>
-      <td><button class="btn btn-sm btn-secondary" onclick="viewStudent('${s.uid || s.id}')">View</button></td>
+      <td>
+        <button class="btn btn-sm btn-secondary" onclick="viewStudent('${s.uid || s.id}')">View</button>
+        <button class="btn btn-sm" onclick="grantQuickBoost('${s.uid || s.id}')" style="background:rgba(255,138,0,0.18);border:1px solid #FF8A00;color:#FFB800;margin-left:0.25rem;padding:.2rem .45rem;font-size:.68rem;font-weight:700;" title="Grant 30-Day Boost">🔥 Boost</button>
+      </td>
     </tr>`;
   }).join('');
 };
@@ -5775,20 +5898,59 @@ window.declareBountyWinners = async function() {
           reviewed_at: serverTimestamp(),
         });
 
-        // Award XP to the winner
-        if (appData.user_id && prizeXp > 0) {
-          batch.update(doc(db, 'users', appData.user_id), {
-            xp_total: increment(prizeXp)
-          });
-          const xpRef = doc(collection(db, 'xp'));
-          batch.set(xpRef, {
+        // Award XP, increment bountyWinsCount, credit prize, and trigger pendingCelebration Flex Card
+        if (appData.user_id) {
+          const userRef = doc(db, 'users', appData.user_id);
+          const userUpdates = {
+            bountyWinsCount: increment(1),
+            bounty_wins_count: increment(1),
+            pendingCelebration: {
+              type: 'bounty',
+              title: bounty.title || 'Verified Protocol Bounty',
+              reward_ngn: prizeNgn || 0,
+              xpEarned: prizeXp || 0,
+              timestamp: Date.now()
+            }
+          };
+          if (prizeXp > 0) userUpdates.xp_total = increment(prizeXp);
+          if (prizeNgn > 0) userUpdates.wallet_balance = increment(prizeNgn);
+
+          batch.update(userRef, userUpdates);
+
+          if (prizeNgn > 0) {
+            const wTxRef = doc(collection(db, 'wallet_transactions'));
+            batch.set(wTxRef, {
+              user_id: appData.user_id,
+              type: 'credit',
+              category: 'bounty_prize',
+              title: `Bounty Winner Prize: ${bounty.title || 'Bounty'} (${rankLabel})`,
+              amount_ngn: prizeNgn,
+              bounty_id: bountyId,
+              created_at: serverTimestamp()
+            });
+          }
+
+          if (prizeXp > 0) {
+            const xpRef = doc(collection(db, 'xp'));
+            batch.set(xpRef, {
+              user_id: appData.user_id,
+              xp_earned: prizeXp,
+              source: 'bounty_winner',
+              bonus_label: `Bounty ${rankLabel}: ` + (bounty.title || 'Bounty'),
+              claimed_at: serverTimestamp(),
+              streak_day: 0,
+              bonus_xp: 0,
+            });
+          }
+
+          const notifRef = doc(collection(db, 'notifications'));
+          batch.set(notifRef, {
             user_id: appData.user_id,
-            xp_earned: prizeXp,
-            source: 'bounty_winner',
-            bonus_label: `Bounty ${rankLabel}: ` + (bounty.title || 'Bounty'),
-            claimed_at: serverTimestamp(),
-            streak_day: 0,
-            bonus_xp: 0,
+            type: 'reward',
+            title: '🎯 Bounty Winner Declared!',
+            message: `Congratulations! You were selected as a winner for "${bounty.title || 'Bounty'}" (${rankLabel})! You received ${prizeNgn > 0 ? '₦' + prizeNgn.toLocaleString('en-NG') + ' + ' : ''}${prizeXp} XP!`,
+            read: false,
+            created_at: serverTimestamp()
           });
         }
         winnersProcessed++;
@@ -5941,6 +6103,317 @@ function handleLogout() {
     window.location.replace('./admin-login.html');
   }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MONTHLY LEADERBOARD SETTLEMENT & PODIUM ENGINE
+// ═══════════════════════════════════════════════════════════════════════════
+window.renderPodiumWinners = async function() {
+  try {
+    let prize1st = 5, prize2nd = 3, prize3rd = 2, usdRate = 1500;
+    try {
+      const setDocSnap = await getDoc(doc(db, 'settings', 'platform'));
+      if (setDocSnap.exists()) {
+        const sData = setDocSnap.data();
+        if (sData.leaderboard_prize_1st !== undefined) prize1st = Number(sData.leaderboard_prize_1st);
+        if (sData.leaderboard_prize_2nd !== undefined) prize2nd = Number(sData.leaderboard_prize_2nd);
+        if (sData.leaderboard_prize_3rd !== undefined) prize3rd = Number(sData.leaderboard_prize_3rd);
+        if (sData.usd_to_ngn_rate !== undefined) usdRate = Number(sData.usd_to_ngn_rate);
+      }
+    } catch(e) {}
+
+    const elP1 = document.getElementById('podiumPrize1st');
+    const elP2 = document.getElementById('podiumPrize2nd');
+    const elP3 = document.getElementById('podiumPrize3rd');
+    if (elP1) elP1.textContent = `$${prize1st} (₦${(prize1st * usdRate).toLocaleString('en-NG')})`;
+    if (elP2) elP2.textContent = `$${prize2nd} (₦${(prize2nd * usdRate).toLocaleString('en-NG')})`;
+    if (elP3) elP3.textContent = `$${prize3rd} (₦${(prize3rd * usdRate).toLocaleString('en-NG')})`;
+
+    const inP1 = document.getElementById('settingPrize1st');
+    const inP2 = document.getElementById('settingPrize2nd');
+    const inP3 = document.getElementById('settingPrize3rd');
+    const inRate = document.getElementById('settingUsdRate');
+    if (inP1) inP1.value = prize1st;
+    if (inP2) inP2.value = prize2nd;
+    if (inP3) inP3.value = prize3rd;
+    if (inRate) inRate.value = usdRate;
+
+    const lbSnap = await getDocs(query(collection(db, 'leaderboard'), orderBy('xp_this_period', 'desc'), limit(3)));
+    const winners = lbSnap.docs.map(d => d.data());
+
+    const w1 = winners[0];
+    const w2 = winners[1];
+    const w3 = winners[2];
+
+    const elW1 = document.getElementById('podiumWinner1st');
+    const elW2 = document.getElementById('podiumWinner2nd');
+    const elW3 = document.getElementById('podiumWinner3rd');
+
+    if (elW1) elW1.innerHTML = w1 ? `<strong>${w1.first_name || 'Sofian'} ${w1.last_initial || ''}</strong> · ${w1.xp_this_period || 0} XP` : 'Awaiting student to reach Rank #1';
+    if (elW2) elW2.innerHTML = w2 ? `<strong>${w2.first_name || 'Sofian'} ${w2.last_initial || ''}</strong> · ${w2.xp_this_period || 0} XP` : 'Awaiting student to reach Rank #2';
+    if (elW3) elW3.innerHTML = w3 ? `<strong>${w3.first_name || 'Sofian'} ${w3.last_initial || ''}</strong> · ${w3.xp_this_period || 0} XP` : 'Awaiting student to reach Rank #3';
+  } catch(e) {
+    console.warn('Error loading podium winners:', e);
+  }
+};
+
+window.settleLeaderboardPodium = async function() {
+  if (!confirm('Execute Monthly Leaderboard Settlement?\n\nThis will atomically:\n1. Credit cash prizes to the Top 3 winners\' wallets ($5, $3, $2 / ₦ equivalent)\n2. Increment their cumulative leaderboardWinsCount (+1)\n3. Grant an upgraded 30-Day Affiliate Commission Boost (+1 Tier)\n4. Unlock the "Top 3 Winner" shareable Flex Card on their dashboard')) {
+    return;
+  }
+
+  const btn = document.getElementById('btnSettleLeaderboard');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Settling rewards…'; }
+
+  try {
+    let prize1st = 5, prize2nd = 3, prize3rd = 2, usdRate = 1500;
+    try {
+      const setDocSnap = await getDoc(doc(db, 'settings', 'platform'));
+      if (setDocSnap.exists()) {
+        const sData = setDocSnap.data();
+        if (sData.leaderboard_prize_1st !== undefined) prize1st = Number(sData.leaderboard_prize_1st);
+        if (sData.leaderboard_prize_2nd !== undefined) prize2nd = Number(sData.leaderboard_prize_2nd);
+        if (sData.leaderboard_prize_3rd !== undefined) prize3rd = Number(sData.leaderboard_prize_3rd);
+        if (sData.usd_to_ngn_rate !== undefined) usdRate = Number(sData.usd_to_ngn_rate);
+      }
+    } catch(e) {}
+
+    const prizes = [
+      { rank: 1, usd: prize1st, ngn: Math.round(prize1st * usdRate) },
+      { rank: 2, usd: prize2nd, ngn: Math.round(prize2nd * usdRate) },
+      { rank: 3, usd: prize3rd, ngn: Math.round(prize3rd * usdRate) }
+    ];
+
+    const lbSnap = await getDocs(query(collection(db, 'leaderboard'), orderBy('xp_this_period', 'desc'), limit(3)));
+    if (lbSnap.empty) {
+      showToast('No active leaderboard entries found to settle.', 'error');
+      if (btn) { btn.disabled = false; btn.textContent = '🏆 Settle Top 3 Podium & Credit Rewards'; }
+      return;
+    }
+
+    const now = new Date();
+    const periodId = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
+    const winners = [];
+
+    let rankIdx = 0;
+    for (const d of lbSnap.docs) {
+      if (rankIdx >= 3) break;
+      const rank = rankIdx + 1;
+      const p = prizes[rankIdx];
+      const lbData = d.data();
+      const userId = d.id;
+
+      const userRef = doc(db, 'users', userId);
+      const userSnap = await getDoc(userRef);
+      const uData = userSnap.exists() ? userSnap.data() : {};
+
+      let boostBaseTime = Date.now();
+      if (uData.affiliateBoostExpiresAt) {
+        const currExp = uData.affiliateBoostExpiresAt.toDate
+          ? uData.affiliateBoostExpiresAt.toDate()
+          : new Date(uData.affiliateBoostExpiresAt);
+        if (currExp && !isNaN(currExp.getTime()) && currExp.getTime() > boostBaseTime) {
+          boostBaseTime = currExp.getTime();
+        }
+      }
+      const newBoostExpiresAt = new Date(boostBaseTime + 30 * 24 * 60 * 60 * 1000);
+      const updatedWins = (Number(uData.leaderboardWinsCount || uData.leaderboard_wins_count || 0)) + 1;
+
+      await updateDoc(userRef, {
+        wallet_balance: increment(p.ngn),
+        leaderboardWinsCount: updatedWins,
+        leaderboard_wins_count: updatedWins,
+        affiliateBoostExpiresAt: newBoostExpiresAt.toISOString(),
+        pendingCelebration: {
+          type: 'leaderboard',
+          rank: rank,
+          reward_usd: p.usd,
+          reward_ngn: p.ngn,
+          xpEarned: Number(lbData.xp_this_period || 0),
+          multiplierCount: updatedWins,
+          multiplierText: `${updatedWins}X Top Leaderboard Winner`,
+          timestamp: Date.now()
+        }
+      });
+
+      await addDoc(collection(db, 'wallet_transactions'), {
+        user_id: userId,
+        type: 'credit',
+        category: 'leaderboard_prize',
+        title: `Rank #${rank} Leaderboard Season Prize`,
+        amount_usd: p.usd,
+        amount_ngn: p.ngn,
+        period_id: periodId,
+        created_at: serverTimestamp()
+      });
+
+      await addDoc(collection(db, 'notifications'), {
+        user_id: userId,
+        type: 'reward',
+        title: '🏆 Top 3 Season Leaderboard Winner!',
+        message: `Congratulations! You placed #${rank} on the Monthly Leaderboard with ${lbData.xp_this_period || 0} XP. You received $${p.usd} (₦${p.ngn.toLocaleString('en-NG')}) in your wallet + an upgraded 30-Day Affiliate Boost!`,
+        read: false,
+        created_at: serverTimestamp()
+      });
+
+      winners.push(`${rank}. ${uData.first_name || 'Sofian'} (₦${p.ngn.toLocaleString('en-NG')})`);
+      rankIdx++;
+    }
+
+    showToast(`✓ Settled Top 3 Podium! Rewarded: ${winners.join(', ')}`, 'success');
+    window.renderPodiumWinners();
+    if (typeof loadAdminLeaderboard === 'function') loadAdminLeaderboard();
+  } catch (err) {
+    console.error('Error settling leaderboard:', err);
+    showToast('Settlement failed: ' + err.message, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🏆 Settle Top 3 Podium & Credit Rewards'; }
+  }
+};
+
+window.saveLeaderboardRewardsSettings = async function() {
+  const p1 = Number(document.getElementById('settingPrize1st')?.value || 5);
+  const p2 = Number(document.getElementById('settingPrize2nd')?.value || 3);
+  const p3 = Number(document.getElementById('settingPrize3rd')?.value || 2);
+  const rate = Number(document.getElementById('settingUsdRate')?.value || 1500);
+
+  try {
+    await updateDoc(doc(db, 'settings', 'platform'), {
+      leaderboard_prize_1st: p1,
+      leaderboard_prize_2nd: p2,
+      leaderboard_prize_3rd: p3,
+      usd_to_ngn_rate: rate,
+      updated_at: serverTimestamp()
+    });
+    showToast('✓ Leaderboard Season Rewards & Exchange Rate saved!', 'success');
+    window.renderPodiumWinners();
+  } catch(err) {
+    showToast('Failed to save settings: ' + err.message, 'error');
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+// COMMUNITY MANAGER TEMPORAL AFFILIATE BOOST
+// ═══════════════════════════════════════════════════════════════════════════
+window.searchStudentForBoost = function(q) {
+  const resEl = document.getElementById('boostStudentResults');
+  if (!resEl) return;
+  if (!q || q.length < 2) { resEl.style.display = 'none'; return; }
+  const term = q.toLowerCase().trim();
+  const pool = _allStudents || [];
+  const matches = pool.filter(s =>
+    (s.first_name && s.first_name.toLowerCase().includes(term)) ||
+    (s.last_name && s.last_name.toLowerCase().includes(term)) ||
+    (s.email && s.email.toLowerCase().includes(term)) ||
+    (s.id && s.id.toLowerCase().includes(term)) ||
+    (s.uid && s.uid.toLowerCase().includes(term))
+  ).slice(0, 6);
+
+  if (matches.length === 0) {
+    resEl.innerHTML = '<div style="padding:.5rem;font-size:.72rem;color:var(--muted);">No matching students found</div>';
+    resEl.style.display = 'block';
+    return;
+  }
+
+  resEl.innerHTML = matches.map(s => `
+    <div style="padding:.5rem .75rem;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.05);font-size:.74rem;" onclick="selectStudentForBoost('${s.uid || s.id}')">
+      <strong>${s.first_name || ''} ${s.last_name || ''}</strong> <span style="color:var(--muted);">(${s.email || s.id})</span>
+    </div>
+  `).join('');
+  resEl.style.display = 'block';
+};
+
+window.selectStudentForBoost = function(uid) {
+  const student = (_allStudents || []).find(s => (s.uid || s.id) === uid);
+  if (!student) return;
+  window._selectedBoostStudent = student;
+  const resEl = document.getElementById('boostStudentResults');
+  if (resEl) resEl.style.display = 'none';
+
+  const now = new Date();
+  let boostActive = false;
+  let daysLeft = 0;
+  if (student.affiliateBoostExpiresAt) {
+    const exp = student.affiliateBoostExpiresAt.toDate ? student.affiliateBoostExpiresAt.toDate() : new Date(student.affiliateBoostExpiresAt);
+    if (exp > now) {
+      boostActive = true;
+      daysLeft = Math.ceil((exp - now) / (1000 * 60 * 60 * 24));
+    }
+  }
+
+  const baseTier = student.affiliateBaseTier || (student.affiliate_tier === 'ambassador' ? 'LEVEL_3' : student.affiliate_tier === 'affiliate' ? 'LEVEL_2' : 'LEVEL_1');
+  const baseName = baseTier === 'LEVEL_3' ? 'Level 3 — Ambassador (10%+5%)' : baseTier === 'LEVEL_2' ? 'Level 2 — Affiliate (10%)' : 'Level 1 — Newbie (5%)';
+
+  const box = document.getElementById('boostSelectedStudent');
+  if (!box) return;
+  box.style.display = 'flex';
+  box.innerHTML = `
+    <div>
+      <div><strong>${student.first_name || 'Sofian'} ${student.last_name || ''}</strong> (${student.email || '—'})</div>
+      <div style="font-size:0.68rem;color:var(--muted);margin-top:0.2rem;">
+        Base Tier: <span style="color:#FFB800;font-weight:700;">${baseName}</span> · 
+        Status: <span style="color:${boostActive ? '#10b981' : 'var(--muted)'};font-weight:700;">${boostActive ? `🔥 Active (${daysLeft}d left)` : 'Standard'}</span>
+      </div>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="document.getElementById('boostSelectedStudent').style.display='none';window._selectedBoostStudent=null;">✕</button>
+  `;
+};
+
+window.submitTemporalAffiliateBoost = async function() {
+  const student = window._selectedBoostStudent;
+  if (!student) {
+    showToast('Please search and select a student first', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('btnGrantBoost');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Applying boost…'; }
+
+  try {
+    let boostBaseTime = Date.now();
+    if (student.affiliateBoostExpiresAt) {
+      const currExp = student.affiliateBoostExpiresAt.toDate ? student.affiliateBoostExpiresAt.toDate() : new Date(student.affiliateBoostExpiresAt);
+      if (currExp && !isNaN(currExp.getTime()) && currExp.getTime() > boostBaseTime) {
+        boostBaseTime = currExp.getTime();
+      }
+    }
+    const newBoostExpiresAt = new Date(boostBaseTime + 30 * 24 * 60 * 60 * 1000);
+
+    const sId = student.uid || student.id;
+    await updateDoc(doc(db, 'users', sId), {
+      affiliateBoostExpiresAt: newBoostExpiresAt.toISOString()
+    });
+
+    await addDoc(collection(db, 'notifications'), {
+      user_id: sId,
+      type: 'reward',
+      title: '🔥 30-Day Affiliate Boost Granted!',
+      message: 'A Community Manager has granted you a 30-Day Affiliate Commission Boost! Your referral earnings have been upgraded by +1 tier for the next 30 days.',
+      read: false,
+      created_at: serverTimestamp()
+    });
+
+    student.affiliateBoostExpiresAt = newBoostExpiresAt.toISOString();
+    window.selectStudentForBoost(sId);
+    showToast(`✓ Granted 30-Day Affiliate Boost to ${student.first_name || student.email}!`, 'success');
+    if (typeof window.renderStudents === 'function') window.renderStudents();
+  } catch(err) {
+    console.error('Error granting boost:', err);
+    showToast('Failed to grant boost: ' + err.message, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🔥 Grant 30-Day Tier Upgrade'; }
+  }
+};
+
+window.grantQuickBoost = function(uid) {
+  const student = (_allStudents || []).find(s => (s.uid || s.id) === uid);
+  if (!student) return;
+  window._selectedBoostStudent = student;
+  const name = `${student.first_name || ''} ${student.last_name || ''}`.trim() || student.email;
+  if (confirm(`Grant a 30-Day Affiliate Commission Boost (+1 Tier) to ${name}?`)) {
+    window.submitTemporalAffiliateBoost();
+  }
+};
+
 </script>
 
 <script type="module">

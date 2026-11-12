@@ -1,10 +1,28 @@
-import AdminDashboardClient from '@/components/AdminDashboardClient';
+'use client';
 
-export const metadata = {
-  title: 'Admin Control Center | Sofe Node',
-  description: 'Control plane for Sofe Node operations, courses, RBAC roles, grading, and disbursements.',
-};
+import { useEffect } from 'react';
 
 export default function AdminDashboardPage() {
-  return <AdminDashboardClient />;
+  useEffect(() => {
+    window.location.replace('/admin-dashboard-v2.html');
+  }, []);
+
+  return (
+    <div style={{
+      minHeight: '100vh',
+      background: '#04080F',
+      color: '#fff',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: '1rem',
+      fontFamily: 'Inter, system-ui, -apple-system, sans-serif'
+    }}>
+      <div style={{ fontSize: '2rem' }}>⚡</div>
+      <div style={{ fontSize: '0.9rem', color: 'rgba(200, 215, 240, 0.7)' }}>
+        Loading Sofe Node Admin Console…
+      </div>
+    </div>
+  );
 }

@@ -23,6 +23,7 @@ import {
   functions,
   httpsCallable
 } from '@/lib/firebase';
+import { getEffectiveAffiliateTier } from '@/lib/affiliateTiers';
 
 const FALLBACK_PAYMENT_COURSES = {
   'smart-contract-developer': {
@@ -73,6 +74,29 @@ export default function PaymentFlowClient() {
   const [errorMsg, setErrorMsg] = useState(null);
 
   const VIP_ADMIN_WA = 'https://wa.me/2349034201114?text=Hello%20Admin,%20I%20have%20paid%20my%20$100%20Sofe%20Node%20Premium%20Membership%20fee.%20Please%20verify%20and%20add%20me%20to%20the%20VIP%20executive%20group.';
+
+  const discountParam = searchParams.get('discount') || searchParams.get('code');
+
+  useEffect(() => {
+    if (discountParam) {
+      const code = discountParam.trim().toUpperCase();
+      setDiscountCode(code);
+      if (code === 'CHALLENGE20') {
+        setAppliedDiscount({ code: 'CHALLENGE20', type: 'percentage', value: 20 });
+        setDiscountMsg({ type: 'success', text: '✓ 24-Hour 20% Challenge Discount Applied (20% off)!' });
+      } else {
+        getDocs(query(collection(db, 'discount_codes'), where('code', '==', code), where('status', '==', 'active')))
+          .then((snap) => {
+            if (!snap.empty) {
+              const dData = snap.docs[0].data();
+              setAppliedDiscount({ id: snap.docs[0].id, ...dData });
+              setDiscountMsg({ type: 'success', text: `✓ Discount applied (${dData.type === 'percentage' ? `${dData.value}% off` : `₦${dData.value} off`})` });
+            }
+          })
+          .catch(() => {});
+      }
+    }
+  }, [discountParam]);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
@@ -168,6 +192,12 @@ export default function PaymentFlowClient() {
   const handleApplyDiscount = async () => {
     const code = discountCode.trim().toUpperCase();
     if (!code) return;
+
+    if (code === 'CHALLENGE20') {
+      setAppliedDiscount({ code: 'CHALLENGE20', type: 'percentage', value: 20 });
+      setDiscountMsg({ type: 'success', text: '✓ 24-Hour 20% Challenge Discount Applied (20% off)!' });
+      return;
+    }
 
     try {
       const snap = await getDocs(query(collection(db, 'discount_codes'), where('code', '==', code), where('status', '==', 'active')));
@@ -300,9 +330,8 @@ export default function PaymentFlowClient() {
           const refSnap = await getDoc(doc(db, 'users', userProfile.referred_by));
           if (refSnap.exists()) {
             const refData = refSnap.data();
-            const isAmbassadorRef = refData.affiliate_tier === 'ambassador' || refData.role === 'ambassador' || refData.role === 'node_lead' || refData.role === 'admin';
-            const isAffiliateRef = isAmbassadorRef || refData.affiliate_tier === 'affiliate' || refData.is_premium || ((refData.qualified_refs_count || 0) >= 10);
-            const directRate = (isAmbassadorRef || isAffiliateRef) ? 0.10 : 0.05;
+            const refTierInfo = getEffectiveAffiliateTier(refData);
+            const directRate = refTierInfo.rate;
             const directAmt = Math.round(netPaid * directRate);
 
             await addDoc(collection(db, 'commissions'), {
@@ -313,8 +342,8 @@ export default function PaymentFlowClient() {
               net_paid: netPaid,
               rate: directRate,
               amount: directAmt,
-              tier: isAmbassadorRef ? 'ambassador_10' : (isAffiliateRef ? 'affiliate_10' : 'newbie_5'),
-              description: `${Math.round(directRate * 100)}% Direct commission from ${currentUser.email} on ${course.title}`,
+              tier: refTierInfo.tier.toLowerCase(),
+              description: `${Math.round(directRate * 100)}% Direct commission from ${currentUser.email} on ${course.title} (${refTierInfo.tierName})`,
               status: 'pending',
               created_at: serverTimestamp()
             });
