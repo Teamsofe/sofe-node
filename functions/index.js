@@ -1442,11 +1442,28 @@ async function executeLeaderboardSettlement(db, options = {}) {
     { rank: 3, usd: prize3rdUsd, ngn: Math.round(prize3rdUsd * usdRate) }
   ];
 
-  // Fetch top 3 from leaderboard sorted by xp_this_period desc
-  const lbSnap = await db.collection('leaderboard')
-    .orderBy('xp_this_period', 'desc')
-    .limit(3)
-    .get();
+  // Fetch top 3 from leaderboard:
+  // If periodId is current period, read from db.collection('leaderboard')
+  // If periodId is an archived month, read from db.collection('leaderboard_archive').doc(periodId).collection('entries')
+  const currentPeriodId = getCurrentPeriodId();
+  let lbSnap;
+  if (!options.periodId || options.periodId === currentPeriodId) {
+    lbSnap = await db.collection('leaderboard')
+      .orderBy('xp_this_period', 'desc')
+      .limit(3)
+      .get();
+  } else {
+    lbSnap = await db.collection('leaderboard_archive').doc(periodId).collection('entries')
+      .orderBy('xp_this_period', 'desc')
+      .limit(3)
+      .get();
+    if (lbSnap.empty) {
+      lbSnap = await db.collection('leaderboard')
+        .orderBy('xp_this_period', 'desc')
+        .limit(3)
+        .get();
+    }
+  }
 
   if (lbSnap.empty) {
     return { success: true, periodId, settledWinners: [] };
@@ -1546,6 +1563,28 @@ async function executeLeaderboardSettlement(db, options = {}) {
   }
 
   await batch.commit();
+
+  // Record settlement in leaderboard_settlements
+  try {
+    await db.collection('leaderboard_settlements').doc(periodId).set({
+      period_id: periodId,
+      settled: true,
+      settled_at: admin.firestore.FieldValue.serverTimestamp(),
+      settled_by: options.settledBy || 'admin',
+      winners: results,
+      total_usd: results.reduce((sum, r) => sum + r.prizeUsd, 0),
+      total_ngn: results.reduce((sum, r) => sum + r.prizeNgn, 0)
+    }, { merge: true });
+
+    await db.collection('leaderboard_archive').doc(periodId).set({
+      settled: true,
+      settled_at: admin.firestore.FieldValue.serverTimestamp(),
+      settled_by: options.settledBy || 'admin'
+    }, { merge: true });
+  } catch (recErr) {
+    console.warn('[executeLeaderboardSettlement] Could not record settlement receipt:', recErr);
+  }
+
   return { success: true, periodId, settledWinners: results };
 }
 

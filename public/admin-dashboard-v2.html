@@ -136,12 +136,28 @@
           </div>
         </div>
         <div style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;">
-          <button class="btn btn-ghost btn-sm" onclick="switchSettingsTab('platform', document.querySelector('#settingsSubTabs button:first-child')); if(window.showPanel) window.showPanel('settings', document.querySelector('[data-panel="settings"]'));" style="border: 1px solid rgba(200,215,240,0.25);">
+          <!-- Month / Season Selector -->
+          <div style="display: flex; align-items: center; gap: 0.4rem; background: rgba(8,14,26,0.8); border: 1px solid rgba(255,184,0,0.4); border-radius: 6px; padding: 0.25rem 0.6rem;">
+            <span style="font-size: 0.72rem; color: #FFB800; font-weight: 800;">📅 Month:</span>
+            <select id="podiumMonthSelect" onchange="renderPodiumWinners(this.value)" style="background: transparent; border: none; color: #fff; font-size: 0.74rem; font-weight: 700; cursor: pointer; outline: none;"></select>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="switchSettingsTab('platform', document.querySelector('#settingsSubTabs button:first-child')); if(window.showPanel) window.showPanel('settings', document.querySelector('[data-panel=\'settings\']'));" style="border: 1px solid rgba(200,215,240,0.25);">
             ⚙️ Modify Prize Rates
           </button>
           <button class="btn btn-primary btn-sm" id="btnSettleLeaderboard" onclick="settleLeaderboardPodium()" style="background: linear-gradient(135deg, #FF8A00, #E07800); border: none; font-weight: 700; box-shadow: 0 4px 15px rgba(255,138,0,0.35);">
             🏆 Settle Top 3 Podium &amp; Credit Rewards
           </button>
+        </div>
+      </div>
+
+      <!-- Month Settlement Status Bar -->
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.6rem; background: rgba(8,14,26,0.6); border: 1px solid rgba(200,215,240,0.1); border-radius: 6px; padding: 0.45rem 0.8rem; margin-bottom: 1rem; font-size: 0.72rem;">
+        <div>
+          <span style="color: var(--muted);">Viewing Season: </span>
+          <strong id="podiumSelectedLabel" style="color: #FFB800;">Loading season…</strong>
+        </div>
+        <div id="podiumSettlementStatus">
+          <span style="color: #FF8A00; font-weight: 700;">⏳ Ready for Settlement (Pending)</span>
         </div>
       </div>
 
@@ -6107,13 +6123,86 @@ function handleLogout() {
 // ═══════════════════════════════════════════════════════════════════════════
 // MONTHLY LEADERBOARD SETTLEMENT & PODIUM ENGINE
 // ═══════════════════════════════════════════════════════════════════════════
-window.renderPodiumWinners = async function() {
+window.getCurrentPeriodId = function() {
+  var now = new Date();
+  var y = now.getUTCFullYear();
+  var m = String(now.getUTCMonth() + 1).padStart(2, '0');
+  return y + '-' + m;
+};
+
+window.formatPeriodLabel = function(periodId) {
+  if (!periodId || typeof periodId !== 'string' || !periodId.includes('-')) return periodId || 'Current Season';
+  var parts = periodId.split('-');
+  var y = parseInt(parts[0], 10);
+  var m = parseInt(parts[1], 10) - 1;
+  var d = new Date(Date.UTC(y, m, 1));
+  return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+};
+
+window._cachedPodiumWinners = [];
+
+window.renderPodiumWinners = async function(requestedPeriod) {
   try {
-    let prize1st = 5, prize2nd = 3, prize3rd = 2, usdRate = 1500;
+    var currPeriod = window.getCurrentPeriodId();
+    var sel = document.getElementById('podiumMonthSelect');
+    
+    // 1. Populate month select dropdown if not populated
+    if (sel && sel.dataset.loaded !== 'true') {
+      sel.innerHTML = '';
+      var optCurr = document.createElement('option');
+      optCurr.value = currPeriod;
+      optCurr.textContent = window.formatPeriodLabel(currPeriod) + ' 🟢 (Active)';
+      sel.appendChild(optCurr);
+
+      try {
+        var archiveSnap = await getDocs(query(collection(db, 'leaderboard_archive'), orderBy('period_id', 'desc')));
+        var seen = new Set([currPeriod]);
+        archiveSnap.docs.forEach(function(d) {
+          var pId = d.id;
+          if (!seen.has(pId)) {
+            seen.add(pId);
+            var opt = document.createElement('option');
+            opt.value = pId;
+            opt.textContent = (d.data().period_label || window.formatPeriodLabel(pId)) + ' 📦';
+            sel.appendChild(opt);
+          }
+        });
+
+        // Add last 6 months as fallback if not present
+        var now = new Date();
+        for (var i = 1; i <= 6; i++) {
+          var past = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
+          var pastId = past.getUTCFullYear() + '-' + String(past.getUTCMonth() + 1).padStart(2, '0');
+          if (!seen.has(pastId)) {
+            seen.add(pastId);
+            var optP = document.createElement('option');
+            optP.value = pastId;
+            optP.textContent = window.formatPeriodLabel(pastId) + ' 📦';
+            sel.appendChild(optP);
+          }
+        }
+      } catch(e) {
+        console.warn('Could not populate archived months:', e);
+      }
+      sel.dataset.loaded = 'true';
+    }
+
+    var targetPeriod = requestedPeriod || (sel ? sel.value : null) || currPeriod;
+    if (sel && sel.value !== targetPeriod) {
+      sel.value = targetPeriod;
+    }
+
+    var periodLabel = window.formatPeriodLabel(targetPeriod);
+    var labelEl = document.getElementById('podiumSelectedLabel');
+    if (labelEl) {
+      labelEl.textContent = periodLabel + (targetPeriod === currPeriod ? ' (Active Live Season)' : ' (Archived Season)');
+    }
+
+    var prize1st = 5, prize2nd = 3, prize3rd = 2, usdRate = 1500;
     try {
-      const setDocSnap = await getDoc(doc(db, 'settings', 'platform'));
+      var setDocSnap = await getDoc(doc(db, 'settings', 'platform'));
       if (setDocSnap.exists()) {
-        const sData = setDocSnap.data();
+        var sData = setDocSnap.data();
         if (sData.leaderboard_prize_1st !== undefined) prize1st = Number(sData.leaderboard_prize_1st);
         if (sData.leaderboard_prize_2nd !== undefined) prize2nd = Number(sData.leaderboard_prize_2nd);
         if (sData.leaderboard_prize_3rd !== undefined) prize3rd = Number(sData.leaderboard_prize_3rd);
@@ -6121,55 +6210,133 @@ window.renderPodiumWinners = async function() {
       }
     } catch(e) {}
 
-    const elP1 = document.getElementById('podiumPrize1st');
-    const elP2 = document.getElementById('podiumPrize2nd');
-    const elP3 = document.getElementById('podiumPrize3rd');
-    if (elP1) elP1.textContent = `$${prize1st} (₦${(prize1st * usdRate).toLocaleString('en-NG')})`;
-    if (elP2) elP2.textContent = `$${prize2nd} (₦${(prize2nd * usdRate).toLocaleString('en-NG')})`;
-    if (elP3) elP3.textContent = `$${prize3rd} (₦${(prize3rd * usdRate).toLocaleString('en-NG')})`;
+    var elP1 = document.getElementById('podiumPrize1st');
+    var elP2 = document.getElementById('podiumPrize2nd');
+    var elP3 = document.getElementById('podiumPrize3rd');
+    if (elP1) elP1.textContent = '$' + prize1st + ' (₦' + (prize1st * usdRate).toLocaleString('en-NG') + ')';
+    if (elP2) elP2.textContent = '$' + prize2nd + ' (₦' + (prize2nd * usdRate).toLocaleString('en-NG') + ')';
+    if (elP3) elP3.textContent = '$' + prize3rd + ' (₦' + (prize3rd * usdRate).toLocaleString('en-NG') + ')';
 
-    const inP1 = document.getElementById('settingPrize1st');
-    const inP2 = document.getElementById('settingPrize2nd');
-    const inP3 = document.getElementById('settingPrize3rd');
-    const inRate = document.getElementById('settingUsdRate');
+    var inP1 = document.getElementById('settingPrize1st');
+    var inP2 = document.getElementById('settingPrize2nd');
+    var inP3 = document.getElementById('settingPrize3rd');
+    var inRate = document.getElementById('settingUsdRate');
     if (inP1) inP1.value = prize1st;
     if (inP2) inP2.value = prize2nd;
     if (inP3) inP3.value = prize3rd;
     if (inRate) inRate.value = usdRate;
 
-    const lbSnap = await getDocs(query(collection(db, 'leaderboard'), orderBy('xp_this_period', 'desc'), limit(3)));
-    const winners = lbSnap.docs.map(d => d.data());
+    var winners = [];
+    if (targetPeriod === currPeriod) {
+      var lbSnap = await getDocs(query(collection(db, 'leaderboard'), orderBy('xp_this_period', 'desc'), limit(3)));
+      winners = lbSnap.docs.map(function(d){ return Object.assign({ id: d.id }, d.data()); });
+    } else {
+      try {
+        var archEntries = await getDocs(collection(db, 'leaderboard_archive', targetPeriod, 'entries'));
+        winners = archEntries.docs.map(function(d){ return Object.assign({ id: d.id }, d.data()); });
+        winners.sort(function(a, b) { return (Number(b.xp_this_period) || 0) - (Number(a.xp_this_period) || 0); });
+        winners = winners.slice(0, 3);
+      } catch(err) {
+        console.warn('Could not read archive entries:', err);
+      }
+    }
 
-    const w1 = winners[0];
-    const w2 = winners[1];
-    const w3 = winners[2];
+    window._cachedPodiumWinners = winners;
 
-    const elW1 = document.getElementById('podiumWinner1st');
-    const elW2 = document.getElementById('podiumWinner2nd');
-    const elW3 = document.getElementById('podiumWinner3rd');
+    var w1 = winners[0];
+    var w2 = winners[1];
+    var w3 = winners[2];
 
-    if (elW1) elW1.innerHTML = w1 ? `<strong>${w1.first_name || 'Sofian'} ${w1.last_initial || ''}</strong> · ${w1.xp_this_period || 0} XP` : 'Awaiting student to reach Rank #1';
-    if (elW2) elW2.innerHTML = w2 ? `<strong>${w2.first_name || 'Sofian'} ${w2.last_initial || ''}</strong> · ${w2.xp_this_period || 0} XP` : 'Awaiting student to reach Rank #2';
-    if (elW3) elW3.innerHTML = w3 ? `<strong>${w3.first_name || 'Sofian'} ${w3.last_initial || ''}</strong> · ${w3.xp_this_period || 0} XP` : 'Awaiting student to reach Rank #3';
+    var elW1 = document.getElementById('podiumWinner1st');
+    var elW2 = document.getElementById('podiumWinner2nd');
+    var elW3 = document.getElementById('podiumWinner3rd');
+
+    if (elW1) elW1.innerHTML = w1 ? '<strong>' + (w1.first_name || 'Sofian') + ' ' + (w1.last_initial || '') + '</strong> · <span style="color:#FF8A00;font-weight:700;">' + Number(w1.xp_this_period || 0).toLocaleString() + ' XP</span>' : 'Awaiting student to reach Rank #1 in ' + periodLabel;
+    if (elW2) elW2.innerHTML = w2 ? '<strong>' + (w2.first_name || 'Sofian') + ' ' + (w2.last_initial || '') + '</strong> · <span style="color:#FF8A00;font-weight:700;">' + Number(w2.xp_this_period || 0).toLocaleString() + ' XP</span>' : 'Awaiting student to reach Rank #2 in ' + periodLabel;
+    if (elW3) elW3.innerHTML = w3 ? '<strong>' + (w3.first_name || 'Sofian') + ' ' + (w3.last_initial || '') + '</strong> · <span style="color:#FF8A00;font-weight:700;">' + Number(w3.xp_this_period || 0).toLocaleString() + ' XP</span>' : 'Awaiting student to reach Rank #3 in ' + periodLabel;
+
+    // Check settlement status
+    var statusEl = document.getElementById('podiumSettlementStatus');
+    var settleBtn = document.getElementById('btnSettleLeaderboard');
+    var isSettled = false;
+    var settledDateText = '';
+    var settledByText = '';
+
+    try {
+      var settDoc = await getDoc(doc(db, 'leaderboard_settlements', targetPeriod));
+      if (settDoc.exists()) {
+        isSettled = true;
+        var sData = settDoc.data();
+        if (sData.settled_at && sData.settled_at.toDate) {
+          settledDateText = sData.settled_at.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        }
+        settledByText = sData.settled_by || 'Admin';
+      } else {
+        var archDoc = await getDoc(doc(db, 'leaderboard_archive', targetPeriod));
+        if (archDoc.exists() && archDoc.data().settled) {
+          isSettled = true;
+          settledDateText = 'Recorded';
+          settledByText = archDoc.data().settled_by || 'Admin';
+        }
+      }
+    } catch(e) {}
+
+    window._isCurrentMonthSettled = isSettled;
+
+    if (statusEl) {
+      if (isSettled) {
+        statusEl.innerHTML = '<span style="background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.4);color:#34d399;border-radius:4px;padding:2px 8px;font-weight:700;">✓ Settled on ' + (settledDateText || 'date') + (settledByText ? ' by ' + settledByText : '') + '</span>';
+      } else {
+        statusEl.innerHTML = '<span style="background:rgba(255,138,0,0.15);border:1px solid rgba(255,138,0,0.4);color:#FF8A00;border-radius:4px;padding:2px 8px;font-weight:700;">⏳ Ready for Settlement (Pending)</span>';
+      }
+    }
+
+    if (settleBtn) {
+      settleBtn.textContent = isSettled ? '✓ Re-settle Selected Month' : '🏆 Settle Top 3 Podium & Credit Rewards';
+      settleBtn.style.background = isSettled ? 'linear-gradient(135deg, #059669, #047857)' : 'linear-gradient(135deg, #FF8A00, #E07800)';
+    }
+
   } catch(e) {
     console.warn('Error loading podium winners:', e);
   }
 };
 
 window.settleLeaderboardPodium = async function() {
-  if (!confirm('Execute Monthly Leaderboard Settlement?\n\nThis will atomically:\n1. Credit cash prizes to the Top 3 winners\' wallets ($5, $3, $2 / ₦ equivalent)\n2. Increment their cumulative leaderboardWinsCount (+1)\n3. Grant an upgraded 30-Day Affiliate Commission Boost (+1 Tier)\n4. Unlock the "Top 3 Winner" shareable Flex Card on their dashboard')) {
+  var sel = document.getElementById('podiumMonthSelect');
+  var currPeriod = window.getCurrentPeriodId();
+  var targetPeriod = (sel ? sel.value : null) || currPeriod;
+  var periodLabel = window.formatPeriodLabel(targetPeriod);
+
+  var winners = window._cachedPodiumWinners || [];
+  if (!winners || winners.length === 0) {
+    showToast('No active participants found on the leaderboard for ' + periodLabel + ' to settle.', 'warning');
     return;
   }
 
-  const btn = document.getElementById('btnSettleLeaderboard');
+  var isSettled = window._isCurrentMonthSettled;
+  var prefix = isSettled ? '⚠️ WARNING: ' + periodLabel + ' has ALREADY been settled! Re-executing will credit winners again.
+
+' : '';
+
+  var confirmMsg = prefix + 'Execute Monthly Leaderboard Settlement for ' + periodLabel + ' (Period: ' + targetPeriod + ')?
+
+' +
+    'Top 3 Winners to receive cash ($5, $3, $2 / ₦ equivalent), +1 multiplier counter, and 30-Day Affiliate Boost:
+' +
+    winners.slice(0, 3).map(function(w, i){ return (i + 1) + '. ' + (w.first_name || 'Sofian') + ' ' + (w.last_initial || '') + ' (' + (w.xp_this_period || 0) + ' XP)'; }).join('
+');
+
+  if (!confirm(confirmMsg)) return;
+
+  var btn = document.getElementById('btnSettleLeaderboard');
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Settling rewards…'; }
 
   try {
-    let prize1st = 5, prize2nd = 3, prize3rd = 2, usdRate = 1500;
+    var prize1st = 5, prize2nd = 3, prize3rd = 2, usdRate = 1500;
     try {
-      const setDocSnap = await getDoc(doc(db, 'settings', 'platform'));
+      var setDocSnap = await getDoc(doc(db, 'settings', 'platform'));
       if (setDocSnap.exists()) {
-        const sData = setDocSnap.data();
+        var sData = setDocSnap.data();
         if (sData.leaderboard_prize_1st !== undefined) prize1st = Number(sData.leaderboard_prize_1st);
         if (sData.leaderboard_prize_2nd !== undefined) prize2nd = Number(sData.leaderboard_prize_2nd);
         if (sData.leaderboard_prize_3rd !== undefined) prize3rd = Number(sData.leaderboard_prize_3rd);
@@ -6177,60 +6344,67 @@ window.settleLeaderboardPodium = async function() {
       }
     } catch(e) {}
 
-    const prizes = [
+    var prizes = [
       { rank: 1, usd: prize1st, ngn: Math.round(prize1st * usdRate) },
       { rank: 2, usd: prize2nd, ngn: Math.round(prize2nd * usdRate) },
       { rank: 3, usd: prize3rd, ngn: Math.round(prize3rd * usdRate) }
     ];
 
-    const lbSnap = await getDocs(query(collection(db, 'leaderboard'), orderBy('xp_this_period', 'desc'), limit(3)));
-    if (lbSnap.empty) {
-      showToast('No active leaderboard entries found to settle.', 'error');
-      if (btn) { btn.disabled = false; btn.textContent = '🏆 Settle Top 3 Podium & Credit Rewards'; }
-      return;
-    }
+    var settledWinnersList = [];
+    var totalNgn = 0;
+    var totalUsd = 0;
+    var adminEmail = (auth.currentUser ? auth.currentUser.email : 'Admin');
 
-    const now = new Date();
-    const periodId = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
-    const winners = [];
+    for (var i = 0; i < winners.length && i < 3; i++) {
+      var w = winners[i];
+      var p = prizes[i];
+      var userId = w.id;
+      if (!userId) continue;
 
-    let rankIdx = 0;
-    for (const d of lbSnap.docs) {
-      if (rankIdx >= 3) break;
-      const rank = rankIdx + 1;
-      const p = prizes[rankIdx];
-      const lbData = d.data();
-      const userId = d.id;
+      var userRef = doc(db, 'users', userId);
+      var userSnap = await getDoc(userRef);
+      var uData = userSnap.exists() ? userSnap.data() : {};
 
-      const userRef = doc(db, 'users', userId);
-      const userSnap = await getDoc(userRef);
-      const uData = userSnap.exists() ? userSnap.data() : {};
-
-      let boostBaseTime = Date.now();
+      var boostBaseTime = Date.now();
       if (uData.affiliateBoostExpiresAt) {
-        const currExp = uData.affiliateBoostExpiresAt.toDate
+        var currExp = uData.affiliateBoostExpiresAt.toDate
           ? uData.affiliateBoostExpiresAt.toDate()
           : new Date(uData.affiliateBoostExpiresAt);
         if (currExp && !isNaN(currExp.getTime()) && currExp.getTime() > boostBaseTime) {
           boostBaseTime = currExp.getTime();
         }
       }
-      const newBoostExpiresAt = new Date(boostBaseTime + 30 * 24 * 60 * 60 * 1000);
-      const updatedWins = (Number(uData.leaderboardWinsCount || uData.leaderboard_wins_count || 0)) + 1;
+      var newBoostExpiresAt = new Date(boostBaseTime + 30 * 24 * 60 * 60 * 1000);
+      var updatedWins = (Number(uData.leaderboardWinsCount || uData.leaderboard_wins_count || 0)) + 1;
+
+      var historyEntry = {
+        month: targetPeriod,
+        month_label: periodLabel,
+        rank: p.rank,
+        xp: Number(w.xp_this_period || 0),
+        reward_usd: p.usd,
+        reward_ngn: p.ngn,
+        rewardedAt: new Date().toISOString()
+      };
+
+      var existingHistory = Array.isArray(uData.leaderboardHistory) ? uData.leaderboardHistory : [];
 
       await updateDoc(userRef, {
         wallet_balance: increment(p.ngn),
         leaderboardWinsCount: updatedWins,
         leaderboard_wins_count: updatedWins,
         affiliateBoostExpiresAt: newBoostExpiresAt.toISOString(),
+        leaderboardHistory: [...existingHistory, historyEntry],
         pendingCelebration: {
           type: 'leaderboard',
-          rank: rank,
+          period_id: targetPeriod,
+          period_label: periodLabel,
+          rank: p.rank,
           reward_usd: p.usd,
           reward_ngn: p.ngn,
-          xpEarned: Number(lbData.xp_this_period || 0),
+          xpEarned: Number(w.xp_this_period || 0),
           multiplierCount: updatedWins,
-          multiplierText: `${updatedWins}X Top Leaderboard Winner`,
+          multiplierText: updatedWins + 'X Top Leaderboard Winner',
           timestamp: Date.now()
         }
       });
@@ -6239,34 +6413,63 @@ window.settleLeaderboardPodium = async function() {
         user_id: userId,
         type: 'credit',
         category: 'leaderboard_prize',
-        title: `Rank #${rank} Leaderboard Season Prize`,
+        title: 'Rank #' + p.rank + ' Leaderboard Season Prize (' + periodLabel + ')',
         amount_usd: p.usd,
         amount_ngn: p.ngn,
-        period_id: periodId,
+        period_id: targetPeriod,
+        period_label: periodLabel,
         created_at: serverTimestamp()
       });
 
       await addDoc(collection(db, 'notifications'), {
         user_id: userId,
         type: 'reward',
-        title: '🏆 Top 3 Season Leaderboard Winner!',
-        message: `Congratulations! You placed #${rank} on the Monthly Leaderboard with ${lbData.xp_this_period || 0} XP. You received $${p.usd} (₦${p.ngn.toLocaleString('en-NG')}) in your wallet + an upgraded 30-Day Affiliate Boost!`,
+        title: '🏆 Top 3 Season Leaderboard Winner (' + periodLabel + ')!',
+        message: 'Congratulations! You placed #' + p.rank + ' on the ' + periodLabel + ' Monthly Leaderboard with ' + (w.xp_this_period || 0) + ' XP. You received $' + p.usd + ' (₦' + p.ngn.toLocaleString('en-NG') + ') in your wallet + an upgraded 30-Day Affiliate Boost!',
         read: false,
         created_at: serverTimestamp()
       });
 
-      winners.push(`${rank}. ${uData.first_name || 'Sofian'} (₦${p.ngn.toLocaleString('en-NG')})`);
-      rankIdx++;
+      settledWinnersList.push({
+        userId: userId,
+        name: (w.first_name || uData.first_name || 'Sofian') + ' ' + (w.last_initial || ''),
+        rank: p.rank,
+        xp: Number(w.xp_this_period || 0),
+        prizeUsd: p.usd,
+        prizeNgn: p.ngn
+      });
+      totalNgn += p.ngn;
+      totalUsd += p.usd;
     }
 
-    showToast(`✓ Settled Top 3 Podium! Rewarded: ${winners.join(', ')}`, 'success');
-    window.renderPodiumWinners();
+    // Save settlement record
+    await setDoc(doc(db, 'leaderboard_settlements', targetPeriod), {
+      period_id: targetPeriod,
+      period_label: periodLabel,
+      settled: true,
+      settled_at: serverTimestamp(),
+      settled_by: adminEmail,
+      winners: settledWinnersList,
+      total_prizes_usd: totalUsd,
+      total_prizes_ngn: totalNgn
+    }, { merge: true });
+
+    await setDoc(doc(db, 'leaderboard_archive', targetPeriod), {
+      period_id: targetPeriod,
+      period_label: periodLabel,
+      settled: true,
+      settled_at: serverTimestamp(),
+      settled_by: adminEmail
+    }, { merge: true });
+
+    showToast('✓ Successfully settled ' + periodLabel + ' Leaderboard! Top ' + settledWinnersList.length + ' winners credited.', 'success');
+    await window.renderPodiumWinners(targetPeriod);
     if (typeof loadAdminLeaderboard === 'function') loadAdminLeaderboard();
-  } catch (err) {
+  } catch(err) {
     console.error('Error settling leaderboard:', err);
     showToast('Settlement failed: ' + err.message, 'error');
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '🏆 Settle Top 3 Podium & Credit Rewards'; }
+    if (btn) { btn.disabled = false; }
   }
 };
 

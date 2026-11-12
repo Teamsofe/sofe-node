@@ -27,6 +27,23 @@ import {
 import WinnerMultiplierBadge from '@/components/WinnerMultiplierBadge';
 import { getEffectiveAffiliateTier } from '@/lib/affiliateTiers';
 
+// Leaderboard period formatting helpers
+const getCurrentPeriodId = () => {
+  const now = new Date();
+  const y = now.getUTCFullYear();
+  const m = String(now.getUTCMonth() + 1).padStart(2, '0');
+  return `${y}-${m}`;
+};
+
+const formatPeriodLabel = (periodId) => {
+  if (!periodId || typeof periodId !== 'string' || !periodId.includes('-')) return periodId || 'Current Season';
+  const [yStr, mStr] = periodId.split('-');
+  const y = parseInt(yStr, 10);
+  const m = parseInt(mStr, 10) - 1;
+  const d = new Date(Date.UTC(y, m, 1));
+  return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+};
+
 export default function AdminDashboardClient() {
   const router = useRouter();
 
@@ -91,6 +108,11 @@ export default function AdminDashboardClient() {
   const [inviteAdminRole, setInviteAdminRole] = useState('tutor');
   const [leaderboardEntries, setLeaderboardEntries] = useState([]);
   const [settlingLeaderboard, setSettlingLeaderboard] = useState(false);
+  const [selectedSettlementMonth, setSelectedSettlementMonth] = useState('');
+  const [availableSettlementMonths, setAvailableSettlementMonths] = useState([]);
+  const [monthPodiumEntries, setMonthPodiumEntries] = useState([]);
+  const [monthSettlementInfo, setMonthSettlementInfo] = useState(null);
+  const [loadingMonthPodium, setLoadingMonthPodium] = useState(false);
   const [platformSettings, setPlatformSettings] = useState({
     bank_name: 'GTBank',
     account_number: '0123456789',
@@ -223,6 +245,61 @@ export default function AdminDashboardClient() {
       const lbList = lbSnap && lbSnap.docs ? lbSnap.docs.map((d) => ({ id: d.id, ...d.data() })) : [];
       setLeaderboardEntries(lbList);
 
+      // Populate available settlement months (active month + archives + last 12 calendar months)
+      let archList = [];
+      try {
+        const archSnap = await getDocs(query(collection(db, 'leaderboard_archive'), orderBy('period_id', 'desc')));
+        archList = archSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      } catch (archErr) {
+        try {
+          const archSnap = await getDocs(collection(db, 'leaderboard_archive'));
+          archList = archSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        } catch (e) {
+          console.warn('Could not read leaderboard_archive:', e);
+        }
+      }
+
+      const currPeriod = getCurrentPeriodId();
+      const monthMap = new Map();
+      monthMap.set(currPeriod, {
+        id: currPeriod,
+        label: `${formatPeriodLabel(currPeriod)} (Current Active Season)`,
+        isCurrent: true
+      });
+
+      archList.forEach((a) => {
+        const pId = a.id || a.period_id;
+        if (pId && !monthMap.has(pId)) {
+          monthMap.set(pId, {
+            id: pId,
+            label: a.period_label || formatPeriodLabel(pId),
+            isCurrent: pId === currPeriod
+          });
+        }
+      });
+
+      const now = new Date();
+      for (let i = 1; i <= 12; i++) {
+        const past = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
+        const pId = `${past.getUTCFullYear()}-${String(past.getUTCMonth() + 1).padStart(2, '0')}`;
+        if (!monthMap.has(pId)) {
+          monthMap.set(pId, {
+            id: pId,
+            label: formatPeriodLabel(pId),
+            isCurrent: false
+          });
+        }
+      }
+
+      const generatedMonths = Array.from(monthMap.values());
+      setAvailableSettlementMonths(generatedMonths);
+
+      const targetPeriod = selectedSettlementMonth || currPeriod;
+      if (!selectedSettlementMonth) {
+        setSelectedSettlementMonth(currPeriod);
+      }
+      loadSettlementMonthData(targetPeriod, uList);
+
       // Compute Overview Metrics
       const validated = uList.filter((u) => u.foundation_complete === true).length;
       const verified = uList.filter((u) => u.email_verified === true).length;
@@ -243,6 +320,84 @@ export default function AdminDashboardClient() {
     } catch (err) {
       console.error('Error loading admin dataset:', err);
     }
+  };
+
+  // Load Leaderboard Podium and Settlement status for a specific month
+  const loadSettlementMonthData = async (periodId, fallbackUsers = null) => {
+    if (!periodId) return;
+    setLoadingMonthPodium(true);
+    try {
+      const curr = getCurrentPeriodId();
+      let entries = [];
+
+      if (periodId === curr) {
+        const lbSnap = await getDocs(query(collection(db, 'leaderboard'), orderBy('xp_this_period', 'desc'), limit(10)));
+        entries = lbSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      } else {
+        try {
+          const archSnap = await getDocs(collection(db, 'leaderboard_archive', periodId, 'entries'));
+          if (!archSnap.empty) {
+            entries = archSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+            entries.sort((a, b) => (Number(b.xp_this_period) || 0) - (Number(a.xp_this_period) || 0));
+          }
+        } catch (archErr) {
+          console.warn('Could not query leaderboard_archive entries:', archErr);
+        }
+
+        // If no entries in archive subcollection, check users' leaderboardHistory
+        if (entries.length === 0) {
+          const uPool = fallbackUsers || users || [];
+          const matched = [];
+          uPool.forEach((u) => {
+            if (Array.isArray(u.leaderboardHistory)) {
+              const h = u.leaderboardHistory.find((item) => item.month === periodId);
+              if (h) {
+                matched.push({
+                  id: u.id,
+                  first_name: u.first_name || 'Sofian',
+                  last_initial: u.last_name ? u.last_name.slice(0, 1) + '.' : '',
+                  xp_this_period: h.xp || 0,
+                  rank: h.rank
+                });
+              }
+            }
+          });
+          if (matched.length > 0) {
+            matched.sort((a, b) => (a.rank || 99) - (b.rank || 99));
+            entries = matched;
+          }
+        }
+      }
+
+      setMonthPodiumEntries(entries);
+
+      // Check settlement status in leaderboard_settlements
+      try {
+        const settDoc = await getDoc(doc(db, 'leaderboard_settlements', periodId));
+        if (settDoc.exists()) {
+          setMonthSettlementInfo(settDoc.data());
+        } else {
+          const archDoc = await getDoc(doc(db, 'leaderboard_archive', periodId));
+          if (archDoc.exists() && archDoc.data().settled) {
+            setMonthSettlementInfo(archDoc.data());
+          } else {
+            setMonthSettlementInfo(null);
+          }
+        }
+      } catch (settErr) {
+        console.warn('Could not check settlement doc:', settErr);
+        setMonthSettlementInfo(null);
+      }
+    } catch (err) {
+      console.error('Error loading month podium data:', err);
+    } finally {
+      setLoadingMonthPodium(false);
+    }
+  };
+
+  const handleSelectSettlementMonth = (mId) => {
+    setSelectedSettlementMonth(mId);
+    loadSettlementMonthData(mId);
   };
 
   // Invite / Assign Admin Role by Email
@@ -354,41 +509,56 @@ export default function AdminDashboardClient() {
     }
   };
 
-  // Settle Monthly Season Leaderboard (Top 3 Rewards & 30-Day Boosts)
+  // Settle Monthly Season Leaderboard (Top 3 Rewards & 30-Day Boosts for Selected Month)
   const handleSettleLeaderboard = async () => {
+    const targetPeriod = selectedSettlementMonth || getCurrentPeriodId();
+    const periodLabel = formatPeriodLabel(targetPeriod);
     const prize1st = Number(platformSettings.leaderboard_prize_1st ?? 5);
     const prize2nd = Number(platformSettings.leaderboard_prize_2nd ?? 3);
     const prize3rd = Number(platformSettings.leaderboard_prize_3rd ?? 2);
     const usdRate = Number(platformSettings.usd_to_ngn_rate ?? 1500);
 
-    const msg = `Settle current Monthly Leaderboard season?\n\nTop 3 Podium Rewards:\n• 1st Place: $${prize1st} (₦${(prize1st * usdRate).toLocaleString('en-NG')})\n• 2nd Place: $${prize2nd} (₦${(prize2nd * usdRate).toLocaleString('en-NG')})\n• 3rd Place: $${prize3rd} (₦${(prize3rd * usdRate).toLocaleString('en-NG')})\n\nThis will atomically credit winners' wallets, increment their leaderboard winner counters (+1), grant a 30-Day 15% Affiliate Commission Boost, and queue their shareable Flex Cards.`;
+    if (!monthPodiumEntries || monthPodiumEntries.length === 0) {
+      showToast(`No participants found on the leaderboard for ${periodLabel} to settle.`, 'warning');
+      return;
+    }
+
+    const prizes = [
+      { rank: 1, usd: prize1st, ngn: Math.round(prize1st * usdRate) },
+      { rank: 2, usd: prize2nd, ngn: Math.round(prize2nd * usdRate) },
+      { rank: 3, usd: prize3rd, ngn: Math.round(prize3rd * usdRate) }
+    ];
+
+    const winnersSummary = monthPodiumEntries.slice(0, 3).map((e, idx) => {
+      const p = prizes[idx];
+      const name = `${e.first_name || 'Sofian'} ${e.last_initial || ''}`.trim();
+      return `• Rank #${p.rank}: ${name} (${Number(e.xp_this_period || 0).toLocaleString()} XP) → $${p.usd} (₦${p.ngn.toLocaleString('en-NG')})`;
+    }).join('\n');
+
+    let alertPrefix = '';
+    if (monthSettlementInfo?.settled) {
+      const settledDate = monthSettlementInfo.settled_at?.toDate
+        ? monthSettlementInfo.settled_at.toDate().toLocaleDateString('en-US', { dateStyle: 'medium' })
+        : (monthSettlementInfo.settled_at ? new Date(monthSettlementInfo.settled_at).toLocaleDateString('en-US', { dateStyle: 'medium' }) : 'previously');
+      alertPrefix = `⚠️ NOTICE: The leaderboard season for ${periodLabel} was ALREADY settled on ${settledDate} by ${monthSettlementInfo.settled_by || 'Admin'}.\n\nRe-settling will credit the winners again.\n\n`;
+    }
+
+    const msg = `${alertPrefix}Execute Monthly Leaderboard Settlement for ${periodLabel} (Period ID: ${targetPeriod})?\n\nTop 3 Podium Winners to be rewarded:\n${winnersSummary}\n\nThis will atomically:\n1. Credit cash prizes in NGN to each winner's wallet\n2. Increment their cumulative leaderboard winner counters (+1)\n3. Grant an upgraded 30-Day 15% Affiliate Commission Boost\n4. Queue their shareable Flex Card for public celebration\n5. Save a settlement record to mark ${periodLabel} as settled`;
 
     if (!window.confirm(msg)) return;
 
     setSettlingLeaderboard(true);
     try {
-      const lbSnap = await getDocs(query(collection(db, 'leaderboard'), orderBy('xp_this_period', 'desc'), limit(3)));
-      if (lbSnap.empty) {
-        showToast('No active participants found on the leaderboard to settle.', 'warning');
-        return;
-      }
-
-      const prizes = [
-        { rank: 1, usd: prize1st, ngn: Math.round(prize1st * usdRate) },
-        { rank: 2, usd: prize2nd, ngn: Math.round(prize2nd * usdRate) },
-        { rank: 3, usd: prize3rd, ngn: Math.round(prize3rd * usdRate) }
-      ];
-
       const batch = writeBatch(db);
-      const now = new Date();
-      const periodId = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;
-      let settledCount = 0;
+      const settledWinners = [];
+      let totalNgn = 0;
+      let totalUsd = 0;
 
-      for (let i = 0; i < lbSnap.docs.length && i < 3; i++) {
-        const d = lbSnap.docs[i];
+      for (let i = 0; i < monthPodiumEntries.length && i < 3; i++) {
+        const entry = monthPodiumEntries[i];
         const prize = prizes[i];
-        const lbD = d.data();
-        const uId = d.id;
+        const uId = entry.id;
+        if (!uId) continue;
 
         const uSnap = await getDoc(doc(db, 'users', uId));
         const uData = uSnap.exists() ? uSnap.data() : {};
@@ -406,9 +576,10 @@ export default function AdminDashboardClient() {
         const updatedWins = (Number(uData.leaderboardWinsCount || uData.leaderboard_wins_count || 0)) + 1;
 
         const historyEntry = {
-          month: periodId,
+          month: targetPeriod,
+          month_label: periodLabel,
           rank: prize.rank,
-          xp: Number(lbD.xp_this_period || 0),
+          xp: Number(entry.xp_this_period || 0),
           reward_usd: prize.usd,
           reward_ngn: prize.ngn,
           rewardedAt: new Date().toISOString()
@@ -424,10 +595,12 @@ export default function AdminDashboardClient() {
           leaderboardHistory: [...existingHistory, historyEntry],
           pendingCelebration: {
             type: 'leaderboard',
+            period_id: targetPeriod,
+            period_label: periodLabel,
             rank: prize.rank,
             reward_usd: prize.usd,
             reward_ngn: prize.ngn,
-            xpEarned: Number(lbD.xp_this_period || 0),
+            xpEarned: Number(entry.xp_this_period || 0),
             multiplierCount: updatedWins,
             multiplierText: `${updatedWins}X Top Leaderboard Winner`,
             timestamp: Date.now()
@@ -440,10 +613,11 @@ export default function AdminDashboardClient() {
           user_id: uId,
           type: 'credit',
           category: 'leaderboard_prize',
-          title: `Rank #${prize.rank} Leaderboard Season Prize`,
+          title: `Rank #${prize.rank} Leaderboard Season Prize (${periodLabel})`,
           amount_usd: prize.usd,
           amount_ngn: prize.ngn,
-          period_id: periodId,
+          period_id: targetPeriod,
+          period_label: periodLabel,
           created_at: serverTimestamp()
         });
 
@@ -452,17 +626,52 @@ export default function AdminDashboardClient() {
         batch.set(notifRef, {
           user_id: uId,
           type: 'reward',
-          title: '🏆 Top 3 Season Leaderboard Winner!',
-          message: `Congratulations! You placed #${prize.rank} on the Monthly Leaderboard with ${lbD.xp_this_period || 0} XP. You received $${prize.usd} (₦${prize.ngn.toLocaleString('en-NG')}) in your wallet + an active 30-Day 15% Affiliate Commission Boost!`,
+          title: `🏆 Top 3 Season Leaderboard Winner (${periodLabel})!`,
+          message: `Congratulations! You placed #${prize.rank} on the ${periodLabel} Monthly Leaderboard with ${Number(entry.xp_this_period || 0).toLocaleString()} XP. You received $${prize.usd} (₦${prize.ngn.toLocaleString('en-NG')}) in your wallet + an active 30-Day 15% Affiliate Commission Boost!`,
           read: false,
           created_at: serverTimestamp()
         });
 
-        settledCount++;
+        settledWinners.push({
+          userId: uId,
+          name: `${entry.first_name || uData.first_name || 'Sofian'} ${entry.last_initial || (uData.last_name ? uData.last_name.slice(0, 1) + '.' : '')}`.trim(),
+          rank: prize.rank,
+          xp: Number(entry.xp_this_period || 0),
+          prizeUsd: prize.usd,
+          prizeNgn: prize.ngn
+        });
+
+        totalNgn += prize.ngn;
+        totalUsd += prize.usd;
       }
 
+      // Record settlement document in leaderboard_settlements
+      const settRef = doc(db, 'leaderboard_settlements', targetPeriod);
+      batch.set(settRef, {
+        period_id: targetPeriod,
+        period_label: periodLabel,
+        settled: true,
+        settled_at: serverTimestamp(),
+        settled_by: adminUser?.email || adminUser?.uid || 'Admin',
+        winners: settledWinners,
+        total_prizes_usd: totalUsd,
+        total_prizes_ngn: totalNgn
+      }, { merge: true });
+
+      // Also record in leaderboard_archive
+      const archRef = doc(db, 'leaderboard_archive', targetPeriod);
+      batch.set(archRef, {
+        period_id: targetPeriod,
+        period_label: periodLabel,
+        settled: true,
+        settled_at: serverTimestamp(),
+        settled_by: adminUser?.email || adminUser?.uid || 'Admin'
+      }, { merge: true });
+
       await batch.commit();
-      showToast(`🏆 Successfully settled Season Leaderboard! Top ${settledCount} winners credited & boosted.`, 'success');
+
+      showToast(`🏆 Successfully settled ${periodLabel} Leaderboard! Top ${settledWinners.length} winners credited & boosted.`, 'success');
+      await loadSettlementMonthData(targetPeriod);
       loadAllAdminData();
     } catch (err) {
       console.error('Error settling leaderboard:', err);
@@ -1029,7 +1238,31 @@ export default function AdminDashboardClient() {
                     </p>
                   </div>
 
-                  <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                    {/* Month / Season Selector */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', background: '#080E1A', border: '1px solid rgba(255,184,0,0.4)', borderRadius: 6, padding: '0.35rem 0.75rem' }}>
+                      <span style={{ fontSize: '0.74rem', color: '#FFB800', fontWeight: 800 }}>📅 Month:</span>
+                      <select
+                        value={selectedSettlementMonth}
+                        onChange={(e) => handleSelectSettlementMonth(e.target.value)}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: '#fff',
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          outline: 'none'
+                        }}
+                      >
+                        {availableSettlementMonths.map((m) => (
+                          <option key={m.id} value={m.id} style={{ background: '#0D1526', color: '#fff' }}>
+                            {m.label} {m.isCurrent ? '🟢' : '📦'}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
                     <button
                       onClick={() => {
                         setActivePanel('settings');
@@ -1050,76 +1283,151 @@ export default function AdminDashboardClient() {
                     </button>
                     <button
                       onClick={handleSettleLeaderboard}
-                      disabled={settlingLeaderboard}
+                      disabled={settlingLeaderboard || loadingMonthPodium}
                       style={{
-                        background: settlingLeaderboard ? 'rgba(255,138,0,0.4)' : 'linear-gradient(135deg, #FF8A00, #E07800)',
+                        background: settlingLeaderboard
+                          ? 'rgba(255,138,0,0.4)'
+                          : monthSettlementInfo?.settled
+                          ? 'linear-gradient(135deg, #059669, #047857)'
+                          : 'linear-gradient(135deg, #FF8A00, #E07800)',
                         border: 'none',
                         color: '#fff',
                         borderRadius: 6,
                         padding: '0.55rem 1.25rem',
                         fontSize: '0.76rem',
                         fontWeight: 800,
-                        cursor: settlingLeaderboard ? 'not-allowed' : 'pointer',
-                        boxShadow: '0 4px 16px rgba(255,138,0,0.25)',
+                        cursor: settlingLeaderboard || loadingMonthPodium ? 'not-allowed' : 'pointer',
+                        boxShadow: monthSettlementInfo?.settled ? '0 4px 16px rgba(5,150,105,0.3)' : '0 4px 16px rgba(255,138,0,0.25)',
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: '0.4rem'
                       }}
                     >
-                      {settlingLeaderboard ? '⏳ Settling Podium...' : '🏆 Settle Top 3 Podium & Credit Rewards'}
+                      {settlingLeaderboard
+                        ? '⏳ Settling Podium...'
+                        : monthSettlementInfo?.settled
+                        ? '✓ Re-settle Selected Month'
+                        : '🏆 Settle Top 3 Podium & Credit Rewards'}
                     </button>
                   </div>
                 </div>
 
-                {/* Top 3 Standings Preview */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem', marginTop: '1.25rem' }}>
-                  {[
-                    { rank: 1, label: '1st Place Winner', prizeUsd: platformSettings.leaderboard_prize_1st ?? 5, badgeColor: '#fbbf24', icon: '🥇' },
-                    { rank: 2, label: '2nd Place Winner', prizeUsd: platformSettings.leaderboard_prize_2nd ?? 3, badgeColor: '#38bdf8', icon: '🥈' },
-                    { rank: 3, label: '3rd Place Winner', prizeUsd: platformSettings.leaderboard_prize_3rd ?? 2, badgeColor: '#34d399', icon: '🥉' }
-                  ].map((podium, pIdx) => {
-                    const entry = leaderboardEntries[pIdx];
-                    const prizeNgn = podium.prizeUsd * (platformSettings.usd_to_ngn_rate || 1500);
-                    return (
-                      <div
-                        key={podium.rank}
-                        style={{
-                          background: '#080E1A',
-                          border: `1px solid ${podium.badgeColor}40`,
-                          borderRadius: 8,
-                          padding: '1rem',
-                          position: 'relative'
-                        }}
-                      >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                          <span style={{ fontSize: '0.72rem', fontWeight: 800, color: podium.badgeColor }}>
-                            {podium.icon} {podium.label}
-                          </span>
-                          <span style={{ fontSize: '0.7rem', color: '#10b981', fontWeight: 700 }}>
-                            ${podium.prizeUsd} (₦{prizeNgn.toLocaleString('en-NG')})
-                          </span>
-                        </div>
-                        {entry ? (
-                          <div>
-                            <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#fff' }}>
-                              {entry.first_name || 'Sofian'} {entry.last_initial || ''}
-                            </div>
-                            <div style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.65)', marginTop: '0.2rem' }}>
-                              Monthly XP: <strong style={{ color: '#FF8A00' }}>{Number(entry.xp_this_period || 0).toLocaleString()} XP</strong>
-                            </div>
-                            <div style={{ fontSize: '0.66rem', color: '#38bdf8', marginTop: '0.25rem' }}>
-                              + 30-Day 15% Affiliate Boost &amp; Multiplier Counter
-                            </div>
-                          </div>
-                        ) : (
-                          <div style={{ fontSize: '0.74rem', color: 'rgba(200,215,240,0.45)', fontStyle: 'italic', padding: '0.4rem 0' }}>
-                            Awaiting student to reach Rank #{podium.rank}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                {/* Status & Period Summary Bar */}
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: '0.6rem',
+                  background: 'rgba(8,14,26,0.6)',
+                  border: '1px solid rgba(200,215,240,0.1)',
+                  borderRadius: 6,
+                  padding: '0.5rem 0.85rem',
+                  marginBottom: '1rem',
+                  fontSize: '0.72rem'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ color: 'rgba(200,215,240,0.7)' }}>Selected Season:</span>
+                    <strong style={{ color: '#FFB800' }}>
+                      {formatPeriodLabel(selectedSettlementMonth)}
+                      {selectedSettlementMonth === getCurrentPeriodId() ? ' (Active Live Season)' : ' (Archived Month)'}
+                    </strong>
+                  </div>
+
+                  <div>
+                    {monthSettlementInfo?.settled ? (
+                      <span style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.35rem',
+                        background: 'rgba(16,185,129,0.15)',
+                        border: '1px solid rgba(16,185,129,0.4)',
+                        color: '#34d399',
+                        borderRadius: 4,
+                        padding: '2px 8px',
+                        fontWeight: 700
+                      }}>
+                        ✓ Settled on {monthSettlementInfo.settled_at?.toDate ? monthSettlementInfo.settled_at.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recorded'}
+                        {monthSettlementInfo.settled_by ? ` by ${monthSettlementInfo.settled_by}` : ''}
+                      </span>
+                    ) : (
+                      <span style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.35rem',
+                        background: 'rgba(255,138,0,0.15)',
+                        border: '1px solid rgba(255,138,0,0.4)',
+                        color: '#FF8A00',
+                        borderRadius: 4,
+                        padding: '2px 8px',
+                        fontWeight: 700
+                      }}>
+                        ⏳ Ready for Settlement (Pending)
+                      </span>
+                    )}
+                  </div>
                 </div>
+
+                {/* Top 3 Standings Preview */}
+                {loadingMonthPodium ? (
+                  <div style={{ padding: '2rem', textAlign: 'center', color: 'rgba(200,215,240,0.6)', fontSize: '0.8rem' }}>
+                    ⏳ Loading Top 3 leaders for {formatPeriodLabel(selectedSettlementMonth)}…
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem', marginTop: '0.5rem' }}>
+                    {[
+                      { rank: 1, label: '1st Place Winner', prizeUsd: platformSettings.leaderboard_prize_1st ?? 5, badgeColor: '#fbbf24', icon: '🥇' },
+                      { rank: 2, label: '2nd Place Winner', prizeUsd: platformSettings.leaderboard_prize_2nd ?? 3, badgeColor: '#38bdf8', icon: '🥈' },
+                      { rank: 3, label: '3rd Place Winner', prizeUsd: platformSettings.leaderboard_prize_3rd ?? 2, badgeColor: '#34d399', icon: '🥉' }
+                    ].map((podium, pIdx) => {
+                      const entry = monthPodiumEntries[pIdx];
+                      const prizeNgn = podium.prizeUsd * (platformSettings.usd_to_ngn_rate || 1500);
+                      return (
+                        <div
+                          key={podium.rank}
+                          style={{
+                            background: '#080E1A',
+                            border: `1px solid ${podium.badgeColor}40`,
+                            borderRadius: 8,
+                            padding: '1rem',
+                            position: 'relative'
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: podium.badgeColor }}>
+                              {podium.icon} {podium.label}
+                            </span>
+                            <span style={{ fontSize: '0.7rem', color: '#10b981', fontWeight: 700 }}>
+                              ${podium.prizeUsd} (₦{prizeNgn.toLocaleString('en-NG')})
+                            </span>
+                          </div>
+                          {entry ? (
+                            <div>
+                              <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#fff' }}>
+                                {entry.first_name || 'Sofian'} {entry.last_initial || ''}
+                              </div>
+                              <div style={{ fontSize: '0.72rem', color: 'rgba(200,215,240,0.65)', marginTop: '0.2rem' }}>
+                                Monthly XP: <strong style={{ color: '#FF8A00' }}>{Number(entry.xp_this_period || 0).toLocaleString()} XP</strong>
+                              </div>
+                              <div style={{ fontSize: '0.66rem', color: '#38bdf8', marginTop: '0.25rem' }}>
+                                + 30-Day 15% Affiliate Boost &amp; Multiplier Counter
+                              </div>
+                              {monthSettlementInfo?.settled && (
+                                <div style={{ fontSize: '0.64rem', color: '#10b981', marginTop: '0.35rem', fontWeight: 700 }}>
+                                  ✓ Settled &amp; Credited
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div style={{ fontSize: '0.74rem', color: 'rgba(200,215,240,0.45)', fontStyle: 'italic', padding: '0.4rem 0' }}>
+                              Awaiting student to reach Rank #{podium.rank} in {formatPeriodLabel(selectedSettlementMonth)}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           )}
