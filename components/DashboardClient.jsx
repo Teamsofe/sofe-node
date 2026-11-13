@@ -613,35 +613,49 @@ export default function DashboardClient() {
   const loadLeaderboardData = async (type = 'xp') => {
     setLbLoading(true);
     try {
-      const snap = await getDocs(query(collection(db, 'leaderboard'), limit(50)));
+      let sortField = 'xp_this_period';
+      if (type === 'commission') sortField = 'commission_this_period';
+      if (type === 'referral') sortField = 'validated_referrals_this_period';
+
+      let snap;
+      try {
+        snap = await getDocs(query(collection(db, 'leaderboard'), orderBy(sortField, 'desc'), limit(100)));
+      } catch (qErr) {
+        console.warn('Leaderboard ordered query failed, falling back to full collection:', qErr);
+        snap = await getDocs(collection(db, 'leaderboard'));
+      }
+
       const sanitizeTier = (t) => (!t || t === 'Genesis Node') ? 'Genesis Scout' : t;
 
       let rows = snap.docs.map((d) => {
         const data = d.data();
+        const xpPeriod = Math.max(0, Number(data.xp_this_period ?? data.monthly_xp ?? 0));
+        const xpTotalVal = Math.max(0, Number(data.xp_total ?? data.total_xp ?? data.xp ?? 0));
+        const commPeriod = Math.max(0, Number(data.commission_this_period ?? 0));
+        const refsPeriod = Math.max(0, Number(data.validated_referrals_this_period ?? 0));
+
         return {
           id: d.id,
+          uid: d.id,
           ...data,
+          xp_this_period: xpPeriod,
+          xp_total: xpTotalVal,
+          commission_this_period: commPeriod,
+          validated_referrals_this_period: refsPeriod,
           tier: sanitizeTier(data.tier)
         };
       });
 
-      // If empty in database, seed with benchmark entries from original design
-      if (rows.length === 0) {
-        rows = [
-          { id: 'u1', first_name: 'Joy', last_initial: 'S.', tier: 'Genesis Scout', xp_total: 50, xp_this_period: 50, commission_this_period: 45000, validated_referrals_this_period: 14 },
-          { id: 'u2', first_name: 'CONFIDENCE', last_initial: 'J.', tier: 'Genesis Scout', xp_total: 36, xp_this_period: 36, commission_this_period: 32000, validated_referrals_this_period: 10 },
-          { id: 'u3', first_name: 'Shedrack', last_initial: 'E.', tier: 'Genesis Scout', xp_total: 36, xp_this_period: 36, commission_this_period: 28000, validated_referrals_this_period: 8 },
-          { id: 'u4', first_name: 'Izuchukwu', last_initial: 'E.', tier: 'Genesis Scout', xp_total: 36, xp_this_period: 36, commission_this_period: 21000, validated_referrals_this_period: 6 },
-          { id: 'u5', first_name: 'Super', last_initial: 'A.', tier: 'Genesis Scout', xp_total: 15, xp_this_period: 15, commission_this_period: 15000, validated_referrals_this_period: 3 }
-        ];
-      }
+      // Filter out duplicate or null entries and ensure valid numeric values
+      rows = rows.filter((r) => r.id && (r.first_name || r.username));
 
       const uid = currentUser?.uid;
       const myTierName = sanitizeTier(currentTier?.name);
       // Strictly use actual monthly XP, actual commission, actual referrals - NEVER hardcoded fake defaults
-      const myXpPeriod = Number(userData?.xp_this_period ?? userData?.monthly_xp ?? 0);
-      const myComm = Number(userData?.commission_this_period ?? walletBalance ?? 0);
-      const myRefs = Number(userData?.validated_referrals_this_period ?? validatedRefs ?? 0);
+      const myXpPeriod = Math.max(0, Number(userData?.xp_this_period ?? userData?.monthly_xp ?? 0));
+      const myComm = Math.max(0, Number(userData?.commission_this_period ?? walletBalance ?? 0));
+      const myRefs = Math.max(0, Number(userData?.validated_referrals_this_period ?? validatedRefs ?? 0));
+      const myXpTotal = Math.max(0, Number(userData?.xp_total ?? userData?.total_xp ?? userData?.xp ?? xpTotal ?? 0));
 
       // Safe name extraction without TDZ references
       const displayNameStr = `${userData?.first_name || ''} ${userData?.last_name || ''}`.trim() || currentUser?.displayName || 'Sofian';
@@ -658,13 +672,13 @@ export default function DashboardClient() {
           first_name: myFirstName,
           last_initial: myLastName ? (myLastName.charAt(0).toUpperCase() + '.') : '',
           tier: myTierName,
-          xp_total: xpTotal,
+          xp_total: myXpTotal,
           xp_this_period: myXpPeriod,
           commission_this_period: myComm,
           validated_referrals_this_period: myRefs
         });
       } else if (myIndex !== -1) {
-        // Sync current user's entry with actual state
+        // Sync current user's entry with latest live state
         rows[myIndex] = {
           ...rows[myIndex],
           id: uid || rows[myIndex].id,
@@ -672,10 +686,10 @@ export default function DashboardClient() {
           first_name: myFirstName,
           last_initial: myLastName ? (myLastName.charAt(0).toUpperCase() + '.') : '',
           tier: myTierName,
-          xp_total: xpTotal,
-          xp_this_period: myXpPeriod,
-          commission_this_period: myComm,
-          validated_referrals_this_period: myRefs
+          xp_total: Math.max(rows[myIndex].xp_total || 0, myXpTotal),
+          xp_this_period: Math.max(rows[myIndex].xp_this_period || 0, myXpPeriod),
+          commission_this_period: Math.max(rows[myIndex].commission_this_period || 0, myComm),
+          validated_referrals_this_period: Math.max(rows[myIndex].validated_referrals_this_period || 0, myRefs)
         };
       }
 

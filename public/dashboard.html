@@ -2400,8 +2400,9 @@ window.loadXpLeaderboard = async function() {
     let html = '<table class="lb-table"><thead><tr><th>#</th><th>Sofian</th><th>Tier</th><th style="text-align:right;">XP This Month</th></tr></thead><tbody>';
     rows.forEach((d, i) => {
       const u = d.data();
-      const xpPeriod = Number(u.xp_this_period)||0;
-      const tier = tierFor(Number(u.xp_total)||0);
+      const xpPeriod = Math.max(0, Number(u.xp_this_period ?? u.monthly_xp ?? 0));
+      const xpTotalVal = Math.max(0, Number(u.xp_total ?? u.total_xp ?? u.xp ?? 0));
+      const tier = tierFor(xpTotalVal);
       const rank = i + 1;
       const rankClass = rank===1?'r1':rank===2?'r2':rank===3?'r3':'';
       const name = displayName(u);

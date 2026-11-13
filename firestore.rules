@@ -602,7 +602,7 @@ service cloud.firestore {
     }
 
     match /certificates/{certId} {
-      allow read: if isOwner(resource.data.user_id) || isAdmin();
+      allow read: if true;
       allow write: if false;  
     }
 

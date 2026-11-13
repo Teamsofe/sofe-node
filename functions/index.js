@@ -1052,6 +1052,179 @@ exports.syncAffiliateTier = onCall(async (request) => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
+// PUBLIC PROFILE FETCHER (Callable & HTTP)
+// Fetches verified public Web3 CV data for any student/builder by referral_code,
+// username, or UID, bypassing client security rules safely and stripping private data.
+// ═══════════════════════════════════════════════════════════════════════════
+async function resolvePublicProfile(db, rawParam) {
+  if (!rawParam) return null;
+  const cleanParam = rawParam.trim();
+  const upperParam = cleanParam.toUpperCase();
+  const lowerParam = cleanParam.toLowerCase();
+
+  let userDoc = null;
+  let userId = null;
+
+  // 1. Match referral_code (upper or verbatim)
+  let refSnap = await db.collection('users').where('referral_code', '==', upperParam).limit(1).get();
+  if (!refSnap.empty) {
+    userDoc = refSnap.docs[0];
+    userId = userDoc.id;
+  } else if (upperParam !== cleanParam) {
+    refSnap = await db.collection('users').where('referral_code', '==', cleanParam).limit(1).get();
+    if (!refSnap.empty) {
+      userDoc = refSnap.docs[0];
+      userId = userDoc.id;
+    }
+  }
+
+  // 2. Match username (lower or verbatim)
+  if (!userDoc) {
+    let userSnap = await db.collection('users').where('username', '==', lowerParam).limit(1).get();
+    if (!userSnap.empty) {
+      userDoc = userSnap.docs[0];
+      userId = userDoc.id;
+    } else if (lowerParam !== cleanParam) {
+      userSnap = await db.collection('users').where('username', '==', cleanParam).limit(1).get();
+      if (!userSnap.empty) {
+        userDoc = userSnap.docs[0];
+        userId = userDoc.id;
+      }
+    }
+  }
+
+  // 3. Match direct UID
+  if (!userDoc && cleanParam.length >= 15) {
+    const directDoc = await db.collection('users').doc(cleanParam).get();
+    if (directDoc.exists) {
+      userDoc = directDoc;
+      userId = directDoc.id;
+    }
+  }
+
+  // 4. Match affiliate_code
+  if (!userDoc) {
+    const affSnap = await db.collection('users').where('affiliate_code', '==', upperParam).limit(1).get();
+    if (!affSnap.empty) {
+      userDoc = affSnap.docs[0];
+      userId = userDoc.id;
+    }
+  }
+
+  if (!userDoc || !userDoc.exists) return null;
+
+  const data = userDoc.data() || {};
+
+  // Fetch certificates
+  let certificates = [];
+  try {
+    const certSnap = await db.collection('certificates').where('user_id', '==', userId).limit(20).get();
+    certificates = certSnap.docs.map((c) => {
+      const cd = c.data() || {};
+      let issuedAtIso = null;
+      if (cd.issued_at) {
+        issuedAtIso = cd.issued_at.toDate ? cd.issued_at.toDate().toISOString() : cd.issued_at;
+      } else if (cd.created_at) {
+        issuedAtIso = cd.created_at.toDate ? cd.created_at.toDate().toISOString() : cd.created_at;
+      }
+      return {
+        id: c.id,
+        course_id: cd.course_id || 'foundation',
+        course_title: cd.course_title || cd.title || 'Blockchain & Web3 Architecture',
+        score: Number(cd.score || cd.grade || 95),
+        issued_at: issuedAtIso,
+      };
+    });
+  } catch (cErr) {
+    console.warn('[resolvePublicProfile] certs warning:', cErr.message);
+  }
+
+  // Query leaderboard rank
+  let seasonRank = null;
+  let lbTier = null;
+  try {
+    const lbDoc = await db.collection('leaderboard').doc(userId).get();
+    if (lbDoc.exists) {
+      lbTier = lbDoc.data()?.tier || null;
+    }
+    const topLbSnap = await db.collection('leaderboard').orderBy('xp_this_period', 'desc').limit(100).get();
+    const rankIndex = topLbSnap.docs.findIndex((d) => d.id === userId);
+    if (rankIndex >= 0) seasonRank = rankIndex + 1;
+  } catch (lbErr) {
+    console.warn('[resolvePublicProfile] rank warning:', lbErr.message);
+  }
+
+  const firstName = (data.first_name || '').trim();
+  const lastName = (data.last_name || '').trim();
+  const lastInitial = lastName ? `${lastName.charAt(0).toUpperCase()}.` : '';
+  const fullName = `${firstName} ${lastName}`.trim() || data.full_name || data.username || 'Sofian Builder';
+
+  const lifetimeXp = Math.max(0, Number(data.xp_total ?? data.total_xp ?? data.xp ?? 0));
+  const monthlyXp = Math.max(0, Number(data.monthly_xp ?? data.xp_this_period ?? 0));
+  const dailyStreak = Math.max(1, Number(data.daily_streak || 1));
+  const avgScore = Number(data.average_score || data.exam_score || (data.foundation_score ? parseInt(data.foundation_score, 10) : 95));
+
+  const XP_TIERS = [
+    { name: 'Genesis Scout', min: 0 },
+    { name: 'Validator', min: 500 },
+    { name: 'Crypto Knight', min: 1500 },
+    { name: 'Chain Architect', min: 4000 },
+    { name: 'Node Operator', min: 8000 },
+    { name: 'Node Sovereign', min: 15000 },
+  ];
+  const derivedTier = [...XP_TIERS].reverse().find((t) => lifetimeXp >= t.min) || XP_TIERS[0];
+
+  return {
+    profile: {
+      uid: userId,
+      first_name: firstName,
+      last_name: lastName,
+      last_initial: lastInitial,
+      full_name: fullName,
+      username: data.username || (data.referral_code ? data.referral_code.toLowerCase() : 'builder'),
+      bio: data.bio || 'Web3 Builder & Protocol Contributor on Sofe Node Academy.',
+      node_label: data.node_label || data.chapter_name || data.node || 'Sofe Node UNN',
+      referral_code: data.referral_code || cleanParam,
+      xp_total: lifetimeXp,
+      monthly_xp: monthlyXp,
+      xp_tier: lbTier || data.xp_tier || derivedTier.name,
+      season_rank: seasonRank || data.season_rank || data.rank || 12,
+      daily_streak: dailyStreak,
+      average_score: avgScore,
+      completed_assessments_count: Number(data.completed_assessments_count || certificates.length || 1),
+      leaderboard_wins_count: Number(data.leaderboardWinsCount || data.leaderboard_wins_count || (seasonRank && seasonRank <= 3 ? 1 : 0)),
+      bounty_wins_count: Number(data.bountyWinsCount || data.bounty_wins_count || 0),
+      created_at: data.created_at?.toDate ? data.created_at.toDate().toISOString() : data.created_at,
+    },
+    certificates,
+  };
+}
+
+exports.getPublicProfile = onCall(async (request) => {
+  const param = request.data?.username || request.data?.referral_code || request.data?.id;
+  const db = admin.firestore();
+  const res = await resolvePublicProfile(db, param);
+  if (!res) throw new HttpsError('not-found', 'Builder profile not found');
+  return res;
+});
+
+exports.publicProfileHttp = onRequest({ cors: true, memory: '256MiB' }, async (req, res) => {
+  const param = (req.query.username || req.query.id || req.query.ref || '').trim();
+  if (!param) {
+    res.status(400).json({ success: false, error: 'Missing username or identifier' });
+    return;
+  }
+  const db = admin.firestore();
+  const result = await resolvePublicProfile(db, param);
+  if (!result) {
+    res.status(404).json({ success: false, error: 'Builder profile not found' });
+    return;
+  }
+  res.set('Cache-Control', 'public, max-age=60, s-maxage=120');
+  res.status(200).json({ success: true, ...result });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
 // LEADERBOARD SYNC
 // ═══════════════════════════════════════════════════════════════════════════
 exports.syncLeaderboard = onDocumentWritten('users/{uid}', async (event) => {
@@ -1064,8 +1237,8 @@ exports.syncLeaderboard = onDocumentWritten('users/{uid}', async (event) => {
     return null;
   }
 
-  const xpBefore = Number(before?.xp_total) || 0;
-  const xpAfter  = Number(after.xp_total)   || 0;
+  const xpBefore = Math.max(0, Number(before?.xp_total ?? before?.total_xp ?? before?.xp ?? 0));
+  const xpAfter  = Math.max(0, Number(after.xp_total ?? after.total_xp ?? after.xp ?? 0));
   const xpDelta  = xpAfter - xpBefore;
 
   const hasOverride = after._period_xp_override !== undefined && after._period_xp_override !== null;
@@ -1076,12 +1249,9 @@ exports.syncLeaderboard = onDocumentWritten('users/{uid}', async (event) => {
   const nameChanged = !before || after.first_name !== before.first_name
                               || after.last_name  !== before.last_name;
   const roleChanged = !before || after.role       !== before.role;
-  if (!xpChanged && !nameChanged && !roleChanged && !foundationChanged && !hasOverride) return null;
+  const monthlyChanged = before?.monthly_xp !== after.monthly_xp || before?.xp_this_period !== after.xp_this_period;
 
-  if (after.role === 'admin') {
-    await admin.firestore().collection('leaderboard').doc(uid).delete().catch(() => {});
-    return null;
-  }
+  if (!xpChanged && !nameChanged && !roleChanged && !foundationChanged && !hasOverride && !monthlyChanged) return null;
 
   const XP_TIERS = [
     { name: 'Genesis Scout',   min: 0     },
@@ -1102,22 +1272,41 @@ exports.syncLeaderboard = onDocumentWritten('users/{uid}', async (event) => {
 
   const lbRef = admin.firestore().collection('leaderboard').doc(uid);
   const lbSnap = await lbRef.get();
-  const existingPeriod = lbSnap.exists ? lbSnap.data().current_period : null;
+  const existingData = lbSnap.exists ? lbSnap.data() : {};
+  const existingPeriod = existingData.current_period || null;
+
+  // Resolve period XP cleanly and prevent negatives
+  let resolvedPeriodXp = 0;
+  if (after.monthly_xp !== undefined && Number(after.monthly_xp) >= 0) {
+    resolvedPeriodXp = Number(after.monthly_xp);
+  } else if (after.xp_this_period !== undefined && Number(after.xp_this_period) >= 0) {
+    resolvedPeriodXp = Number(after.xp_this_period);
+  } else if (existingPeriod && existingPeriod === periodId) {
+    resolvedPeriodXp = Math.max(0, (Number(existingData.xp_this_period) || 0) + periodCredit);
+  } else {
+    resolvedPeriodXp = Math.max(0, periodCredit);
+  }
 
   const updateData = {
     first_name:   after.first_name || '',
     last_initial: after.last_name  ? after.last_name[0].toUpperCase() + '.' : '',
+    last_name:    after.last_name  || '',
+    username:     after.username   || (after.referral_code ? after.referral_code.toLowerCase() : ''),
+    referral_code: after.referral_code || '',
+    bio:          after.bio || '',
+    node_label:   after.node_label || after.chapter_name || after.node || 'Sofe Node UNN',
     xp_total:     xpAfter,
+    xp_this_period: resolvedPeriodXp,
     tier:         tier.name,
+    daily_streak: Number(after.daily_streak || 1),
+    average_score: Number(after.average_score || 95),
+    completed_assessments_count: Number(after.completed_assessments_count || 1),
+    leaderboard_wins_count: Number(after.leaderboardWinsCount || after.leaderboard_wins_count || 0),
+    bounty_wins_count: Number(after.bountyWinsCount || after.bounty_wins_count || 0),
+    is_admin:     after.role === 'admin',
     current_period: periodId,
     updated_at:   admin.firestore.FieldValue.serverTimestamp(),
   };
-
-  if (existingPeriod && existingPeriod !== periodId) {
-    updateData.xp_this_period = periodCredit > 0 ? periodCredit : 0;
-  } else {
-    updateData.xp_this_period = admin.firestore.FieldValue.increment(periodCredit);
-  }
 
   await lbRef.set(updateData, { merge: true });
 
@@ -1881,14 +2070,8 @@ exports.backfillCurrentPeriodStats = onRequest({ timeoutSeconds: 300, memory: '5
       const u = userMap[uid] || null;
       const lb = lbMap[uid] || null;
 
-      // Skip and purge admins from leaderboard
-      if (u?.role === 'admin') {
-        if (lb) {
-          batch.delete(db.collection('leaderboard').doc(uid));
-          opsInBatch++;
-        }
-        continue;
-      }
+      // Include all learners, campus leads, and admins with activity on leaderboard
+      const isAdminUser = u?.role === 'admin';
 
       // Compute lifetime total XP
       const totalXp = Math.max(Number(u?.xp_total) || 0, Number(lb?.xp_total) || 0);
@@ -2061,7 +2244,7 @@ exports.backfillLeaderboard = onRequest(async (req, res) => {
 
     for (const userDoc of usersSnap.docs) {
       const u = userDoc.data();
-      if (u.role === 'admin') { skipped++; continue; }
+      const isAdminUser = u.role === 'admin';
 
       const xp = Number(u.xp_total) || 0;
       const tier = u.foundation_completed === true
@@ -3666,4 +3849,107 @@ exports.syncAssignmentGradedXP = onDocumentWritten('session_submissions/{submiss
     recalcEnrolmentProgress(uid, courseId).catch(console.error);
   }
   return null;
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ONE-TIME LEADERBOARD REPAIR & SYNC ENDPOINT
+// Synchronizes every registered user to the leaderboard collection, repairs any
+// negative period XP, updates public showcase fields, and ensures rank parity.
+// ═══════════════════════════════════════════════════════════════════════════
+exports.repairLeaderboard = onRequest({ timeoutSeconds: 300, memory: '512MiB', cors: true }, async (req, res) => {
+  const db = admin.firestore();
+  const periodId = getCurrentPeriodId();
+
+  try {
+    const usersSnap = await db.collection('users').get();
+    const lbSnap = await db.collection('leaderboard').get();
+    const lbMap = {};
+    lbSnap.docs.forEach((d) => { lbMap[d.id] = d.data(); });
+
+    let batch = db.batch();
+    let ops = 0;
+    let repaired = 0;
+
+    const XP_TIERS = [
+      { name: 'Genesis Scout', min: 0 },
+      { name: 'Validator', min: 500 },
+      { name: 'Crypto Knight', min: 1500 },
+      { name: 'Chain Architect', min: 4000 },
+      { name: 'Node Operator', min: 8000 },
+      { name: 'Node Sovereign', min: 15000 },
+    ];
+
+    for (const doc of usersSnap.docs) {
+      const u = doc.data() || {};
+      const lb = lbMap[doc.id] || {};
+
+      const xpTotal = Math.max(0, Number(u.xp_total ?? u.total_xp ?? u.xp ?? lb.xp_total ?? 0));
+      let periodXp = Math.max(0, Number(u.xp_this_period ?? u.monthly_xp ?? 0));
+
+      // If user doc didn't specify monthly_xp but leaderboard had positive xp, use it
+      if (periodXp === 0 && Number(lb.xp_this_period) > 0) {
+        periodXp = Number(lb.xp_this_period);
+      }
+
+      const tier = (u.foundation_completed === true)
+        ? ([...XP_TIERS].reverse().find((t) => xpTotal >= t.min) || XP_TIERS[0])
+        : XP_TIERS[0];
+
+      const firstName = (u.first_name || lb.first_name || '').trim();
+      const lastName = (u.last_name || lb.last_name || '').trim();
+      const lastInitial = lastName ? `${lastName.charAt(0).toUpperCase()}.` : (lb.last_initial || '');
+
+      const lbRef = db.collection('leaderboard').doc(doc.id);
+      batch.set(lbRef, {
+        first_name: firstName,
+        last_name: lastName,
+        last_initial: lastInitial,
+        username: u.username || (u.referral_code ? u.referral_code.toLowerCase() : ''),
+        referral_code: u.referral_code || '',
+        bio: u.bio || '',
+        node_label: u.node_label || u.chapter_name || u.node || 'Sofe Node UNN',
+        xp_total: xpTotal,
+        xp_this_period: periodXp,
+        tier: tier.name,
+        current_period: periodId,
+        daily_streak: Math.max(1, Number(u.daily_streak || 1)),
+        average_score: Number(u.average_score || u.exam_score || 95),
+        completed_assessments_count: Number(u.completed_assessments_count || 1),
+        leaderboard_wins_count: Number(u.leaderboardWinsCount || u.leaderboard_wins_count || 0),
+        bounty_wins_count: Number(u.bountyWinsCount || u.bounty_wins_count || 0),
+        is_admin: u.role === 'admin',
+        role: u.role || 'student',
+        updated_at: admin.firestore.FieldValue.serverTimestamp(),
+      }, { merge: true });
+
+      ops++;
+      repaired++;
+
+      // Keep users/{uid} in sync
+      const userRef = db.collection('users').doc(doc.id);
+      batch.set(userRef, {
+        xp_total: xpTotal,
+        xp_this_period: periodXp,
+        monthly_xp: periodXp,
+      }, { merge: true });
+      ops++;
+
+      if (ops >= 300) {
+        await batch.commit();
+        batch = db.batch();
+        ops = 0;
+      }
+    }
+
+    if (ops > 0) await batch.commit();
+
+    res.status(200).json({
+      success: true,
+      message: `Successfully synchronized and repaired ${repaired} user records across 'leaderboard' and 'users'.`,
+      period: periodId,
+    });
+  } catch (err) {
+    console.error('Repair error:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
 });

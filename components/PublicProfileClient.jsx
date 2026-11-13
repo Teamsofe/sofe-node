@@ -11,98 +11,123 @@ export default function PublicProfileClient({ usernameParam }) {
   const [profile, setProfile] = useState(null);
   const [certificates, setCertificates] = useState([]);
   const [copied, setCopied] = useState(false);
+  const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
     async function loadProfile() {
       setLoading(true);
+      setNotFound(false);
       const cleanParam = (usernameParam || '').trim();
 
+      if (!cleanParam) {
+        setNotFound(true);
+        setLoading(false);
+        return;
+      }
+
       try {
+        // 1. Call server-side API route (uses Firebase Admin, bypasses client permission rules securely)
+        try {
+          const res = await fetch(`/api/profile/${encodeURIComponent(cleanParam)}`, {
+            cache: 'no-store'
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.success && data.profile) {
+              setProfile(data.profile);
+              setCertificates(data.certificates || []);
+              setLoading(false);
+              return;
+            }
+          }
+        } catch (apiErr) {
+          console.warn('[Profile] API route fetch failed, trying client Firestore:', apiErr.message);
+        }
+
+        // 2. Fallback to client Firestore (works if viewer is admin or profile owner)
         let foundUser = null;
         let userId = null;
 
-        // 1. Try finding by referral_code
-        const refQ = query(collection(db, 'users'), where('referral_code', '==', cleanParam));
-        const refSnap = await getDocs(refQ);
+        // Try referral_code uppercase and raw
+        const upperParam = cleanParam.toUpperCase();
+        let refQ = query(collection(db, 'users'), where('referral_code', '==', upperParam));
+        let refSnap = await getDocs(refQ).catch(() => ({ empty: true, docs: [] }));
         if (!refSnap.empty) {
           foundUser = refSnap.docs[0].data();
           userId = refSnap.docs[0].id;
+        } else if (upperParam !== cleanParam) {
+          refQ = query(collection(db, 'users'), where('referral_code', '==', cleanParam));
+          refSnap = await getDocs(refQ).catch(() => ({ empty: true, docs: [] }));
+          if (!refSnap.empty) {
+            foundUser = refSnap.docs[0].data();
+            userId = refSnap.docs[0].id;
+          }
         }
 
-        // 2. Try finding by username
+        // Try username lowercase
         if (!foundUser) {
-          const userQ = query(collection(db, 'users'), where('username', '==', cleanParam.toLowerCase()));
-          const userSnap = await getDocs(userQ);
+          const lowerParam = cleanParam.toLowerCase();
+          const userQ = query(collection(db, 'users'), where('username', '==', lowerParam));
+          const userSnap = await getDocs(userQ).catch(() => ({ empty: true, docs: [] }));
           if (!userSnap.empty) {
             foundUser = userSnap.docs[0].data();
             userId = userSnap.docs[0].id;
           }
         }
 
-        // 3. Try direct UID
-        if (!foundUser && cleanParam.length >= 10) {
-          const docSnap = await getDoc(doc(db, 'users', cleanParam));
-          if (docSnap.exists()) {
+        // Try direct UID
+        if (!foundUser && cleanParam.length >= 15) {
+          const docSnap = await getDoc(doc(db, 'users', cleanParam)).catch(() => ({ exists: () => false }));
+          if (docSnap.exists && docSnap.exists()) {
             foundUser = docSnap.data();
             userId = docSnap.id;
           }
         }
 
-        // 4. Fallback demo showcase profile if not yet in DB
-        if (!foundUser) {
-          foundUser = {
-            uid: 'demo-profile',
-            first_name: 'Ekpegbue',
-            last_name: 'Shedrack',
-            username: cleanParam || 'shedrack',
-            bio: 'Web3 Developer & Protocol Contributor. Scaling decentralized infrastructure and verified talent across Africa.',
-            node_label: 'Sofe Node UNN',
-            referral_code: cleanParam.startsWith('SOFE-') ? cleanParam : 'SOFE-SHEBDWJH7',
-            xp_total: 348,
-            monthly_xp: 348,
-            daily_streak: 6,
-            leaderboard_wins_count: 1,
-            bounty_wins_count: 0,
-            season_rank: 12,
-            xp_tier: 'Genesis',
-            completed_assessments_count: 4,
-            average_score: 95,
-            created_at: new Date('2024-01-15')
-          };
-          userId = 'demo-profile';
+        if (foundUser) {
+          const lifetimeXp = Math.max(0, Number(foundUser.xp_total ?? foundUser.total_xp ?? foundUser.xp ?? 0));
+          const monthlyXp = Math.max(0, Number(foundUser.monthly_xp ?? foundUser.xp_this_period ?? 0));
+          const firstName = (foundUser.first_name || '').trim();
+          const lastName = (foundUser.last_name || '').trim();
+          const lastInitial = lastName ? `${lastName.charAt(0).toUpperCase()}.` : '';
 
-          setCertificates([
-            {
-              id: 'CERT-FOUNDATION-98214',
-              course_id: 'foundation',
-              course_title: 'Blockchain & Cryptocurrency Foundation',
-              issued_at: new Date('2024-02-10'),
-              score: 97
-            },
-            {
-              id: 'CERT-SMART-CONTRACTS-55102',
-              course_id: 'smart-contract-developer',
-              course_title: 'Smart Contract Developer Career Track',
-              issued_at: new Date('2024-04-18'),
-              score: 94
-            }
-          ]);
-        } else {
-          // If real user found, load their certificates
-          if (userId) {
-            try {
-              const certQ = query(collection(db, 'certificates'), where('user_id', '==', userId));
-              const certSnap = await getDocs(certQ);
-              setCertificates(certSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
-            } catch (err) {
-              console.warn('Could not load certificates:', err);
-            }
+          setProfile({
+            uid: userId,
+            id: userId,
+            first_name: firstName,
+            last_name: lastName,
+            last_initial: lastInitial,
+            full_name: `${firstName} ${lastName}`.trim() || foundUser.full_name || foundUser.username || 'Sofian Builder',
+            username: foundUser.username || (foundUser.referral_code ? foundUser.referral_code.toLowerCase() : 'builder'),
+            bio: foundUser.bio || 'Web3 Builder & Protocol Contributor on Sofe Node Academy.',
+            node_label: foundUser.node_label || foundUser.chapter_name || foundUser.node || 'Sofe Node UNN',
+            referral_code: foundUser.referral_code || cleanParam,
+            xp_total: lifetimeXp,
+            monthly_xp: monthlyXp,
+            xp_tier: foundUser.xp_tier || 'Genesis Scout',
+            season_rank: foundUser.season_rank || foundUser.rank || 12,
+            daily_streak: Math.max(1, Number(foundUser.daily_streak || 1)),
+            average_score: Number(foundUser.average_score || foundUser.exam_score || (foundUser.foundation_score ? parseInt(foundUser.foundation_score, 10) : 95)),
+            completed_assessments_count: Number(foundUser.completed_assessments_count || 1),
+            leaderboard_wins_count: Number(foundUser.leaderboardWinsCount || foundUser.leaderboard_wins_count || 0),
+            bounty_wins_count: Number(foundUser.bountyWinsCount || foundUser.bounty_wins_count || 0),
+            created_at: foundUser.created_at,
+          });
+
+          // Load certificates
+          try {
+            const certQ = query(collection(db, 'certificates'), where('user_id', '==', userId));
+            const certSnap = await getDocs(certQ);
+            setCertificates(certSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
+          } catch (certErr) {
+            console.warn('Could not load certificates:', certErr);
           }
+        } else {
+          setNotFound(true);
         }
-
-        setProfile({ ...foundUser, id: userId });
       } catch (e) {
         console.error('Error loading public profile:', e);
+        setNotFound(true);
       } finally {
         setLoading(false);
       }
@@ -138,6 +163,41 @@ export default function PublicProfileClient({ usernameParam }) {
           <div className="profile-spinner" />
           <p style={{ fontSize: '0.92rem', opacity: 0.8 }}>Loading Verified Web3 CV...</p>
         </div>
+      </div>
+    );
+  }
+
+  if (notFound || !profile) {
+    return (
+      <div className="profile-page-wrapper not-found-state">
+        <style dangerouslySetInnerHTML={{ __html: profileStyles }} />
+        <main className="profile-main-container">
+          <div className="profile-card profile-hero-card" style={{ textAlign: 'center', padding: '3.5rem 1.5rem' }}>
+            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🛡️</div>
+            <h1 style={{ fontSize: '1.6rem', fontWeight: 800, marginBottom: '0.5rem', color: '#fff' }}>
+              Builder Profile Not Found
+            </h1>
+            <p style={{ fontSize: '0.88rem', color: 'rgba(200,215,240,0.7)', maxWidth: 480, margin: '0 auto 1.75rem auto', lineHeight: 1.6 }}>
+              The Web3 CV for <strong style={{ color: '#FF8A00' }}>@{usernameParam || 'builder'}</strong> has not been claimed yet or the referral link has expired.
+            </p>
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+              <Link
+                href={`/signup?ref=${encodeURIComponent(usernameParam || '')}`}
+                className="profile-btn-challenge"
+                style={{ textDecoration: 'none' }}
+              >
+                Claim Your Web3 CV &amp; Join Sofe Node →
+              </Link>
+              <Link
+                href="/academy"
+                className="profile-btn-share"
+                style={{ textDecoration: 'none' }}
+              >
+                Explore Courses
+              </Link>
+            </div>
+          </div>
+        </main>
       </div>
     );
   }
