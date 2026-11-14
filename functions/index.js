@@ -3866,6 +3866,31 @@ exports.repairLeaderboard = onRequest({ timeoutSeconds: 300, memory: '512MiB', c
     const lbMap = {};
     lbSnap.docs.forEach((d) => { lbMap[d.id] = d.data(); });
 
+    // Aggregate true transaction totals from collection 'xp'
+    const xpSnap = await db.collection('xp').get();
+    const now = new Date();
+    const startOfCurrentMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0));
+    const xpByUserAllTime = {};
+    const xpByUserCurrentPeriod = {};
+
+    xpSnap.docs.forEach(d => {
+      const data = d.data();
+      const uid = data.user_id;
+      if (!uid) return;
+      const earned = Number(data.xp_earned || 0);
+      xpByUserAllTime[uid] = (xpByUserAllTime[uid] || 0) + earned;
+
+      let claimedDate = null;
+      if (data.claimed_at) {
+        if (data.claimed_at.toDate) claimedDate = data.claimed_at.toDate();
+        else if (data.claimed_at._seconds) claimedDate = new Date(data.claimed_at._seconds * 1000);
+        else claimedDate = new Date(data.claimed_at);
+      }
+      if (claimedDate && claimedDate >= startOfCurrentMonth) {
+        xpByUserCurrentPeriod[uid] = (xpByUserCurrentPeriod[uid] || 0) + earned;
+      }
+    });
+
     let batch = db.batch();
     let ops = 0;
     let repaired = 0;
@@ -3883,13 +3908,17 @@ exports.repairLeaderboard = onRequest({ timeoutSeconds: 300, memory: '512MiB', c
       const u = doc.data() || {};
       const lb = lbMap[doc.id] || {};
 
-      const xpTotal = Math.max(0, Number(u.xp_total ?? u.total_xp ?? u.xp ?? lb.xp_total ?? 0));
-      let periodXp = Math.max(0, Number(u.xp_this_period ?? u.monthly_xp ?? 0));
+      const fromLogsAll = xpByUserAllTime[doc.id] || 0;
+      const fromLogsPeriod = xpByUserCurrentPeriod[doc.id] || 0;
 
-      // If user doc didn't specify monthly_xp but leaderboard had positive xp, use it
-      if (periodXp === 0 && Number(lb.xp_this_period) > 0) {
-        periodXp = Number(lb.xp_this_period);
-      }
+      const xpTotal = Math.max(0, Number(u.xp_total ?? u.total_xp ?? u.xp ?? 0), Number(lb.xp_total ?? 0), fromLogsAll);
+      let periodXp = Math.max(0, Number(u.xp_this_period ?? u.monthly_xp ?? 0), Number(lb.xp_this_period ?? 0), fromLogsPeriod);
+
+      const winsCount = Math.max(
+        0,
+        Number(u.leaderboardWinsCount || u.leaderboard_wins_count || 0),
+        Number(lb.leaderboardWinsCount || lb.leaderboard_wins_count || 0)
+      );
 
       const tier = (u.foundation_completed === true)
         ? ([...XP_TIERS].reverse().find((t) => xpTotal >= t.min) || XP_TIERS[0])
@@ -3915,7 +3944,8 @@ exports.repairLeaderboard = onRequest({ timeoutSeconds: 300, memory: '512MiB', c
         daily_streak: Math.max(1, Number(u.daily_streak || 1)),
         average_score: Number(u.average_score || u.exam_score || 95),
         completed_assessments_count: Number(u.completed_assessments_count || 1),
-        leaderboard_wins_count: Number(u.leaderboardWinsCount || u.leaderboard_wins_count || 0),
+        leaderboard_wins_count: winsCount,
+        leaderboardWinsCount: winsCount,
         bounty_wins_count: Number(u.bountyWinsCount || u.bounty_wins_count || 0),
         is_admin: u.role === 'admin',
         role: u.role || 'student',
@@ -3931,6 +3961,8 @@ exports.repairLeaderboard = onRequest({ timeoutSeconds: 300, memory: '512MiB', c
         xp_total: xpTotal,
         xp_this_period: periodXp,
         monthly_xp: periodXp,
+        leaderboard_wins_count: winsCount,
+        leaderboardWinsCount: winsCount,
       }, { merge: true });
       ops++;
 

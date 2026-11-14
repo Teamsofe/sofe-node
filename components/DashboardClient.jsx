@@ -182,6 +182,11 @@ export default function DashboardClient() {
   const [userRankInfo, setUserRankInfo] = useState(null);
   const [lbLoading, setLbLoading] = useState(false);
 
+  // XP Transaction Log
+  const [xpLogs, setXpLogs] = useState([]);
+  const [xpLogsLoading, setXpLogsLoading] = useState(false);
+  const [xpLogsStats, setXpLogsStats] = useState(null);
+
   // Premium Banner Daily Dismissal & Copy Feedback
   const [premiumBannerDismissed, setPremiumBannerDismissed] = useState(false);
   const [copyFeedback, setCopyFeedback] = useState(null);
@@ -580,11 +585,24 @@ export default function DashboardClient() {
     if (claimedToday || !currentUser) return;
     try {
       const newStreak = dailyStreak + 1;
-      const bonus = newStreak % 7 === 0 ? 10 : 2;
-      const newTotal = xpTotal + bonus;
+      let bonusXp = 0;
+      let bonusLabel = 'Daily Login';
+      if (newStreak % 100 === 0) {
+        bonusXp = 50;
+        bonusLabel = '100-Day Streak Bonus!';
+      } else if (newStreak % 30 === 0) {
+        bonusXp = 25;
+        bonusLabel = '30-Day Streak Bonus!';
+      } else if (newStreak % 7 === 0) {
+        bonusXp = 10;
+        bonusLabel = '7-Day Streak Bonus!';
+      }
+      const earned = 2 + bonusXp;
+      const newTotal = xpTotal + earned;
       const currentPeriodXp = Number(userData?.xp_this_period ?? userData?.monthly_xp ?? 0);
-      const newPeriodXp = currentPeriodXp + bonus;
+      const newPeriodXp = currentPeriodXp + earned;
 
+      // 1. Update users document
       await updateDoc(doc(db, 'users', currentUser.uid), {
         xp_total: newTotal,
         daily_streak: newStreak,
@@ -592,6 +610,25 @@ export default function DashboardClient() {
         xp_this_period: newPeriodXp,
         monthly_xp: newPeriodXp
       });
+
+      // 2. Append permanent transaction record in collection 'xp'
+      await addDoc(collection(db, 'xp'), {
+        user_id: currentUser.uid,
+        xp_earned: earned,
+        source: 'streak_auto',
+        bonus_label: bonusLabel,
+        claimed_at: serverTimestamp(),
+        streak_day: newStreak,
+        bonus_xp: bonusXp
+      }).catch((err) => console.warn('Could not write xp ledger doc:', err));
+
+      // 3. Keep leaderboard document in sync
+      await setDoc(doc(db, 'leaderboard', currentUser.uid), {
+        xp_total: newTotal,
+        xp_this_period: newPeriodXp,
+        daily_streak: newStreak,
+        updated_at: serverTimestamp()
+      }, { merge: true }).catch((err) => console.warn('Could not update leaderboard doc:', err));
 
       setXpTotal(newTotal);
       setDailyStreak(newStreak);
@@ -603,8 +640,12 @@ export default function DashboardClient() {
         xp_this_period: newPeriodXp,
         monthly_xp: newPeriodXp
       } : prev);
-      setPayoutToast(`⚡ +${bonus} XP claimed! Streak: ${newStreak} days.`);
+      setPayoutToast(`⚡ +${earned} XP claimed! (${bonusLabel}) Streak: ${newStreak} days.`);
       setTimeout(() => setPayoutToast(null), 4000);
+
+      if (typeof loadUserXpLogs === 'function') {
+        loadUserXpLogs();
+      }
     } catch (e) {
       alert('Could not record daily claim: ' + e.message);
     }
@@ -732,9 +773,76 @@ export default function DashboardClient() {
     }
   };
 
+  const loadUserXpLogs = async () => {
+    if (!currentUser?.uid) return;
+    setXpLogsLoading(true);
+    try {
+      const res = await fetch(`/api/xp?userId=${encodeURIComponent(currentUser.uid)}`);
+      const data = await res.json();
+      if (data?.success && Array.isArray(data.logs)) {
+        setXpLogs(data.logs);
+        setXpLogsStats(data.stats || null);
+        setXpLogsLoading(false);
+        return;
+      }
+    } catch (err) {
+      console.warn('Could not fetch from /api/xp, falling back to client query:', err);
+    }
+
+    // Fallback: query client collection('xp')
+    try {
+      const q = query(
+        collection(db, 'xp'),
+        where('user_id', '==', currentUser.uid)
+      );
+      const snap = await getDocs(q);
+      const items = [];
+      let total = 0;
+      let monthTotal = 0;
+      const startOfNov = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1));
+
+      snap.docs.forEach((docSnap) => {
+        const d = docSnap.data();
+        const earned = Number(d.xp_earned || 0);
+        total += earned;
+        let date = null;
+        if (d.claimed_at) {
+          if (d.claimed_at.toDate) date = d.claimed_at.toDate();
+          else if (d.claimed_at._seconds) date = new Date(d.claimed_at._seconds * 1000);
+          else date = new Date(d.claimed_at);
+        }
+        if (date && date >= startOfNov) monthTotal += earned;
+
+        items.push({
+          id: docSnap.id,
+          xp_earned: earned,
+          source: d.source || 'daily_claim',
+          bonus_label: d.bonus_label || (d.source === 'streak_auto' ? 'Daily Login Streak' : 'XP Award'),
+          streak_day: d.streak_day || 0,
+          bonus_xp: d.bonus_xp || 0,
+          claimed_at: date ? date.toISOString() : null,
+          claimed_at_ms: date ? date.getTime() : 0,
+        });
+      });
+
+      items.sort((a, b) => (b.claimed_at_ms || 0) - (a.claimed_at_ms || 0));
+      setXpLogs(items);
+      setXpLogsStats({
+        computedFromLogs_totalXp: total,
+        computedFromLogs_thisMonthXp: monthTotal,
+        totalLogEntries: items.length
+      });
+    } catch (e) {
+      console.error('Error fetching client xp logs:', e);
+    } finally {
+      setXpLogsLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (currentUser && activeTab === 'leaderboard') {
       loadLeaderboardData(lbTab);
+      loadUserXpLogs();
     }
   }, [currentUser, lbTab, activeTab]);
 
@@ -3008,6 +3116,150 @@ export default function DashboardClient() {
                           </>
                         );
                       })()}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+
+              {/* XP Transaction History Ledger */}
+              <div className="dash-card lb-table-card" style={{
+                background: '#0D1526',
+                border: '1px solid rgba(255,138,0,0.22)',
+                borderRadius: 12,
+                padding: '1.25rem 1.5rem',
+                marginTop: '1.5rem',
+                overflowX: 'auto'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+                  <div>
+                    <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--white, #fff)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <span>📜</span> My XP Transaction History &amp; Claims Log
+                    </h3>
+                    <p style={{ color: 'rgba(200,215,240,0.65)', fontSize: '0.75rem', margin: '0.25rem 0 0 0' }}>
+                      Transparent itemized record of your daily login claims, milestone streaks, and bonuses.
+                    </p>
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                    <button
+                      onClick={loadUserXpLogs}
+                      disabled={xpLogsLoading}
+                      style={{
+                        background: 'rgba(255,138,0,0.14)',
+                        border: '1px solid rgba(255,138,0,0.35)',
+                        color: '#FF8A00',
+                        borderRadius: 6,
+                        padding: '0.35rem 0.75rem',
+                        fontSize: '0.72rem',
+                        fontWeight: 700,
+                        cursor: xpLogsLoading ? 'not-allowed' : 'pointer'
+                      }}
+                    >
+                      {xpLogsLoading ? '⏳ Refreshing...' : '🔄 Refresh Log'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Summary Statistics */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.75rem', marginBottom: '1.25rem' }}>
+                  <div style={{ background: 'rgba(20,40,255,0.08)', border: '1px solid rgba(20,40,255,0.2)', borderRadius: 8, padding: '0.65rem 0.85rem' }}>
+                    <div style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: 'rgba(200,215,240,0.6)', fontWeight: 700 }}>Total Verified XP</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#fff', marginTop: '0.15rem' }}>
+                      {xpLogsStats?.computedFromLogs_totalXp !== undefined ? xpLogsStats.computedFromLogs_totalXp.toLocaleString() : xpTotal.toLocaleString()} XP
+                    </div>
+                  </div>
+                  <div style={{ background: 'rgba(255,138,0,0.08)', border: '1px solid rgba(255,138,0,0.25)', borderRadius: 8, padding: '0.65rem 0.85rem' }}>
+                    <div style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: 'rgba(200,215,240,0.6)', fontWeight: 700 }}>This Month (Nov)</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#FF8A00', marginTop: '0.15rem' }}>
+                      {xpLogsStats?.computedFromLogs_thisMonthXp !== undefined ? xpLogsStats.computedFromLogs_thisMonthXp.toLocaleString() : (Number(userData?.xp_this_period ?? userData?.monthly_xp ?? 0)).toLocaleString()} XP
+                    </div>
+                  </div>
+                  <div style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: 8, padding: '0.65rem 0.85rem' }}>
+                    <div style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: 'rgba(200,215,240,0.6)', fontWeight: 700 }}>Claim Records</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#34d399', marginTop: '0.15rem' }}>
+                      {xpLogs.length} Entries
+                    </div>
+                  </div>
+                  <div style={{ background: 'rgba(168,85,247,0.08)', border: '1px solid rgba(168,85,247,0.25)', borderRadius: 8, padding: '0.65rem 0.85rem' }}>
+                    <div style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: 'rgba(200,215,240,0.6)', fontWeight: 700 }}>Active Streak</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#c084fc', marginTop: '0.15rem' }}>
+                      🔥 {dailyStreak} Days
+                    </div>
+                  </div>
+                </div>
+
+                {xpLogsLoading ? (
+                  <div style={{ textAlign: 'center', padding: '2rem', color: 'rgba(200,215,240,0.6)', fontSize: '0.8rem' }}>
+                    Loading verified XP transaction records...
+                  </div>
+                ) : xpLogs.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '2rem', color: 'rgba(200,215,240,0.5)', fontSize: '0.8rem' }}>
+                    No XP claim transactions recorded yet. Claim daily on the dashboard to build your streak!
+                  </div>
+                ) : (
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid rgba(200,215,240,0.12)', textAlign: 'left', color: 'rgba(200,215,240,0.65)', fontSize: '0.68rem', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                        <th style={{ padding: '0.65rem 0.6rem' }}>DATE &amp; TIME</th>
+                        <th style={{ padding: '0.65rem 0.6rem' }}>ACTIVITY / EVENT</th>
+                        <th style={{ padding: '0.65rem 0.6rem' }}>SOURCE</th>
+                        <th style={{ padding: '0.65rem 0.6rem', textAlign: 'right' }}>XP EARNED</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {xpLogs.map((log, idx) => {
+                        const dateStr = log.claimed_at ? new Date(log.claimed_at).toLocaleDateString('en-NG', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        }) : '—';
+
+                        const isMilestone = log.bonus_xp > 0 || (log.bonus_label && log.bonus_label.includes('Bonus'));
+
+                        return (
+                          <tr key={log.id || idx} style={{ borderBottom: '1px solid rgba(200,215,240,0.06)' }}>
+                            <td style={{ padding: '0.65rem 0.6rem', color: 'rgba(200,215,240,0.75)', whiteSpace: 'nowrap' }}>
+                              {dateStr}
+                            </td>
+                            <td style={{ padding: '0.65rem 0.6rem', fontWeight: 600, color: '#fff' }}>
+                              <span style={{ marginRight: '0.4rem' }}>{isMilestone ? '🎉' : '⚡'}</span>
+                              {log.bonus_label || 'Daily Claim'}
+                              {log.streak_day ? (
+                                <span style={{ fontSize: '0.68rem', color: 'rgba(200,215,240,0.55)', marginLeft: '0.4rem', fontWeight: 400 }}>
+                                  (Day {log.streak_day})
+                                </span>
+                              ) : null}
+                            </td>
+                            <td style={{ padding: '0.65rem 0.6rem' }}>
+                              <span style={{
+                                background: log.source === 'streak_auto' ? 'rgba(20,40,255,0.15)' : 'rgba(168,85,247,0.15)',
+                                border: `1px solid ${log.source === 'streak_auto' ? 'rgba(20,40,255,0.3)' : 'rgba(168,85,247,0.3)'}`,
+                                color: log.source === 'streak_auto' ? '#8ca5ff' : '#d8b4fe',
+                                borderRadius: 4,
+                                padding: '0.2rem 0.45rem',
+                                fontSize: '0.68rem',
+                                fontWeight: 600
+                              }}>
+                                {log.source === 'streak_auto' ? 'Daily Streak' : log.source || 'Standard'}
+                              </span>
+                            </td>
+                            <td style={{ padding: '0.65rem 0.6rem', textAlign: 'right' }}>
+                              <span style={{
+                                background: isMilestone ? 'rgba(255,138,0,0.2)' : 'rgba(200,215,240,0.08)',
+                                color: isMilestone ? '#FF8A00' : '#fff',
+                                border: isMilestone ? '1px solid rgba(255,138,0,0.4)' : '1px solid rgba(200,215,240,0.15)',
+                                padding: '0.25rem 0.55rem',
+                                borderRadius: 6,
+                                fontWeight: 800,
+                                fontSize: '0.78rem'
+                              }}>
+                                +{log.xp_earned} XP
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 )}
