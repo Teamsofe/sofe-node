@@ -2468,7 +2468,7 @@
 <!-- ═══ LIVE ASSIGNMENT GRADING MODAL (FOR TUTORS & ADMINS) ═══ -->
 
 <!-- ═══ SOFIAN XP TRANSACTION LOG MODAL ═══ -->
-<div class="modal-overlay" id="modalSofianXpLog" onclick="if(event.target===this)closeModal('modalSofianXpLog')">
+<div class="modal-overlay" id="modalSofianXpLog" style="z-index:99999;" onclick="if(event.target===this)closeModal('modalSofianXpLog')">
   <div class="modal" style="max-width:760px;width:95%;">
     <div class="modal-head">
       <span class="modal-title" id="xpLogModalTitle">📜 Sofian XP Transaction History &amp; Claims</span>
@@ -6144,8 +6144,23 @@ function setFilter(el, group) {
     renderXpLogTable();
   }
 }
-function openModal(id) { document.getElementById(id).classList.add('open'); }
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+window.openModal = function(id) {
+  const el = document.getElementById(id);
+  if (el) {
+    el.classList.add('open');
+    el.style.display = 'flex';
+  }
+};
+function openModal(id) { window.openModal(id); }
+
+window.closeModal = function(id) {
+  const el = document.getElementById(id);
+  if (el) {
+    el.classList.remove('open');
+    el.style.display = 'none';
+  }
+};
+function closeModal(id) { window.closeModal(id); }
 document.querySelectorAll('.modal-overlay').forEach(o => o.addEventListener('click', e => { if(e.target===o) o.classList.remove('open'); }));
 function showToast(msg, type='success') {
   const t = document.getElementById('toast');
@@ -9139,24 +9154,33 @@ window.viewStudent = function(uid) {
 window._currentXpLogUid = null;
 
 window.viewUserXpLog = async function(uid) {
-  if (!uid) return;
-  window._currentXpLogUid = uid;
-
-  let s = (window._allStudents || []).find(x => (x.uid || x.id) === uid);
-  const titleEl = document.getElementById('xpLogModalTitle');
-  const summaryEl = document.getElementById('xpLogUserSummary');
-  const pillsEl = document.getElementById('xpLogStatsPills');
-  const tbody = document.getElementById('xpLogTableBody');
-  const countLabel = document.getElementById('xpLogCountLabel');
-
-  if (titleEl) titleEl.textContent = '📜 Sofian XP Transaction History';
-  if (summaryEl) summaryEl.innerHTML = '<span style="color:var(--muted);">Loading student profile...</span>';
-  if (pillsEl) pillsEl.innerHTML = '';
-  if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:2rem;color:var(--muted);">Loading verified ledger records...</td></tr>';
-
-  openModal('modalSofianXpLog');
-
   try {
+    if (!uid) {
+      console.warn('[XP Log] viewUserXpLog called without UID');
+      return;
+    }
+    window._currentXpLogUid = uid;
+
+    // Immediately open modal directly and ensure top-level visibility
+    const modal = document.getElementById('modalSofianXpLog');
+    if (modal) {
+      modal.classList.add('open');
+      modal.style.display = 'flex';
+      modal.style.zIndex = '99999';
+    }
+    if (typeof window.openModal === 'function') window.openModal('modalSofianXpLog');
+
+    let s = (window._allStudents || []).find(x => (x.uid || x.id) === uid);
+    const titleEl = document.getElementById('xpLogModalTitle');
+    const summaryEl = document.getElementById('xpLogUserSummary');
+    const pillsEl = document.getElementById('xpLogStatsPills');
+    const tbody = document.getElementById('xpLogTableBody');
+    const countLabel = document.getElementById('xpLogCountLabel');
+
+    if (titleEl) titleEl.textContent = '📜 Sofian XP Transaction History';
+    if (summaryEl) summaryEl.innerHTML = '<span style="color:var(--muted);">Loading student profile...</span>';
+    if (pillsEl) pillsEl.innerHTML = '';
+    if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:2rem;color:var(--muted);">Loading verified ledger records...</td></tr>';
     const res = await fetch('/api/xp?userId=' + encodeURIComponent(uid));
     const data = await res.json();
 
@@ -9398,7 +9422,7 @@ window.backfillSofianIds = async function() {
     await setDoc(counterRef, { value: counter, updated_at: serverTimestamp() }, { merge: true });
 
     showToast('✓ Assigned ' + assigned + ' Sofian IDs', 'success');
-    loadStudents();
+    if (typeof window.loadStudents === 'function') window.loadStudents();
   } catch (err) {
     console.error('Backfill error:', err);
     showToast('Error: ' + err.message, 'error');
@@ -9463,7 +9487,7 @@ window.backfillReferrals = async function() {
 };
 
 // On startup, load students for overview counts
-setTimeout(() => { if (window._auth?.currentUser) loadStudents(); }, 2500);
+setTimeout(() => { if (window._auth?.currentUser && typeof window.loadStudents === 'function') window.loadStudents(); }, 2500);
 
 console.log('Students panel & backfill loaded');
 

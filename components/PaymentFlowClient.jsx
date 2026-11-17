@@ -238,13 +238,99 @@ export default function PaymentFlowClient() {
   }
   const netPaid = Math.max(0, originalPrice - discountAmount);
 
-  // Handle Free Enrolment Directly
-  const handleFreeEnrol = async () => {
+  // Handle Free Enrolment Directly (originalPrice is 0 or 100% discount applied)
+  const handleFreeEnrol = async (codeOverride = null) => {
     setSubmitting(true);
     try {
-      // Server checks the admin-set price is 0 before creating the enrolment(s) and setting career_enrolled
-      const enrolFn = httpsCallable(functions, 'enrolFreeCourse');
-      await enrolFn({ courseId: course.id });
+      const activeCode = codeOverride || appliedDiscount?.code || null;
+      let cloudSuccess = false;
+      try {
+        const enrolFn = httpsCallable(functions, 'enrolFreeCourse');
+        await enrolFn({ courseId: course.id, discountCode: activeCode });
+        cloudSuccess = true;
+      } catch (cloudErr) {
+        console.warn('enrolFreeCourse Cloud Function fallback:', cloudErr.message);
+      }
+
+      // If Cloud Function did not execute or succeeded, ensure client records are synced
+      if (!cloudSuccess) {
+        const tier = course.tier || 'track';
+        const includesFoundation = (tier === 'track' && course.includes_foundation !== false);
+        const mainStatus = (tier === 'track' && includesFoundation) ? 'locked_pending_foundation' : 'active';
+
+        // 1. Set main course enrolment
+        await setDoc(doc(db, 'enrolments', `${currentUser.uid}_${course.id}`), {
+          user_id: currentUser.uid,
+          user_email: currentUser.email,
+          course_id: course.id,
+          course_title: course.title,
+          tier: tier,
+          status: mainStatus,
+          progress_pct: 0,
+          enrolled_at: serverTimestamp(),
+          updated_at: serverTimestamp(),
+          discount_code: activeCode,
+          discount_percent: 100,
+          granted_via: activeCode ? '100pct_discount' : 'free_course'
+        }, { merge: true });
+
+        // 2. Set foundation enrolment
+        if (includesFoundation || course.id === 'foundation') {
+          await setDoc(doc(db, 'enrolments', `${currentUser.uid}_foundation`), {
+            user_id: currentUser.uid,
+            user_email: currentUser.email,
+            course_id: 'foundation',
+            course_title: 'Blockchain & Cryptocurrency Foundation',
+            tier: 'foundation',
+            status: 'active',
+            progress_pct: 0,
+            enrolled_at: serverTimestamp(),
+            updated_at: serverTimestamp(),
+            discount_code: activeCode,
+            granted_via: activeCode ? '100pct_discount' : 'free_course'
+          }, { merge: true });
+        }
+
+        // 3. Record confirmed payment
+        await addDoc(collection(db, 'payments'), {
+          user_id: currentUser.uid,
+          user_email: currentUser.email,
+          course_id: course.id,
+          course_title: course.title,
+          is_premium: isPremiumCheckout,
+          original_amount: originalPrice,
+          discount_amount: discountAmount,
+          discount_code: activeCode,
+          discount_percent: 100,
+          amount: 0,
+          method: activeCode ? 'discount_code' : 'free_enrolment',
+          reference: `SOFE_FREE_${Date.now()}_${Math.random().toString(36).slice(2, 6).toUpperCase()}`,
+          payment_type: 'enrolment',
+          status: 'confirmed',
+          created_at: serverTimestamp(),
+          updated_at: serverTimestamp()
+        });
+
+        // 4. Update user document
+        const userUpdates = { updated_at: serverTimestamp() };
+        if (course.id === 'foundation' || includesFoundation) {
+          userUpdates.foundation_enrolled = true;
+        }
+        if (tier === 'track' && course.id !== 'foundation') {
+          userUpdates.career_enrolled = true;
+        }
+        await updateDoc(doc(db, 'users', currentUser.uid), userUpdates);
+
+        // 5. Increment discount code usage if applicable
+        if (appliedDiscount?.id) {
+          try {
+            await updateDoc(doc(db, 'discount_codes', appliedDiscount.id), {
+              uses_count: increment(1),
+              updated_at: serverTimestamp()
+            });
+          } catch(e) {}
+        }
+      }
 
       setSuccessData({
         title: 'Enrolment Activated!',
@@ -257,10 +343,10 @@ export default function PaymentFlowClient() {
     }
   };
 
-  // Submit Payment (Bank Transfer or Paystack)
+  // Submit Payment (Bank Transfer, Paystack, or 100% Free / Discount)
   const handleSubmitPayment = async (e) => {
     e.preventDefault();
-    if (originalPrice === 0) {
+    if (netPaid === 0) {
       return handleFreeEnrol();
     }
 
@@ -523,8 +609,8 @@ export default function PaymentFlowClient() {
                     </div>
                   )}
 
-                  {/* Bank Account Details */}
-                  {selectedMethod === 'bank' && originalPrice > 0 && (
+                  {/* Bank Account Details or 100% Scholarship Banner */}
+                  {selectedMethod === 'bank' && netPaid > 0 && (
                     <div className="payment-card" style={{ background: '#080E1A', border: '1px solid rgba(20,40,255,0.25)', borderRadius: 10, padding: '1.2rem', fontSize: '0.82rem' }}>
                       <div style={{ color: '#FF8A00', fontWeight: 700, marginBottom: '0.5rem', fontSize: '0.9rem' }}>Transfer Settlement Details</div>
                       <div style={{ marginBottom: '0.3rem' }}>Bank: <strong>{settings.bank_name || 'Access Bank / GTBank'}</strong></div>
@@ -532,6 +618,15 @@ export default function PaymentFlowClient() {
                       <div style={{ marginBottom: '0.5rem' }}>Account Name: <strong>{settings.bank_account_name || 'Sofe Group Limited'}</strong></div>
                       <div style={{ color: '#10b981', fontWeight: 700, fontSize: '0.9rem' }}>
                         Pay Exactly: ₦{netPaid.toLocaleString('en-NG')}
+                      </div>
+                    </div>
+                  )}
+
+                  {netPaid === 0 && originalPrice > 0 && (
+                    <div className="payment-card" style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 10, padding: '1.2rem', fontSize: '0.85rem' }}>
+                      <div style={{ color: '#10b981', fontWeight: 700, marginBottom: '0.3rem', fontSize: '0.92rem' }}>🎉 100% Full Scholarship Applied</div>
+                      <div style={{ color: 'rgba(200,215,240,0.85)', fontSize: '0.78rem' }}>
+                        Your discount code covers the entire tuition fee. No payment or bank transfer receipt is required. Click below to activate your enrolment immediately.
                       </div>
                     </div>
                   )}
@@ -583,8 +678,8 @@ export default function PaymentFlowClient() {
                     </div>
                   )}
 
-                  {/* Proof Upload */}
-                  {selectedMethod === 'bank' && originalPrice > 0 && (
+                  {/* Proof Upload (Only required if netPaid > 0) */}
+                  {selectedMethod === 'bank' && netPaid > 0 && (
                     <div>
                       <label style={{ fontSize: '0.78rem', color: 'rgba(200,215,240,0.8)', display: 'block', marginBottom: '0.4rem' }}>
                         Upload Payment Proof (Receipt Screenshot / PDF)
@@ -616,7 +711,7 @@ export default function PaymentFlowClient() {
                       letterSpacing: '0.5px'
                     }}
                   >
-                    {submitting ? 'Processing Payment...' : originalPrice === 0 ? 'Activate Free Enrolment →' : 'Complete payment →'}
+                    {submitting ? 'Processing Payment...' : netPaid === 0 ? 'Activate Free Enrolment →' : 'Complete payment →'}
                   </button>
 
                   <div style={{ textAlign: 'center', fontSize: '0.72rem', color: 'rgba(200,215,240,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}>

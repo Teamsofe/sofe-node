@@ -1001,19 +1001,86 @@ exports.grantPremiumOnPaymentApproval = onDocumentUpdated('payments/{paymentId}'
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// FREE COURSE ENROLMENT — only for courses an admin has priced at 0
+// FREE COURSE ENROLMENT — for courses priced at 0 or with 100% discount codes
 // ═══════════════════════════════════════════════════════════════════════════
 exports.enrolFreeCourse = onCall(async (request) => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Must be signed in.');
-  const { courseId } = request.data || {};
+  const { courseId, discountCode } = request.data || {};
   if (!courseId || typeof courseId !== 'string') throw new HttpsError('invalid-argument', 'Missing courseId.');
 
   const db = admin.firestore();
   const courseSnap = await db.collection('courses').doc(courseId).get();
   if (!courseSnap.exists) throw new HttpsError('not-found', 'Course not found.');
   const course = courseSnap.data();
-  if (course.price === undefined || Number(course.price) !== 0) {
-    throw new HttpsError('failed-precondition', 'This course requires payment.');
+
+  const originalPrice = Number(course.price || 0);
+  let isAuthorizedFree = originalPrice === 0;
+  let validatedCode = null;
+
+  if (!isAuthorizedFree && discountCode) {
+    const codeClean = String(discountCode).trim().toUpperCase();
+    const dSnap = await db.collection('discount_codes')
+      .where('code', '==', codeClean)
+      .where('status', '==', 'active')
+      .limit(1)
+      .get();
+
+    if (!dSnap.empty) {
+      const dDoc = dSnap.docs[0];
+      const dData = dDoc.data();
+      const coursesAllowed = dData.course_ids || ['*'];
+      const isEligible = coursesAllowed.includes('*') || coursesAllowed.includes(courseId);
+
+      let discountVal = 0;
+      if (dData.type === 'percentage' || dData.type === 'percent') {
+        discountVal = Math.round((originalPrice * Number(dData.value || 0)) / 100);
+      } else {
+        discountVal = Math.min(Number(dData.value || 0), originalPrice);
+      }
+
+      if (isEligible && discountVal >= originalPrice) {
+        isAuthorizedFree = true;
+        validatedCode = codeClean;
+        try {
+          await dDoc.ref.update({
+            uses_count: admin.firestore.FieldValue.increment(1),
+            updated_at: admin.firestore.FieldValue.serverTimestamp()
+          });
+        } catch(err) {
+          console.warn('Could not increment discount uses_count:', err.message);
+        }
+      }
+    }
+  }
+
+  if (!isAuthorizedFree) {
+    throw new HttpsError('failed-precondition', 'This course requires payment or a valid 100% discount code.');
+  }
+
+  // Create confirmed 0-amount payment record so all security audits and backfills recognize it
+  try {
+    const userDoc = await db.collection('users').doc(request.auth.uid).get();
+    const uData = userDoc.exists ? userDoc.data() : {};
+    await db.collection('payments').add({
+      user_id: request.auth.uid,
+      user_email: uData.email || request.auth.token?.email || '',
+      student_name: ((uData.first_name || '') + ' ' + (uData.last_name || '')).trim() || 'Sofian',
+      course_id: courseId,
+      course_title: course.title || courseId,
+      original_amount: originalPrice,
+      discount_amount: originalPrice,
+      amount: 0,
+      discount_code: validatedCode,
+      discount_percent: 100,
+      method: validatedCode ? 'discount_code' : 'free_enrolment',
+      reference: `SOFE_FREE_${Date.now()}_${Math.random().toString(36).slice(2, 6).toUpperCase()}`,
+      payment_type: 'enrolment',
+      status: 'confirmed',
+      created_at: admin.firestore.FieldValue.serverTimestamp(),
+      updated_at: admin.firestore.FieldValue.serverTimestamp()
+    });
+  } catch(payErr) {
+    console.warn('Could not create free payment record:', payErr.message);
   }
 
   await grantCourseEnrolment(db, { user_id: request.auth.uid, course_id: courseId }, course);
@@ -2321,6 +2388,19 @@ exports.backfillPastEnrollments = onRequest(async (req, res) => {
         paidUsers.add(uid);
         if (p.course_id === 'foundation') paidFoundationUsers.add(uid);
         else paidCareerUsers.add(uid);
+      }
+    });
+
+    // 1b. Include users who have a 100% scholarship / discount enrolment
+    const scholarshipEnrols = await db.collection('enrolments')
+      .where('course_id', '==', 'foundation')
+      .where('discount_percent', '==', 100)
+      .get();
+    scholarshipEnrols.docs.forEach((doc) => {
+      const e = doc.data();
+      if (e.user_id) {
+        paidUsers.add(e.user_id);
+        paidFoundationUsers.add(e.user_id);
       }
     });
 
