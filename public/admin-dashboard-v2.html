@@ -787,28 +787,203 @@
   </div>
 
   <!-- ═══ ENROLMENTS ═══ -->
+  <!-- ═══ ENROLMENTS & COURSE PROGRESS ANALYTICS ═══ -->
   <div class="panel" id="panel-enrolments">
-    <div class="section-header"><div><div class="section-title">Enrolments</div><div class="section-sub">Manage course access</div></div></div>
-    <div class="sub-tabs">
-      <button class="sub-tab active" onclick="switchEnrolTab('pending',this)">Pending</button>
-      <button class="sub-tab" onclick="switchEnrolTab('active',this)">Active</button>
-      <button class="sub-tab" onclick="switchEnrolTab('all',this)">All</button>
+    <!-- Header with Actions -->
+    <div class="section-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.2rem;">
+      <div>
+        <div class="section-title" style="display:flex;align-items:center;gap:.5rem;">
+          <span>📚 Enrolments &amp; Progress Analytics</span>
+        </div>
+        <div class="section-sub">Track real-time course participation, student percentage progress, and completion cohorts.</div>
+      </div>
+      <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;">
+        <button class="btn btn-secondary btn-sm" onclick="exportEnrolmentsCSV()" style="display:flex;align-items:center;gap:.35rem;background:rgba(20,40,255,0.12);border:1px solid rgba(20,40,255,0.3);color:#8ca5ff;font-weight:700;" title="Export current filtered view to CSV">
+          <span>📥</span> Export CSV
+        </button>
+        <button class="btn btn-secondary btn-sm" onclick="loadEnrolmentsHub(true)" style="display:flex;align-items:center;gap:.35rem;" title="Refresh enrolment records">
+          <span>🔄</span> Refresh
+        </button>
+      </div>
     </div>
-    <div id="enrol-tab-pending">
-      <div style="background:var(--orange-dim);border:1px solid rgba(255,138,0,.2);border-radius:8px;padding:.85rem 1.1rem;font-size:.76rem;color:var(--orange);margin-bottom:1rem;">⚠ Verify bank statement before approving.</div>
-      <div id="pendingApprovalList"><div class="empty-state"><div class="empty-state-text">No pending approvals</div></div></div>
+
+    <!-- Sub-tabs -->
+    <div class="sub-tabs" id="enrolSubTabs" style="margin-bottom:1.2rem;">
+      <button class="sub-tab active" onclick="switchEnrolTab('analytics', this)">📊 Course Analytics &amp; Enrolments</button>
+      <button class="sub-tab" onclick="switchEnrolTab('pending', this)">⏳ Pending Approvals</button>
+      <button class="sub-tab" onclick="switchEnrolTab('stalled', this)">⚠️ Stalled Learners (0%)</button>
     </div>
-    <div id="enrol-tab-active" style="display:none;">
-      <div class="table-wrap"><table>
-        <thead><tr><th>Sofian</th><th>Course</th><th>Enrolled</th><th>Progress</th><th>Status</th></tr></thead>
-        <tbody id="activeEnrolTable"><tr><td colspan="5"><div class="empty-state"><div class="empty-state-text">Loading…</div></div></td></tr></tbody>
-      </table></div>
+
+    <!-- SUB-TAB 1: ANALYTICS & ENROLMENTS -->
+    <div id="enrol-tab-analytics">
+      <!-- Controls & Filter Toolbar -->
+      <div class="card" style="margin-bottom:1.2rem;padding:1rem 1.2rem;background:var(--deep);border:1px solid var(--border);border-radius:10px;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:.85rem;align-items:end;">
+          <div>
+            <label class="form-label" style="font-size:.68rem;text-transform:uppercase;color:var(--muted);font-weight:700;">Filter by Course</label>
+            <select class="form-select" id="enrolCourseFilter" onchange="onEnrolFilterChange()" style="font-size:.82rem;">
+              <option value="all">All Courses</option>
+              <option value="foundation">⛓️ Blockchain &amp; Crypto Foundation</option>
+              <option value="smart-contract-developer">⚡ Smart Contract Development</option>
+              <option value="cbie">💡 CBIE (Innovation &amp; Entrepreneurship)</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label" style="font-size:.68rem;text-transform:uppercase;color:var(--muted);font-weight:700;">Filter by Status</label>
+            <select class="form-select" id="enrolStatusFilter" onchange="onEnrolFilterChange()" style="font-size:.82rem;">
+              <option value="all">All Statuses</option>
+              <option value="active">🟢 Active</option>
+              <option value="completed">🏆 Completed (100%)</option>
+              <option value="locked">🔒 Locked / Unpaid</option>
+              <option value="scholarship">🎉 100% Scholarship</option>
+              <option value="pending">🟡 Pending Payment Approval</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label" style="font-size:.68rem;text-transform:uppercase;color:var(--muted);font-weight:700;">Progress Cohort</label>
+            <select class="form-select" id="enrolProgressTierFilter" onchange="onEnrolFilterChange()" style="font-size:.82rem;">
+              <option value="all">All Progress Levels</option>
+              <option value="100">🏆 Certified (100%)</option>
+              <option value="76-99">⚡ Advanced (76% – 99%)</option>
+              <option value="26-75">🚀 Mid-Flight (26% – 75%)</option>
+              <option value="1-25">🌱 Getting Started (1% – 25%)</option>
+              <option value="0">⚠️ Not Started (0%)</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label" style="font-size:.68rem;text-transform:uppercase;color:var(--muted);font-weight:700;">Search Enrolments</label>
+            <div style="position:relative;">
+              <input class="form-input" id="enrolSearchInput" placeholder="Name, email, Sofian ID, ref code…" oninput="onEnrolFilterChange()" style="padding-left:1.85rem;font-size:.82rem;" />
+              <span style="position:absolute;left:.65rem;top:50%;transform:translateY(-50%);font-size:.8rem;opacity:.5;">🔍</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI Summary Cards -->
+      <div class="stats-grid" style="grid-template-columns:repeat(auto-fit, minmax(170px, 1fr));gap:1rem;margin-bottom:1.2rem;">
+        <div class="stat-card">
+          <div class="stat-label">Total Enrolled</div>
+          <div class="stat-num" id="enrolStatTotal">—</div>
+          <div class="stat-sub" id="enrolStatTotalSub">In selected course</div>
+        </div>
+        <div class="stat-card" style="border-color:rgba(20,40,255,0.3);">
+          <div class="stat-label" style="color:#8ca5ff;">Average Progress</div>
+          <div class="stat-num" id="enrolStatAvgProg" style="color:#8ca5ff;">—%</div>
+          <div class="stat-sub" id="enrolStatAvgProgSub">Across all learners</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-label">Certified (100%)</div>
+          <div class="stat-num" id="enrolStatCompleted" style="color:var(--green);">—</div>
+          <div class="stat-sub" id="enrolStatCompletedSub">Completion rate: 0%</div>
+        </div>
+        <div class="stat-card orange">
+          <div class="stat-label">In-Flight (1–99%)</div>
+          <div class="stat-num" id="enrolStatActive" style="color:var(--orange);">—</div>
+          <div class="stat-sub">Actively studying</div>
+        </div>
+        <div class="stat-card" style="border-color:rgba(239,68,68,0.3);">
+          <div class="stat-label" style="color:#f87171;">Stalled (0%)</div>
+          <div class="stat-num" id="enrolStatStalled" style="color:#f87171;">—</div>
+          <div class="stat-sub">Needs study nudge</div>
+        </div>
+      </div>
+
+      <!-- VISUAL CHARTS SECTION (2 Columns) -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(340px, 1fr));gap:1.2rem;margin-bottom:1.5rem;">
+        <!-- Chart 1: Progress Cohort Distribution -->
+        <div class="card" style="background:var(--deep);border:1px solid var(--border);border-radius:10px;padding:1.2rem;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+            <div>
+              <div style="font-size:.88rem;font-weight:700;color:var(--white);">📊 Student Progress Distribution</div>
+              <div style="font-size:.68rem;color:var(--muted);margin-top:2px;">Percentage completion breakdown across cohorts</div>
+            </div>
+            <span class="badge" id="enrolCohortCountBadge" style="background:rgba(20,40,255,.15);color:#8ca5ff;border:1px solid rgba(20,40,255,.3);font-size:.68rem;">0 Learners</span>
+          </div>
+          <!-- Chart Bars Container -->
+          <div id="enrolProgressBarChartWrap" style="display:flex;flex-direction:column;gap:.75rem;">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+
+        <!-- Chart 2: Course Access & Completion Velocity -->
+        <div class="card" style="background:var(--deep);border:1px solid var(--border);border-radius:10px;padding:1.2rem;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+            <div>
+              <div style="font-size:.88rem;font-weight:700;color:var(--white);">⚡ Enrolment Access &amp; Breakdown</div>
+              <div style="font-size:.68rem;color:var(--muted);margin-top:2px;">Access tier and completion status telemetry</div>
+            </div>
+          </div>
+          <!-- Velocity & Access telemetry representation -->
+          <div id="enrolVelocityChartWrap" style="display:flex;flex-direction:column;gap:.75rem;">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+      </div>
+
+      <!-- ENROLLED STUDENTS TABLE -->
+      <div class="card" style="background:var(--deep);border:1px solid var(--border);border-radius:10px;padding:1.2rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:.5rem;">
+          <div style="display:flex;align-items:center;gap:.6rem;">
+            <div style="font-size:.9rem;font-weight:700;color:var(--white);">📋 Enrolled Students</div>
+            <span class="badge" id="enrolTableCountBadge" style="background:rgba(255,138,0,.12);color:var(--orange);border:1px solid rgba(255,138,0,.3);font-size:.7rem;font-weight:700;">0 Students</span>
+          </div>
+          <div style="font-size:.72rem;color:var(--muted);" id="enrolFilteredNote">
+            Click on any cohort bar above to filter students
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Sofian / Builder</th>
+                <th>Course</th>
+                <th>Progress %</th>
+                <th>Enrolled On</th>
+                <th>Status</th>
+                <th style="text-align:right;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="enrolmentsAnalyticsTableBody">
+              <tr><td colspan="6" style="text-align:center;padding:2.5rem;color:var(--muted);">Loading enrolment and progress records…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
-    <div id="enrol-tab-all" style="display:none;">
-      <div class="table-wrap"><table>
-        <thead><tr><th>Sofian</th><th>Course</th><th>Tier</th><th>Status</th><th>Date</th></tr></thead>
-        <tbody id="allEnrolTable"><tr><td colspan="5"><div class="empty-state"><div class="empty-state-text">Loading…</div></div></td></tr></tbody>
-      </table></div>
+
+    <!-- SUB-TAB 2: PENDING APPROVALS -->
+    <div id="enrol-tab-pending" style="display:none;">
+      <div style="background:var(--orange-dim);border:1px solid rgba(255,138,0,.2);border-radius:8px;padding:.85rem 1.1rem;font-size:.76rem;color:var(--orange);margin-bottom:1rem;">
+        ⚠ Verify student payment reference and bank statement before approving course access.
+      </div>
+      <div id="pendingApprovalList">
+        <div class="empty-state"><div class="empty-state-text">No pending approvals</div></div>
+      </div>
+    </div>
+
+    <!-- SUB-TAB 3: STALLED LEARNERS -->
+    <div id="enrol-tab-stalled" style="display:none;">
+      <div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);border-radius:8px;padding:.85rem 1.1rem;font-size:.76rem;color:#f87171;margin-bottom:1rem;">
+        ⚠️ Stalled Learners: These enrolled students currently have 0% progress. Send a study nudge or check in to ensure high retention.
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Sofian / Builder</th>
+              <th>Course</th>
+              <th>Enrolled On</th>
+              <th>Status</th>
+              <th style="text-align:right;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="stalledLearnersTableBody">
+            <tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--muted);">Loading stalled learners…</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 
@@ -2658,7 +2833,10 @@ window.showPanel = function(id, el) {
   if (id === 'cohorts' && typeof window.loadCohorts === 'function') window.loadCohorts();
   if (id === 'applications' && typeof window.loadApplications === 'function') window.loadApplications();
   if (id === 'students' && typeof window.loadStudents === 'function') window.loadStudents();
-  if (id === 'enrolments' && typeof window.loadActiveEnrolments === 'function') window.loadActiveEnrolments();
+  if (id === 'enrolments') {
+    if (typeof window.loadEnrolmentsHub === 'function') window.loadEnrolmentsHub();
+    else if (typeof window.loadActiveEnrolments === 'function') window.loadActiveEnrolments();
+  }
   if (id === 'payments' && typeof window.loadPayments === 'function') window.loadPayments();
   if (id === 'discounts' && typeof window.loadDiscounts === 'function') window.loadDiscounts();
   if (id === 'chapters' && typeof window.loadChapters === 'function') window.loadChapters();
@@ -3662,13 +3840,22 @@ function switchCourseTab(id, el) {
   if (el) el.classList.add('active');
 }
 function switchEnrolTab(id, el) {
-  ['pending','active','all'].forEach(t => document.getElementById('enrol-tab-'+t).style.display = 'none');
-  document.getElementById('enrol-tab-'+id).style.display = '';
+  ['analytics','pending','stalled'].forEach(t => {
+    const tabEl = document.getElementById('enrol-tab-' + t);
+    if (tabEl) tabEl.style.display = 'none';
+  });
+  const target = document.getElementById('enrol-tab-' + id);
+  if (target) target.style.display = '';
   document.querySelectorAll('#panel-enrolments .sub-tab').forEach(b => b.classList.remove('active'));
   if (el) el.classList.add('active');
-  // Load data for tab
-  if (id === 'active') loadActiveEnrolments();
-  if (id === 'all')    loadAllEnrolments();
+
+  if (id === 'analytics') {
+    if (typeof window.loadEnrolmentsHub === 'function') window.loadEnrolmentsHub();
+  } else if (id === 'pending') {
+    if (typeof window.loadPendingCBIEApprovals === 'function') window.loadPendingCBIEApprovals();
+  } else if (id === 'stalled') {
+    if (typeof window.renderStalledLearners === 'function') window.renderStalledLearners();
+  }
 }
 function switchPayTab(id, el) {
   ['all','bank','paystack','commissions'].forEach(t => document.getElementById('pay-tab-'+t).style.display = 'none');
@@ -4157,89 +4344,502 @@ async function payCommission(referralId) {
 }
 window.payCommission = payCommission;
 
-// ── HELPER: BATCH RESOLVE SOFIAN PROFILES FOR ENROLMENTS ──
+// ════════════════════════════════════════════════════════════════════════════
+// ENROLMENTS & COURSE PROGRESS ANALYTICS HUB
+// ════════════════════════════════════════════════════════════════════════════
+window._allEnrolments = [];
+window._filteredEnrolments = [];
+window._enrolCohortSelected = 'all';
+
 async function resolveEnrolmentUsers(enrolments) {
-  const missingUids = [...new Set(enrolments.filter(e => (!e.user_name || e.user_name === '—' || !e.user_email) && e.user_id).map(e => e.user_id))];
-  if (missingUids.length === 0) return enrolments;
+  const studentsMap = {};
+  if (Array.isArray(window._allStudents) && window._allStudents.length > 0) {
+    window._allStudents.forEach(s => {
+      const sId = s.uid || s.id;
+      if (sId) studentsMap[sId] = s;
+    });
+  }
 
-  const userMap = {};
-  await Promise.all(missingUids.map(async uid => {
-    try {
-      const uSnap = await getDoc(doc(db, 'users', uid));
-      if (uSnap.exists()) {
-        const u = uSnap.data();
-        userMap[uid] = { name: ((u.first_name || '') + ' ' + (u.last_name || '')).trim() || u.email || 'Sofian', email: u.email || '' };
-      }
-    } catch (e) {}
-  }));
-
+  const missingUids = [];
   enrolments.forEach(e => {
-    if (userMap[e.user_id]) { e.user_name = userMap[e.user_id].name; e.user_email = userMap[e.user_id].email; }
+    const s = studentsMap[e.user_id];
+    if (s) {
+      e.user_name = ((s.first_name || '') + ' ' + (s.last_name || '')).trim() || s.full_name || s.email || 'Sofian';
+      e.user_email = s.email || e.user_email || '—';
+      e.sofian_id = s.sofian_id || e.sofian_id || '—';
+      e.referral_code = s.referral_code || '—';
+      e.node_label = s.node_label || s.node || s.chapter_name || 'Online / Global Node';
+    } else if (e.user_id && (!e.user_name || e.user_name === '—')) {
+      missingUids.push(e.user_id);
+    }
   });
+
+  const uniqueMissing = [...new Set(missingUids)];
+  if (uniqueMissing.length > 0) {
+    await Promise.all(uniqueMissing.map(async uid => {
+      try {
+        const uSnap = await getDoc(doc(db, 'users', uid));
+        if (uSnap.exists()) {
+          const u = uSnap.data();
+          const name = ((u.first_name || '') + ' ' + (u.last_name || '')).trim() || u.full_name || u.email || 'Sofian';
+          enrolments.forEach(e => {
+            if (e.user_id === uid) {
+              e.user_name = name;
+              e.user_email = u.email || e.user_email || '—';
+              e.sofian_id = u.sofian_id || '—';
+              e.referral_code = u.referral_code || '—';
+              e.node_label = u.node_label || u.node || u.chapter_name || 'Online / Global Node';
+            }
+          });
+        }
+      } catch (e) {}
+    }));
+  }
+
   return enrolments;
 }
 
-// ── ENROLMENTS — ACTIVE TAB ──
-window.loadActiveEnrolments = async function() {
-  const tbody = document.getElementById('activeEnrolTable');
+window.loadEnrolmentsHub = async function(forceRefresh = false) {
+  const tbody = document.getElementById('enrolmentsAnalyticsTableBody');
   if (!tbody) return;
-  tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--muted);">Loading active enrolments…</td></tr>';
 
-  try {
-    const snap = await getDocs(query(collection(db, 'enrolments'), where('status', 'in', ['active', 'locked_pending_foundation'])));
-    let enrols = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    enrols = await resolveEnrolmentUsers(enrols);
+  if (window._allEnrolments.length === 0 || forceRefresh) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2.5rem;color:var(--muted);"><div class="spinner" style="margin:0 auto .75rem;"></div>Loading verified course enrolments &amp; telemetry…</td></tr>';
+    try {
+      const snap = await getDocs(collection(db, 'enrolments'));
+      let rawEnrols = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      rawEnrols = await resolveEnrolmentUsers(rawEnrols);
 
-    if (enrols.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:2rem;">No active enrolments.</td></tr>';
+      window._allEnrolments = rawEnrols.map(e => {
+        const prog = Math.min(100, Math.max(0, Math.round(Number(e.progress_pct ?? e.progress ?? 0))));
+        const courseId = (e.course_id || 'foundation').toLowerCase();
+        let courseTitle = e.course_title;
+        if (!courseTitle || courseTitle === courseId) {
+          if (courseId.includes('smart-contract')) courseTitle = 'Smart Contract Development';
+          else if (courseId === 'foundation') courseTitle = 'Blockchain & Cryptocurrency Foundation';
+          else if (courseId === 'cbie') courseTitle = 'CBIE (Innovation & Entrep.)';
+          else courseTitle = courseId.charAt(0).toUpperCase() + courseId.slice(1);
+        }
+
+        const dateObj = e.enrolled_at?.toDate ? e.enrolled_at.toDate() : (e.enrolled_at ? new Date(e.enrolled_at) : null);
+        const dateStr = dateObj ? dateObj.toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+        const isScholarship = e.granted_via === '100pct_discount' || Number(e.discount_percent || 0) === 100 || e.discount_code;
+
+        return {
+          ...e,
+          course_id: courseId,
+          course_title: courseTitle,
+          progress_pct: prog,
+          dateObj: dateObj,
+          dateStr: dateStr,
+          isScholarship: isScholarship,
+          user_name: e.user_name || 'Sofian Builder',
+          user_email: e.user_email || '—',
+          sofian_id: e.sofian_id || '—',
+          referral_code: e.referral_code || '—',
+          node_label: e.node_label || 'Online / Global Node',
+          status: (e.status || 'active').toLowerCase(),
+        };
+      });
+
+      populateCourseFilterOptions(window._allEnrolments);
+
+    } catch (err) {
+      console.error('loadEnrolmentsHub error:', err);
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:2rem;color:#ff7070;">Failed to load enrolments: ${err.message}</td></tr>`;
       return;
     }
+  }
 
-    tbody.innerHTML = enrols.map(e => {
-      const date = e.enrolled_at?.toDate ? e.enrolled_at.toDate().toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
-      const prog = Math.round(e.progress_pct || e.progress || 0);
-      return `<tr>
-        <td><div style="font-weight:600;font-size:.82rem;">${e.user_name || 'Sofian'}</div><div style="font-size:.65rem;color:var(--muted);">${e.user_email || e.user_id}</div></td>
-        <td style="font-size:.8rem;">${e.course_title || e.course_id || '—'}</td>
-        <td style="font-size:.75rem;color:var(--muted);">${date}</td>
-        <td><div style="display:flex;align-items:center;gap:.4rem;"><div style="background:var(--border);border-radius:50px;height:5px;width:70px;overflow:hidden;"><div style="background:#10b981;height:100%;width:${prog}%;"></div></div><span style="font-size:.65rem;">${prog}%</span></div></td>
-        <td><span class="badge badge-green">${e.status || 'active'}</span></td>
-      </tr>`;
-    }).join('');
-  } catch (err) { tbody.innerHTML = `<tr><td colspan="5" style="color:#ff7070;">Error: ${err.message}</td></tr>`; }
+  applyEnrolFilters();
 };
 
-// ── ENROLMENTS — ALL TAB ──
-window.loadAllEnrolments = async function() {
-  const tbody = document.getElementById('allEnrolTable');
-  if (!tbody) return;
-  tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--muted);">Loading all enrolments…</td></tr>';
+function populateCourseFilterOptions(enrolments) {
+  const select = document.getElementById('enrolCourseFilter');
+  if (!select) return;
+  const currentVal = select.value || 'all';
 
-  try {
-    const snap = await getDocs(collection(db, 'enrolments'));
-    let enrols = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    enrols = await resolveEnrolmentUsers(enrols);
+  const coursesMap = {};
+  enrolments.forEach(e => {
+    if (!coursesMap[e.course_id]) {
+      coursesMap[e.course_id] = e.course_title;
+    }
+  });
 
-    if (enrols.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:2rem;">No enrolments found.</td></tr>';
-      return;
+  let opts = '<option value="all">All Courses (' + enrolments.length + ')</option>';
+  for (const [cId, title] of Object.entries(coursesMap)) {
+    const count = enrolments.filter(e => e.course_id === cId).length;
+    let icon = '📚';
+    if (cId === 'foundation') icon = '⛓️';
+    else if (cId.includes('smart-contract')) icon = '⚡';
+    else if (cId === 'cbie') icon = '💡';
+    opts += `<option value="${cId}">${icon} ${title} (${count})</option>`;
+  }
+  select.innerHTML = opts;
+  select.value = currentVal;
+}
+
+window.onEnrolFilterChange = function() {
+  applyEnrolFilters();
+};
+
+window.quickFilterCohort = function(cohort) {
+  const cohortSelect = document.getElementById('enrolProgressTierFilter');
+  if (cohortSelect) {
+    cohortSelect.value = cohort;
+  }
+  window._enrolCohortSelected = cohort;
+  applyEnrolFilters();
+};
+
+function applyEnrolFilters() {
+  const courseFilter = (document.getElementById('enrolCourseFilter')?.value || 'all').toLowerCase();
+  const statusFilter = (document.getElementById('enrolStatusFilter')?.value || 'all').toLowerCase();
+  const cohortFilter = document.getElementById('enrolProgressTierFilter')?.value || 'all';
+  const search = (document.getElementById('enrolSearchInput')?.value || '').toLowerCase().trim();
+
+  let courseEnrols = window._allEnrolments;
+  if (courseFilter !== 'all') {
+    courseEnrols = window._allEnrolments.filter(e => {
+      if (courseFilter === 'foundation') return e.course_id.includes('foundation');
+      if (courseFilter === 'smart-contract-developer') return e.course_id.includes('smart-contract');
+      if (courseFilter === 'cbie') return e.course_id.includes('cbie');
+      return e.course_id === courseFilter;
+    });
+  }
+
+  renderEnrolmentKPIsAndCharts(courseEnrols, courseFilter);
+
+  const filtered = courseEnrols.filter(e => {
+    if (statusFilter !== 'all') {
+      if (statusFilter === 'completed') {
+        if (e.progress_pct < 100 && e.status !== 'completed') return false;
+      } else if (statusFilter === 'scholarship') {
+        if (!e.isScholarship) return false;
+      } else if (statusFilter === 'locked') {
+        if (e.status !== 'locked' && e.status !== 'locked_pending_foundation') return false;
+      } else if (e.status !== statusFilter) {
+        return false;
+      }
     }
 
-    tbody.innerHTML = enrols.map(e => {
-      const date = e.enrolled_at?.toDate ? e.enrolled_at.toDate().toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
-      const badge = e.status === 'active' ? '<span class="badge badge-green">Active</span>' :
-                    e.status === 'completed' ? '<span class="badge badge-blue">Completed</span>' :
-                    '<span class="badge badge-gray">' + (e.status || '—') + '</span>';
-      return `<tr>
-        <td><div style="font-weight:600;font-size:.82rem;">${e.user_name || 'Sofian'}</div><div style="font-size:.65rem;color:var(--muted);">${e.user_email || e.user_id}</div></td>
-        <td style="font-size:.8rem;">${e.course_title || e.course_id || '—'}</td>
-        <td style="font-size:.75rem;">${e.tier || '—'}</td>
-        <td>${badge}</td>
-        <td style="font-size:.75rem;color:var(--muted);">${date}</td>
-      </tr>`;
+    if (cohortFilter !== 'all') {
+      const p = e.progress_pct;
+      if (cohortFilter === '0' && p !== 0) return false;
+      if (cohortFilter === '1-25' && (p < 1 || p > 25)) return false;
+      if (cohortFilter === '26-75' && (p < 26 || p > 75)) return false;
+      if (cohortFilter === '76-99' && (p < 76 || p > 99)) return false;
+      if (cohortFilter === '100' && p !== 100) return false;
+    }
+
+    if (search) {
+      const match = (e.user_name || '').toLowerCase().includes(search) ||
+                    (e.user_email || '').toLowerCase().includes(search) ||
+                    (e.sofian_id || '').toLowerCase().includes(search) ||
+                    (e.referral_code || '').toLowerCase().includes(search) ||
+                    (e.node_label || '').toLowerCase().includes(search) ||
+                    (e.course_title || '').toLowerCase().includes(search);
+      if (!match) return false;
+    }
+
+    return true;
+  });
+
+  window._filteredEnrolments = filtered;
+  renderEnrolmentsTable(filtered);
+  renderStalledLearners(window._allEnrolments);
+}
+
+function renderEnrolmentKPIsAndCharts(list, courseFilter) {
+  const total = list.length;
+  let sumProg = 0;
+  let completed = 0;
+  let active = 0;
+  let stalled = 0;
+  let scholarshipCount = 0;
+  let lockedCount = 0;
+  let activeStatusCount = 0;
+
+  const cohorts = { '0': 0, '1-25': 0, '26-75': 0, '76-99': 0, '100': 0 };
+
+  list.forEach(e => {
+    const prog = e.progress_pct;
+    sumProg += prog;
+    if (prog === 0) {
+      stalled++;
+      cohorts['0']++;
+    } else if (prog < 100) {
+      active++;
+      if (prog <= 25) cohorts['1-25']++;
+      else if (prog <= 75) cohorts['26-75']++;
+      else cohorts['76-99']++;
+    } else {
+      completed++;
+      cohorts['100']++;
+    }
+
+    if (e.isScholarship) scholarshipCount++;
+    if (e.status === 'locked' || e.status === 'locked_pending_foundation') lockedCount++;
+    else if (e.status === 'active') activeStatusCount++;
+  });
+
+  const avgProg = total > 0 ? Math.round(sumProg / total) : 0;
+  const compRate = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+  const elTotal = document.getElementById('enrolStatTotal');
+  const elTotalSub = document.getElementById('enrolStatTotalSub');
+  const elAvgProg = document.getElementById('enrolStatAvgProg');
+  const elAvgProgSub = document.getElementById('enrolStatAvgProgSub');
+  const elCompleted = document.getElementById('enrolStatCompleted');
+  const elCompletedSub = document.getElementById('enrolStatCompletedSub');
+  const elActive = document.getElementById('enrolStatActive');
+  const elStalled = document.getElementById('enrolStatStalled');
+  const elCohortBadge = document.getElementById('enrolCohortCountBadge');
+
+  if (elTotal) elTotal.textContent = total.toLocaleString();
+  if (elTotalSub) elTotalSub.textContent = courseFilter === 'all' ? 'Across all courses' : 'In this course';
+  if (elAvgProg) elAvgProg.textContent = avgProg + '%';
+  if (elAvgProgSub) elAvgProgSub.textContent = `${completed} graduated · ${active} in flight`;
+  if (elCompleted) elCompleted.textContent = completed.toLocaleString();
+  if (elCompletedSub) elCompletedSub.textContent = `Completion rate: ${compRate}%`;
+  if (elActive) elActive.textContent = active.toLocaleString();
+  if (elStalled) elStalled.textContent = stalled.toLocaleString();
+  if (elCohortBadge) elCohortBadge.textContent = total + ' Learners';
+
+  const chartWrap = document.getElementById('enrolProgressBarChartWrap');
+  if (chartWrap) {
+    const cohortConfigs = [
+      { key: '100', label: '🏆 Certified / Completed', range: '100%', color: '#10B981', glow: 'rgba(16,185,129,0.25)', count: cohorts['100'] },
+      { key: '76-99', label: '⚡ Advanced Stage', range: '76% – 99%', color: '#A855F7', glow: 'rgba(168,85,247,0.25)', count: cohorts['76-99'] },
+      { key: '26-75', label: '🚀 Mid-Flight Progress', range: '26% – 75%', color: '#3B82F6', glow: 'rgba(59,130,246,0.25)', count: cohorts['26-75'] },
+      { key: '1-25', label: '🌱 Getting Started', range: '1% – 25%', color: '#FF8A00', glow: 'rgba(255,138,0,0.25)', count: cohorts['1-25'] },
+      { key: '0', label: '⚠️ Not Started / Stalled', range: '0%', color: '#EF4444', glow: 'rgba(239,68,68,0.25)', count: cohorts['0'] },
+    ];
+
+    const currentCohortFilter = document.getElementById('enrolProgressTierFilter')?.value || 'all';
+
+    chartWrap.innerHTML = cohortConfigs.map(c => {
+      const pct = total > 0 ? Math.round((c.count / total) * 100) : 0;
+      const isSelected = currentCohortFilter === c.key;
+      return `
+        <div onclick="quickFilterCohort('${isSelected ? 'all' : c.key}')" style="cursor:pointer;padding:.5rem .65rem;border-radius:8px;background:${isSelected ? 'rgba(20,40,255,0.12)' : 'rgba(255,255,255,0.02)'};border:1px solid ${isSelected ? 'var(--blue)' : 'var(--border)'};transition:all .18s;" title="Click to filter students in ${c.range}">
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:.74rem;margin-bottom:.35rem;">
+            <div style="display:flex;align-items:center;gap:.4rem;">
+              <span style="font-weight:600;color:var(--white);">${c.label}</span>
+              <span style="font-size:.65rem;color:var(--muted);">${c.range}</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:.5rem;">
+              <span style="font-weight:700;color:${c.color};">${c.count} students</span>
+              <span style="font-size:.65rem;color:var(--muted);min-width:32px;text-align:right;">${pct}%</span>
+            </div>
+          </div>
+          <div style="background:rgba(255,255,255,0.06);height:7px;border-radius:50px;overflow:hidden;position:relative;">
+            <div style="background:${c.color};width:${pct}%;height:100%;border-radius:50px;box-shadow:0 0 10px ${c.glow};transition:width .4s ease;"></div>
+          </div>
+        </div>
+      `;
     }).join('');
-  } catch (err) { tbody.innerHTML = `<tr><td colspan="5" style="color:#ff7070;">Error: ${err.message}</td></tr>`; }
+  }
+
+  const velocityWrap = document.getElementById('enrolVelocityChartWrap');
+  if (velocityWrap) {
+    velocityWrap.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;">
+        <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:8px;padding:.85rem;">
+          <div style="font-size:.62rem;text-transform:uppercase;color:var(--muted);font-weight:700;">Active Learning Access</div>
+          <div style="font-size:1.25rem;font-weight:800;color:#34d399;margin-top:.2rem;">${activeStatusCount} <span style="font-size:.7rem;font-weight:500;color:var(--muted);">Students</span></div>
+          <div style="font-size:.65rem;color:var(--muted);margin-top:.25rem;">Standard access active</div>
+        </div>
+        <div style="background:rgba(168,85,247,0.08);border:1px solid rgba(168,85,247,0.2);border-radius:8px;padding:.85rem;">
+          <div style="font-size:.62rem;text-transform:uppercase;color:var(--muted);font-weight:700;">Scholarship Grants</div>
+          <div style="font-size:1.25rem;font-weight:800;color:#c084fc;margin-top:.2rem;">${scholarshipCount} <span style="font-size:.7rem;font-weight:500;color:var(--muted);">Grants</span></div>
+          <div style="font-size:.65rem;color:var(--muted);margin-top:.25rem;">100% discount codes</div>
+        </div>
+      </div>
+      <div style="background:rgba(255,138,0,0.06);border:1px solid rgba(255,138,0,0.2);border-radius:8px;padding:.85rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem;">
+          <span style="font-size:.72rem;font-weight:700;color:var(--orange);">Course Completion Rate</span>
+          <span style="font-size:.85rem;font-weight:800;color:var(--white);">${compRate}%</span>
+        </div>
+        <div style="background:rgba(255,255,255,0.08);height:6px;border-radius:50px;overflow:hidden;">
+          <div style="background:var(--orange);width:${compRate}%;height:100%;border-radius:50px;"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:.65rem;color:var(--muted);margin-top:.4rem;">
+          <span>Target benchmark: 70%</span>
+          <span>${completed} of ${total} graduated</span>
+        </div>
+      </div>
+    `;
+  }
+}
+
+function renderEnrolmentsTable(list) {
+  const tbody = document.getElementById('enrolmentsAnalyticsTableBody');
+  const countBadge = document.getElementById('enrolTableCountBadge');
+  const noteEl = document.getElementById('enrolFilteredNote');
+
+  if (countBadge) countBadge.textContent = list.length + ' Students';
+  if (!tbody) return;
+
+  if (list.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:3rem;color:var(--muted);">
+      <div style="font-size:1.8rem;margin-bottom:.5rem;">🔍</div>
+      <div style="font-weight:600;color:var(--white);">No enrolments match the selected filters</div>
+      <div style="font-size:.75rem;margin-top:.25rem;">Try adjusting the course, progress tier, status, or search query.</div>
+    </td></tr>`;
+    return;
+  }
+
+  const currentCohort = document.getElementById('enrolProgressTierFilter')?.value;
+  if (noteEl) {
+    if (currentCohort && currentCohort !== 'all') {
+      noteEl.innerHTML = `Filtered by: <strong>${currentCohort === '100' ? 'Certified (100%)' : currentCohort + '% Cohort'}</strong> · <a href="javascript:quickFilterCohort('all')" style="color:var(--orange);text-decoration:underline;">Reset</a>`;
+    } else {
+      noteEl.textContent = 'Click on any cohort bar above to filter students';
+    }
+  }
+
+  tbody.innerHTML = list.map(e => {
+    const prog = e.progress_pct;
+    let progColor = '#10B981';
+    if (prog === 0) progColor = '#64748b';
+    else if (prog <= 25) progColor = '#FF8A00';
+    else if (prog <= 75) progColor = '#3B82F6';
+    else if (prog < 100) progColor = '#A855F7';
+
+    let statusBadge = '<span class="badge badge-green">Active</span>';
+    if (prog === 100 || e.status === 'completed') {
+      statusBadge = '<span class="badge" style="background:rgba(16,185,129,0.18);border:1px solid #10b981;color:#34d399;font-weight:700;">🏆 Completed</span>';
+    } else if (e.isScholarship) {
+      statusBadge = '<span class="badge" style="background:rgba(168,85,247,0.18);border:1px solid #a855f7;color:#c084fc;font-weight:700;">🎉 Scholarship</span>';
+    } else if (e.status === 'locked' || e.status === 'locked_pending_foundation') {
+      statusBadge = '<span class="badge" style="background:rgba(239,68,68,0.18);border:1px solid #ef4444;color:#f87171;font-weight:700;">🔒 Locked</span>';
+    } else if (e.status === 'pending') {
+      statusBadge = '<span class="badge badge-yellow">Pending Bank</span>';
+    }
+
+    const initials = (e.user_name || 'SB').split(' ').filter(Boolean).map(x => x[0]).slice(0, 2).join('').toUpperCase();
+
+    let courseIcon = '📚';
+    if (e.course_id === 'foundation') courseIcon = '⛓️';
+    else if (e.course_id.includes('smart-contract')) courseIcon = '⚡';
+    else if (e.course_id === 'cbie') courseIcon = '💡';
+
+    return `
+      <tr style="border-bottom:1px solid var(--border);">
+        <td>
+          <div style="display:flex;align-items:center;gap:.65rem;">
+            <div style="width:32px;height:32px;border-radius:50%;background:rgba(20,40,255,0.15);border:1px solid rgba(20,40,255,0.3);color:#8ca5ff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.72rem;flex-shrink:0;">
+              ${initials}
+            </div>
+            <div>
+              <div style="font-weight:600;color:var(--white);font-size:.82rem;">${e.user_name}</div>
+              <div style="font-size:.65rem;color:var(--muted);">${e.user_email}</div>
+              <div style="display:flex;gap:.35rem;align-items:center;margin-top:2px;">
+                <code style="font-size:.62rem;color:var(--orange);">${e.sofian_id}</code>
+                <span style="font-size:.62rem;color:var(--muted);">· ${e.node_label}</span>
+              </div>
+            </div>
+          </div>
+        </td>
+        <td>
+          <div style="display:flex;align-items:center;gap:.35rem;">
+            <span>${courseIcon}</span>
+            <span style="font-size:.8rem;font-weight:600;color:var(--white);">${e.course_title}</span>
+          </div>
+          <div style="font-size:.65rem;color:var(--muted);margin-top:2px;">${e.tier ? (e.tier.charAt(0).toUpperCase() + e.tier.slice(1)) : 'Core Curriculum'}</div>
+        </td>
+        <td>
+          <div style="display:flex;align-items:center;gap:.6rem;min-width:120px;">
+            <div style="background:rgba(255,255,255,0.08);border-radius:50px;height:6px;width:75px;overflow:hidden;flex-shrink:0;">
+              <div style="background:${progColor};height:100%;width:${prog}%;border-radius:50px;box-shadow:0 0 6px ${progColor};"></div>
+            </div>
+            <span style="font-size:.75rem;font-weight:700;color:${prog === 100 ? '#10b981' : 'var(--white)'};">${prog}%</span>
+          </div>
+        </td>
+        <td style="font-size:.75rem;color:var(--muted);white-space:nowrap;">
+          ${e.dateStr}
+        </td>
+        <td>
+          ${statusBadge}
+        </td>
+        <td style="text-align:right;white-space:nowrap;">
+          <button class="btn btn-sm" onclick="viewUserXpLog('${e.user_id}')" style="background:rgba(20,40,255,0.18);border:1px solid rgba(20,40,255,0.45);color:#8ca5ff;padding:.2rem .5rem;font-size:.68rem;font-weight:700;" title="View Student XP Ledger">⚡ XP Log</button>
+          <button class="btn btn-sm btn-secondary" onclick="viewStudent('${e.user_id}')" style="margin-left:.25rem;padding:.2rem .5rem;font-size:.68rem;" title="Manage Sofian Roles">👁️ Manage</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function renderStalledLearners(enrolments) {
+  const tbody = document.getElementById('stalledLearnersTableBody');
+  if (!tbody) return;
+  const stalled = enrolments.filter(e => Number(e.progress_pct || 0) === 0);
+
+  if (stalled.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--muted);">🎉 Excellent! No stalled learners. All enrolled students have started learning.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = stalled.map(e => `
+    <tr style="border-bottom:1px solid var(--border);">
+      <td>
+        <div style="font-weight:600;font-size:.82rem;color:var(--white);">${e.user_name}</div>
+        <div style="font-size:.65rem;color:var(--muted);">${e.user_email}</div>
+        <code style="font-size:.62rem;color:var(--orange);">${e.sofian_id}</code>
+      </td>
+      <td style="font-size:.8rem;">${e.course_title}</td>
+      <td style="font-size:.75rem;color:var(--muted);">${e.dateStr}</td>
+      <td><span class="badge" style="background:rgba(239,68,68,0.18);border:1px solid #ef4444;color:#f87171;font-weight:700;">0% Progress</span></td>
+      <td style="text-align:right;">
+        <button class="btn btn-sm" onclick="viewUserXpLog('${e.user_id}')" style="background:rgba(20,40,255,0.18);border:1px solid rgba(20,40,255,0.45);color:#8ca5ff;padding:.2rem .45rem;font-size:.68rem;font-weight:700;">⚡ XP Log</button>
+        <button class="btn btn-sm btn-secondary" onclick="viewStudent('${e.user_id}')" style="margin-left:.25rem;padding:.2rem .45rem;font-size:.68rem;">👁️ Manage</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+window.exportEnrolmentsCSV = function() {
+  const list = window._filteredEnrolments && window._filteredEnrolments.length > 0 ? window._filteredEnrolments : window._allEnrolments;
+  if (!list || list.length === 0) {
+    alert('No enrolment records to export.');
+    return;
+  }
+
+  const courseFilter = document.getElementById('enrolCourseFilter')?.value || 'all';
+  const headers = ['Full Name', 'Email', 'Sofian ID', 'Referral Code', 'Node/Chapter', 'Course ID', 'Course Title', 'Progress %', 'Status', 'Enrolled Date', 'Scholarship'];
+  
+  const rows = list.map(e => [
+    `"${(e.user_name || '').replace(/"/g, '""')}"`,
+    `"${(e.user_email || '').replace(/"/g, '""')}"`,
+    `"${(e.sofian_id || '').replace(/"/g, '""')}"`,
+    `"${(e.referral_code || '').replace(/"/g, '""')}"`,
+    `"${(e.node_label || '').replace(/"/g, '""')}"`,
+    `"${(e.course_id || '').replace(/"/g, '""')}"`,
+    `"${(e.course_title || '').replace(/"/g, '""')}"`,
+    e.progress_pct || 0,
+    `"${(e.status || '').replace(/"/g, '""')}"`,
+    `"${(e.dateStr || '').replace(/"/g, '""')}"`,
+    e.isScholarship ? 'Yes' : 'No'
+  ]);
+
+  const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\r\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const nowStr = new Date().toISOString().slice(0, 10);
+  a.download = `sofe_enrolments_${courseFilter}_${nowStr}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 };
+
+// Legacy compatibility
+window.loadActiveEnrolments = function() { window.loadEnrolmentsHub(); };
+window.loadAllEnrolments = function() { window.loadEnrolmentsHub(); };
 
 // ── SOFIANS DEMOGRAPHICS HUB ──
 let _allStudents = [];
