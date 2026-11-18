@@ -1785,6 +1785,52 @@ export default function DashboardClient() {
                       >
                         🌐 View Web3 CV ↗
                       </Link>
+
+                      {/* Quick Notifications Trigger */}
+                      <button
+                        type="button"
+                        id="dashHeroNotifBtn"
+                        onClick={() => {
+                          const topNavBell = document.getElementById('navBellBtn');
+                          if (topNavBell) {
+                            topNavBell.click();
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          } else {
+                            setShowNotifDropdown(!showNotifDropdown);
+                          }
+                        }}
+                        style={{
+                          background: unreadNotifsCount > 0 ? 'rgba(255,138,0,0.12)' : 'rgba(20,40,255,0.12)',
+                          border: unreadNotifsCount > 0 ? '1px solid rgba(255,138,0,0.35)' : '1px solid rgba(20,40,255,0.3)',
+                          color: unreadNotifsCount > 0 ? '#FF8A00' : '#6b8cff',
+                          borderRadius: 6,
+                          padding: '0.38rem 0.85rem',
+                          fontSize: '0.74rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.4rem',
+                          position: 'relative'
+                        }}
+                        title="View Notifications"
+                      >
+                        <span>🔔</span>
+                        <span>Notifications</span>
+                        {unreadNotifsCount > 0 && (
+                          <span style={{
+                            background: '#FF3B3B',
+                            color: '#fff',
+                            borderRadius: 10,
+                            padding: '0.1rem 0.45rem',
+                            fontSize: '0.62rem',
+                            fontWeight: 800,
+                            lineHeight: 1
+                          }}>
+                            {unreadNotifsCount}
+                          </span>
+                        )}
+                      </button>
                     </div>
 
                     {/* Under Sofian ID line: Total Balance */}

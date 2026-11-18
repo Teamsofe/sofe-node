@@ -59,6 +59,140 @@
   .modal { width: 95% !important; max-width: 95% !important; margin: 1rem !important; max-height: 90vh !important; }
   .section-header { flex-direction: column !important; align-items: flex-start !important; gap: 1rem !important; }
 }
+
+/* ── STUDENT LIFECYCLE DRAWER ── */
+#studentLifecycleDrawerOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(4, 8, 16, 0.78);
+  backdrop-filter: blur(6px);
+  z-index: 99998;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .25s ease;
+}
+#studentLifecycleDrawerOverlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+#studentLifecycleDrawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 720px;
+  max-width: 96vw;
+  background: #060d1a;
+  border-left: 1px solid rgba(200, 215, 240, 0.14);
+  z-index: 99999;
+  transform: translateX(100%);
+  transition: transform .28s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  box-shadow: -14px 0 45px rgba(0, 0, 0, 0.8);
+}
+#studentLifecycleDrawer.open {
+  transform: translateX(0);
+}
+.sld-header {
+  padding: 1.25rem 1.5rem 1rem;
+  background: linear-gradient(180deg, rgba(20,40,255,0.08) 0%, rgba(6,13,26,0.95) 100%);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.sld-tabs {
+  display: flex;
+  background: rgba(255,255,255,0.03);
+  border-bottom: 1px solid var(--border);
+  padding: 0 1rem;
+  gap: .5rem;
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+.sld-tab-btn {
+  padding: .75rem 1rem;
+  font-size: .75rem;
+  font-weight: 600;
+  color: var(--muted);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  transition: all .18s ease;
+}
+.sld-tab-btn:hover {
+  color: var(--white);
+}
+.sld-tab-btn.active {
+  color: #8ca5ff;
+  border-bottom-color: var(--blue);
+  background: rgba(20,40,255,0.06);
+}
+.sld-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.25rem 1.5rem;
+}
+.sld-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: .65rem;
+  margin-bottom: 1.2rem;
+}
+@media (max-width: 640px) {
+  .sld-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+.sld-kpi-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: .75rem;
+}
+.sld-kpi-label {
+  font-size: .62rem;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+  letter-spacing: .05em;
+  margin-bottom: .25rem;
+}
+.sld-kpi-val {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--white);
+}
+
+/* Stalled Learner Intervention Styles */
+.stalled-pill {
+  padding: .35rem .75rem;
+  border-radius: 50px;
+  font-size: .7rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  transition: all .15s ease;
+}
+.stalled-pill:hover {
+  color: var(--white);
+  border-color: rgba(200,215,240,0.25);
+}
+.stalled-pill.active {
+  background: rgba(239,68,68,0.18);
+  border-color: #ef4444;
+  color: #f87171;
+}
+
 </style></head>
 <body>
 
@@ -808,10 +942,12 @@
     </div>
 
     <!-- Sub-tabs -->
-    <div class="sub-tabs" id="enrolSubTabs" style="margin-bottom:1.2rem;">
+    <div class="sub-tabs" id="enrolSubTabs" style="margin-bottom:1.2rem;display:flex;gap:.5rem;flex-wrap:wrap;">
       <button class="sub-tab active" onclick="switchEnrolTab('analytics', this)">📊 Course Analytics &amp; Enrolments</button>
-      <button class="sub-tab" onclick="switchEnrolTab('pending', this)">⏳ Pending Approvals</button>
       <button class="sub-tab" onclick="switchEnrolTab('stalled', this)">⚠️ Stalled Learners (0%)</button>
+      <button class="sub-tab" onclick="switchEnrolTab('attribution', this)">💰 Revenue &amp; Scholarship Attribution</button>
+      <button class="sub-tab" onclick="switchEnrolTab('query', this)">🔍 Cross-Collection Query Builder</button>
+      <button class="sub-tab" onclick="switchEnrolTab('pending', this)">⏳ Pending Approvals</button>
     </div>
 
     <!-- SUB-TAB 1: ANALYTICS & ENROLMENTS -->
@@ -1004,28 +1140,318 @@
       </div>
     </div>
 
-    <!-- SUB-TAB 3: STALLED LEARNERS -->
+    <!-- SUB-TAB 3: STALLED LEARNERS & RE-ENGAGEMENT HUB -->
     <div id="enrol-tab-stalled" style="display:none;">
-      <div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);border-radius:8px;padding:.85rem 1.1rem;font-size:.76rem;color:#f87171;margin-bottom:1rem;">
-        ⚠️ Stalled Learners: These enrolled students currently have 0% progress. Send a study nudge or check in to ensure high retention.
+      <!-- Hero Banner -->
+      <div style="background:linear-gradient(135deg, rgba(239,68,68,0.12), rgba(20,40,255,0.06));border:1px solid rgba(239,68,68,0.28);border-radius:10px;padding:1.1rem 1.3rem;margin-bottom:1.2rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;">
+        <div>
+          <div style="display:flex;align-items:center;gap:.5rem;font-size:.95rem;font-weight:700;color:var(--white);">
+            <span>⚠️ Stalled Learner Intervention &amp; Re-Engagement Hub</span>
+            <span class="badge" style="background:rgba(239,68,68,0.2);border:1px solid #ef4444;color:#f87171;font-size:.65rem;">0% Progress Retention</span>
+          </div>
+          <div style="font-size:.75rem;color:var(--muted);margin-top:3px;max-width:680px;">
+            Enrolled students who have registered but have not started Lesson 1. Trigger personalized in-app notifications and study reminders with 1-click or batch-reengage inactive learners.
+          </div>
+        </div>
+        <div>
+          <button id="btnBatchNudgeStalled" class="btn btn-primary btn-sm" onclick="batchNudgeFilteredStalled()" style="background:linear-gradient(135deg,#FF8A00,#E07800);border:none;color:#fff;font-weight:700;display:flex;align-items:center;gap:.4rem;padding:.45rem .95rem;border-radius:6px;box-shadow:0 2px 10px rgba(255,138,0,0.3);cursor:pointer;">
+            <span>🚀</span> Batch Nudge Filtered (<span id="stalledBatchCountBadge">0</span>)
+          </button>
+        </div>
       </div>
+
+      <!-- Micro KPI Grid -->
+      <div class="stats-grid" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr));margin-bottom:1.2rem;">
+        <div class="stat-card red" style="cursor:pointer;" onclick="setStalledDurationFilter('all')">
+          <div class="stat-label">Total Stalled</div>
+          <div class="stat-num" id="stalledKpiTotal">—</div>
+          <div class="stat-sub">0% course progress</div>
+        </div>
+        <div class="stat-card orange" style="cursor:pointer;" onclick="setStalledDurationFilter('7d')">
+          <div class="stat-label">Inactive &gt; 7 Days</div>
+          <div class="stat-num" id="stalledKpi7d">—</div>
+          <div class="stat-sub">Needs study reminder</div>
+        </div>
+        <div class="stat-card red" style="cursor:pointer;" onclick="setStalledDurationFilter('14d')">
+          <div class="stat-label">Inactive &gt; 14 Days</div>
+          <div class="stat-num" id="stalledKpi14d">—</div>
+          <div class="stat-sub">At-risk retention drop</div>
+        </div>
+        <div class="stat-card purple" style="cursor:pointer;" onclick="setStalledDurationFilter('never')">
+          <div class="stat-label">Never Nudged</div>
+          <div class="stat-num" id="stalledKpiNever">—</div>
+          <div class="stat-sub">No outreach sent yet</div>
+        </div>
+      </div>
+
+      <!-- Filter & Search Toolbar -->
+      <div style="background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:.85rem 1rem;margin-bottom:1rem;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.8rem;">
+        <div style="display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;">
+          <span style="font-size:.72rem;color:var(--muted);font-weight:600;text-transform:uppercase;margin-right:.25rem;">Inactivity Filter:</span>
+          <button class="stalled-pill active" id="stalledFilterPill-all" onclick="setStalledDurationFilter('all')">All Stalled</button>
+          <button class="stalled-pill" id="stalledFilterPill-7d" onclick="setStalledDurationFilter('7d')">&gt; 7 Days</button>
+          <button class="stalled-pill" id="stalledFilterPill-14d" onclick="setStalledDurationFilter('14d')">&gt; 14 Days</button>
+          <button class="stalled-pill" id="stalledFilterPill-30d" onclick="setStalledDurationFilter('30d')">&gt; 30 Days</button>
+          <button class="stalled-pill" id="stalledFilterPill-never" onclick="setStalledDurationFilter('never')">Never Nudged</button>
+          <button class="stalled-pill" id="stalledFilterPill-nudged" onclick="setStalledDurationFilter('nudged')">Nudged Before</button>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;">
+          <select id="stalledCourseFilter" class="form-select" onchange="applyStalledFilters()" style="background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--white);border-radius:6px;padding:.35rem .65rem;font-size:.75rem;">
+            <option value="all">All Stalled Courses</option>
+          </select>
+          <input id="stalledSearchInput" class="form-input" placeholder="🔍 Search name, email, Sofian ID…" oninput="applyStalledFilters()" style="background:rgba(255,255,255,0.05);border:1px solid var(--border);color:var(--white);border-radius:6px;padding:.35rem .65rem;font-size:.75rem;min-width:200px;" />
+        </div>
+      </div>
+
+      <!-- Table -->
       <div class="table-wrap">
         <table>
           <thead>
             <tr>
               <th>Sofian / Builder</th>
-              <th>Course</th>
-              <th>Enrolled On</th>
-              <th>Status</th>
+              <th>Course &amp; Cohort</th>
+              <th>Enrolled &amp; Inactivity</th>
+              <th>Nudge Telemetry</th>
               <th style="text-align:right;">Actions</th>
             </tr>
           </thead>
           <tbody id="stalledLearnersTableBody">
-            <tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--muted);">Loading stalled learners…</td></tr>
+            <tr><td colspan="5" style="text-align:center;padding:2.5rem;color:var(--muted);">Loading stalled learners…</td></tr>
           </tbody>
         </table>
       </div>
     </div>
+  
+    <!-- SUB-TAB 4: REVENUE, DISCOUNT & SCHOLARSHIP ATTRIBUTION -->
+    <div id="enrol-tab-attribution" style="display:none;">
+      <!-- Hero Banner -->
+      <div style="background:linear-gradient(135deg, rgba(16,185,129,0.12), rgba(20,40,255,0.06));border:1px solid rgba(16,185,129,0.28);border-radius:10px;padding:1.1rem 1.3rem;margin-bottom:1.2rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;">
+        <div>
+          <div style="display:flex;align-items:center;gap:.5rem;font-size:.95rem;font-weight:700;color:var(--white);">
+            <span>💰 Course Revenue, Discount &amp; Scholarship Attribution</span>
+            <span class="badge" style="background:rgba(16,185,129,0.2);border:1px solid #10b981;color:#34d399;font-size:.65rem;">Financial Intelligence</span>
+          </div>
+          <div style="font-size:.75rem;color:var(--muted);margin-top:3px;max-width:700px;">
+            Real-time attribution of gross potential course value, verified cash revenue collected, institutional scholarships granted, and campaign discount code performance.
+          </div>
+        </div>
+        <div style="display:flex;gap:.5rem;align-items:center;">
+          <button class="btn btn-secondary btn-sm" onclick="exportAttributionCSV()" style="font-size:.72rem;">📥 Export Financial Ledger</button>
+          <button class="btn btn-ghost btn-sm" onclick="loadRevenueAttribution(true)" style="font-size:.72rem;">↻ Refresh</button>
+        </div>
+      </div>
+
+      <!-- Financial Telemetry Grid -->
+      <div class="stats-grid" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr));margin-bottom:1.3rem;">
+        <div class="stat-card green">
+          <div class="stat-label">Confirmed Cash Revenue</div>
+          <div class="stat-num" id="attrTotalConfirmed">₦129,000</div>
+          <div class="stat-sub">Verified payments (CBIE &amp; Foundation)</div>
+        </div>
+        <div class="stat-card purple">
+          <div class="stat-label">Scholarships &amp; 100% Waivers</div>
+          <div class="stat-num" id="attrTotalScholarships">₦100,000</div>
+          <div class="stat-sub" id="attrTotalScholarshipsSub">4 students sponsored</div>
+        </div>
+        <div class="stat-card orange">
+          <div class="stat-label">Subsidized Discounts Waived</div>
+          <div class="stat-num" id="attrTotalDiscounts">₦20,000</div>
+          <div class="stat-sub" id="attrTotalDiscountsSub">40% / 50% fee reductions</div>
+        </div>
+        <div class="stat-card red">
+          <div class="stat-label">Locked / Unpaid Subsidized</div>
+          <div class="stat-num" id="attrTotalLocked">5</div>
+          <div class="stat-sub">Pipeline awaiting balance or waiver</div>
+        </div>
+      </div>
+
+      <!-- Course-by-Course Financial & Enrollment Ledger -->
+      <div class="section-header" style="margin-top:1.5rem;margin-bottom:.8rem;">
+        <div>
+          <div class="section-title" style="font-size:.9rem;">Course Portfolio Performance &amp; Attribution</div>
+          <div class="section-sub">Cross-reference of enrolled students, confirmed tuition revenue, and institutional scholarship waivers.</div>
+        </div>
+      </div>
+      <div class="table-wrap" style="margin-bottom:1.5rem;">
+        <table>
+          <thead>
+            <tr>
+              <th>Course Curriculum</th>
+              <th>Benchmark Fee</th>
+              <th>Enrolled</th>
+              <th>Paid Tuition</th>
+              <th>100% Scholarship</th>
+              <th>Subsidized (40%)</th>
+              <th>Locked / Unpaid</th>
+              <th style="text-align:right;">Cash Collected</th>
+              <th style="text-align:right;">Value Waived</th>
+            </tr>
+          </thead>
+          <tbody id="attrCoursesTableBody">
+            <tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--muted);">Loading course revenue attribution…</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Locked & Subsidized Intervention Section -->
+      <div style="background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.22);border-radius:10px;padding:1.2rem;margin-bottom:1.5rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-bottom:1rem;">
+          <div>
+            <div style="display:flex;align-items:center;gap:.5rem;font-size:.88rem;font-weight:700;color:var(--white);">
+              <span>🔒 Locked Subsidized Students Intervention</span>
+              <span class="badge" style="background:rgba(239,68,68,0.2);color:#f87171;font-weight:700;"><span id="attrLockedBadgeCount">5</span> Accounts Locked</span>
+            </div>
+            <div style="font-size:.72rem;color:var(--muted);margin-top:2px;">
+              These students registered under a subsidized tier but did not complete balance payment. You can grant a 100% scholarship waiver or unlock their course in 1-click.
+            </div>
+          </div>
+          <div>
+            <button class="btn btn-primary btn-sm" onclick="unlockAllSubsidizedStudents()" style="background:linear-gradient(135deg,#10B981,#059669);border:none;color:#fff;font-weight:700;font-size:.72rem;padding:.4rem .85rem;box-shadow:0 2px 8px rgba(16,185,129,0.3);">
+              🔓 Grant Scholarship &amp; Unlock All (<span id="attrUnlockAllCount">5</span>)
+            </button>
+          </div>
+        </div>
+
+        <div class="table-wrap" style="background:var(--deep);border:1px solid var(--border);">
+          <table>
+            <thead>
+              <tr>
+                <th>Sofian / Builder</th>
+                <th>Course</th>
+                <th>Locked Reason</th>
+                <th>Enrolled Date</th>
+                <th style="text-align:right;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="attrLockedTableBody">
+              <tr><td colspan="5" style="text-align:center;padding:1.5rem;color:var(--muted);">Loading locked accounts…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Campaign & Discount Code Attribution Performance -->
+      <div class="section-header" style="margin-bottom:.8rem;">
+        <div>
+          <div class="section-title" style="font-size:.9rem;">Discount Code &amp; Campaign Attribution</div>
+          <div class="section-sub">Tracking codes generated for leaderboard champions, partner campus chapters, and special campaigns.</div>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Discount / Promo Code</th>
+              <th>Campaign / Description</th>
+              <th>Discount Benefit</th>
+              <th>Allowed Course</th>
+              <th>Redemptions</th>
+              <th>Beneficiary Students</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="attrDiscountsTableBody">
+            <tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--muted);">Loading discount codes attribution…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- SUB-TAB 5: CROSS-COLLECTION QUERY BUILDER -->
+    <div id="enrol-tab-query" style="display:none;">
+      <!-- Hero Banner -->
+      <div style="background:linear-gradient(135deg, rgba(20,40,255,0.12), rgba(168,85,247,0.06));border:1px solid rgba(20,40,255,0.28);border-radius:10px;padding:1.1rem 1.3rem;margin-bottom:1.2rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;">
+        <div>
+          <div style="display:flex;align-items:center;gap:.5rem;font-size:.95rem;font-weight:700;color:var(--white);">
+            <span>🔍 Cross-Collection Query Builder &amp; Data Explorer</span>
+            <span class="badge badge-blue" style="font-size:.65rem;">Multi-Collection Intelligence</span>
+          </div>
+          <div style="font-size:.75rem;color:var(--muted);margin-top:3px;max-width:700px;">
+            Construct compound query conditions across Enrolments, Sofians, Payments, and Activity. Filter, audit, and batch-action student cohorts in milliseconds.
+          </div>
+        </div>
+        <div style="display:flex;gap:.5rem;align-items:center;">
+          <button class="btn btn-secondary btn-sm" onclick="exportQueryResultsCSV()" style="font-size:.72rem;">📥 Export Query CSV</button>
+          <button class="btn btn-ghost btn-sm" onclick="resetQueryBuilder()" style="font-size:.72rem;">↻ Reset</button>
+        </div>
+      </div>
+
+      <!-- Quick Preset Shortcuts -->
+      <div style="margin-bottom:1rem;display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;">
+        <span style="font-size:.72rem;color:var(--muted);font-weight:600;text-transform:uppercase;margin-right:.25rem;">Quick Presets:</span>
+        <button class="stalled-pill" onclick="applyQueryPreset('stalled_foundation')">⚡ Stalled Foundation (&gt;14d)</button>
+        <button class="stalled-pill" onclick="applyQueryPreset('cbie_paid')">⚡ CBIE Confirmed Paid</button>
+        <button class="stalled-pill" onclick="applyQueryPreset('scholarship_students')">⚡ 100% Scholarship Students</button>
+        <button class="stalled-pill" onclick="applyQueryPreset('locked_accounts')">⚡ Locked / Unpaid Accounts</button>
+        <button class="stalled-pill" onclick="applyQueryPreset('high_xp')">⚡ High XP Builders (&gt;20 XP)</button>
+        <button class="stalled-pill" onclick="applyQueryPreset('unverified')">⚡ Unverified Emails</button>
+      </div>
+
+      <!-- Query Configuration Card -->
+      <div style="background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:1.1rem;margin-bottom:1.2rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.8rem;margin-bottom:1rem;border-bottom:1px solid rgba(200,215,240,0.08);padding-bottom:.85rem;">
+          <div style="display:flex;align-items:center;gap:.8rem;flex-wrap:wrap;">
+            <div>
+              <label style="font-size:.65rem;text-transform:uppercase;color:var(--muted);font-weight:700;display:block;margin-bottom:3px;">Source Collection</label>
+              <select id="qbCollectionSelect" class="form-select" onchange="onQbCollectionChange()" style="font-size:.75rem;padding:.35rem .6rem;background:var(--deep);color:var(--white);">
+                <option value="enrolments">🎓 Enrolments &amp; Course Progress</option>
+                <option value="students">👥 Sofians / User Directory</option>
+                <option value="payments">💳 Payments &amp; Revenue Transactions</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:.65rem;text-transform:uppercase;color:var(--muted);font-weight:700;display:block;margin-bottom:3px;">Matching Rule</label>
+              <select id="qbLogicSelect" class="form-select" style="font-size:.75rem;padding:.35rem .6rem;background:var(--deep);color:var(--white);">
+                <option value="AND">AND (Match ALL conditions)</option>
+                <option value="OR">OR (Match ANY condition)</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <button class="btn btn-secondary btn-sm" onclick="addQbConditionRow()" style="font-size:.72rem;">+ Add Condition</button>
+            <button class="btn btn-primary btn-sm" onclick="executeCurrentQuery()" style="background:linear-gradient(135deg,#1428FF,#8ca5ff);border:none;box-shadow:0 2px 10px rgba(20,40,255,0.4);font-weight:700;padding:.4rem 1rem;font-size:.75rem;margin-left:.4rem;">⚡ Run Query</button>
+          </div>
+        </div>
+
+        <!-- Dynamic Conditions Rows -->
+        <div id="qbConditionsContainer" style="display:flex;flex-direction:column;gap:.6rem;">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
+
+      <!-- Query Telemetry & Results Action Bar -->
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.8rem;margin-bottom:.85rem;">
+        <div style="display:flex;align-items:center;gap:.5rem;">
+          <span style="font-size:.82rem;font-weight:700;color:var(--white);" id="qbResultCountBadge">0 Matches Found</span>
+          <span style="font-size:.7rem;color:var(--muted);" id="qbExecutionTime"></span>
+        </div>
+        <div style="display:flex;gap:.5rem;align-items:center;">
+          <button id="btnQbBatchNudge" class="btn btn-primary btn-sm" onclick="batchNudgeQueryResults()" style="background:linear-gradient(135deg,#FF8A00,#E07800);border:none;color:#fff;font-size:.7rem;padding:.35rem .75rem;display:none;">
+            🚀 Batch Nudge Filtered
+          </button>
+        </div>
+      </div>
+
+      <!-- Results Table -->
+      <div class="table-wrap">
+        <table>
+          <thead id="qbResultsThead">
+            <tr>
+              <th>Sofian / Builder</th>
+              <th>Attribute 1</th>
+              <th>Attribute 2</th>
+              <th>Status / Progress</th>
+              <th style="text-align:right;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="qbResultsTbody">
+            <tr><td colspan="5" style="text-align:center;padding:2.5rem;color:var(--muted);">Click "⚡ Run Query" or pick a Quick Preset above to explore records.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
   </div>
 
   <!-- ═══ PAYMENTS ═══ -->
@@ -2743,6 +3169,141 @@
   </div>
 </div>
 
+
+<!-- ═══ STUDENT LIFECYCLE DRAWER OVERLAY & PANEL ═══ -->
+<div id="studentLifecycleDrawerOverlay" onclick="closeStudentLifecycleDrawer()"></div>
+
+<div id="studentLifecycleDrawer">
+  <!-- Drawer Header -->
+  <div class="sld-header">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;margin-bottom:.85rem;">
+      <div style="display:flex;align-items:center;gap:.35rem;font-size:.65rem;font-weight:700;color:var(--orange);letter-spacing:.08em;text-transform:uppercase;">
+        <span>👤</span> <span>STUDENT LIFECYCLE &amp; AUDIT TRAIL</span>
+      </div>
+      <button onclick="closeStudentLifecycleDrawer()" style="background:rgba(255,255,255,0.08);border:1px solid var(--border);color:var(--muted);width:28px;height:28px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1rem;line-height:1;transition:all .15s ease;" onmouseover="this.style.color='#fff';this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.color='var(--muted)';this.style.background='rgba(255,255,255,0.08)'">✕</button>
+    </div>
+
+    <!-- Student Identity Profile Card -->
+    <div style="display:flex;align-items:center;gap:.9rem;">
+      <div id="sldAvatar" style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#1428FF,#A855F7);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.1rem;color:#fff;box-shadow:0 4px 15px rgba(20,40,255,0.35);flex-shrink:0;">
+        SB
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;">
+          <h3 id="sldName" style="font-size:1.05rem;font-weight:700;color:var(--white);margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Sofian Builder</h3>
+          <span id="sldVerifiedBadge" class="badge badge-green">Verified</span>
+          <span id="sldFoundationBadge" class="badge badge-purple">Foundation Grad</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;font-size:.72rem;margin-top:3px;">
+          <span id="sldEmail" style="color:var(--muted);">email@example.com</span>
+          <span style="color:rgba(200,215,240,0.2);">·</span>
+          <code id="sldSofianId" style="color:var(--orange);font-weight:700;font-size:.72rem;">SN-00000</code>
+          <span style="color:rgba(200,215,240,0.2);">·</span>
+          <span id="sldNode" style="color:var(--muted);">Global Node</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:.4rem;flex-shrink:0;">
+        <button class="btn btn-sm btn-secondary" id="sldCopyUidBtn" onclick="copyDrawerStudentUid()" title="Copy User Firebase UID" style="padding:.3rem .55rem;font-size:.68rem;">📋 UID</button>
+        <button class="btn btn-sm" id="sldManageRolesBtn" onclick="openDrawerStudentRoles()" style="background:rgba(20,40,255,0.2);border:1px solid rgba(20,40,255,0.45);color:#8ca5ff;padding:.3rem .6rem;font-size:.68rem;font-weight:700;">⚙️ Roles</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI Ribbon Summary -->
+  <div style="padding:.9rem 1.5rem 0;">
+    <div class="sld-kpi-grid">
+      <div class="sld-kpi-card">
+        <div class="sld-kpi-label">Verified XP</div>
+        <div class="sld-kpi-val" id="sldKpiXp" style="color:#FFB800;">0 XP</div>
+        <div style="font-size:.65rem;color:var(--muted);margin-top:2px;" id="sldKpiTier">Genesis Tier</div>
+      </div>
+      <div class="sld-kpi-card">
+        <div class="sld-kpi-label">Daily Streak</div>
+        <div class="sld-kpi-val" id="sldKpiStreak" style="color:#FF8A00;">0 Days 🔥</div>
+        <div style="font-size:.65rem;color:var(--muted);margin-top:2px;">Consecutive</div>
+      </div>
+      <div class="sld-kpi-card">
+        <div class="sld-kpi-label">Enrolled Courses</div>
+        <div class="sld-kpi-val" id="sldKpiCourses" style="color:#38bdf8;">0</div>
+        <div style="font-size:.65rem;color:var(--muted);margin-top:2px;" id="sldKpiCoursesSub">Active &amp; Completed</div>
+      </div>
+      <div class="sld-kpi-card">
+        <div class="sld-kpi-label">Referrals</div>
+        <div class="sld-kpi-val" id="sldKpiReferrals" style="color:#34d399;">0</div>
+        <div style="font-size:.65rem;color:var(--muted);margin-top:2px;" id="sldKpiRefCode">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sub-Tabs Navigation -->
+  <div class="sld-tabs">
+    <button class="sld-tab-btn active" id="sldTabBtn-courses" onclick="switchDrawerTab('courses')">📚 Enrolled Courses (<span id="sldTabCountCourses">0</span>)</button>
+    <button class="sld-tab-btn" id="sldTabBtn-activity" onclick="switchDrawerTab('activity')">🎯 Module Activity &amp; Sessions</button>
+    <button class="sld-tab-btn" id="sldTabBtn-xp" onclick="switchDrawerTab('xp')">⚡ XP Ledger &amp; Manual Award</button>
+    <button class="sld-tab-btn" id="sldTabBtn-audit" onclick="switchDrawerTab('audit')">🔍 Account Audit &amp; Metadata</button>
+  </div>
+
+  <!-- Drawer Body -->
+  <div class="sld-body" id="sldBody">
+    <!-- TAB 1: ENROLLED COURSES -->
+    <div id="sldView-courses">
+      <div id="sldCoursesList">
+        <div style="text-align:center;padding:2rem;color:var(--muted);">Loading course enrolments…</div>
+      </div>
+    </div>
+
+    <!-- TAB 2: MODULE ACTIVITY -->
+    <div id="sldView-activity" style="display:none;">
+      <div id="sldActivityList">
+        <div style="text-align:center;padding:2rem;color:var(--muted);">Loading module activity…</div>
+      </div>
+    </div>
+
+    <!-- TAB 3: XP LEDGER & MANUAL AWARD -->
+    <div id="sldView-xp" style="display:none;">
+      <!-- Inline Award Manual XP Form -->
+      <div style="background:rgba(20,40,255,0.06);border:1px solid rgba(20,40,255,0.22);border-radius:8px;padding:1rem;margin-bottom:1.2rem;">
+        <div style="font-size:.78rem;font-weight:700;color:var(--white);margin-bottom:.5rem;display:flex;align-items:center;gap:.4rem;">
+          <span>⚡</span> <span>Award / Adjust Sofian XP Balance</span>
+        </div>
+        <div style="display:grid;grid-template-columns:120px 1fr auto;gap:.6rem;align-items:center;">
+          <input type="number" id="sldManualXpAmount" class="form-input" placeholder="Amount (e.g. 50)" style="font-size:.75rem;padding:.4rem .6rem;" />
+          <input type="text" id="sldManualXpReason" class="form-input" placeholder="Reason (e.g. Hackathon Bounty / Manual Adjustment)" style="font-size:.75rem;padding:.4rem .6rem;" />
+          <button class="btn btn-primary btn-sm" onclick="submitDrawerManualXp()" style="font-size:.72rem;padding:.4rem .85rem;white-space:nowrap;">+ Award XP</button>
+        </div>
+      </div>
+
+      <!-- Itemized Ledger -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem;">
+        <span style="font-size:.72rem;color:var(--muted);font-weight:600;text-transform:uppercase;">Itemized XP Ledger (<span id="sldXpCountBadge">0</span>)</span>
+        <button class="btn btn-ghost btn-sm" onclick="reloadDrawerXpLedger()" style="font-size:.68rem;padding:.2rem .4rem;">↻ Refresh</button>
+      </div>
+      <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;">
+        <table style="width:100%;border-collapse:collapse;font-size:.74rem;">
+          <thead>
+            <tr style="background:rgba(20,40,255,0.08);border-bottom:1px solid var(--border);color:var(--muted);text-transform:uppercase;font-size:.65rem;text-align:left;">
+              <th style="padding:.55rem .7rem;">Date (WAT)</th>
+              <th style="padding:.55rem .7rem;">Activity</th>
+              <th style="padding:.55rem .7rem;">Source</th>
+              <th style="padding:.55rem .7rem;text-align:right;">XP</th>
+            </tr>
+          </thead>
+          <tbody id="sldXpTableBody">
+            <tr><td colspan="4" style="text-align:center;padding:1.5rem;color:var(--muted);">Loading transactions…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- TAB 4: ACCOUNT AUDIT -->
+    <div id="sldView-audit" style="display:none;">
+      <div id="sldAuditDetails">
+        <div style="text-align:center;padding:2rem;color:var(--muted);">Loading account audit trail…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div class="toast" id="toast"><span id="toastIcon">✓</span><span id="toastMsg">Done</span></div>
 
@@ -3882,7 +4443,7 @@ function switchCourseTab(id, el) {
   if (el) el.classList.add('active');
 }
 function switchEnrolTab(id, el) {
-  ['analytics','pending','stalled'].forEach(t => {
+  ['analytics','pending','stalled','attribution','query'].forEach(t => {
     const tabEl = document.getElementById('enrol-tab-' + t);
     if (tabEl) tabEl.style.display = 'none';
   });
@@ -3897,6 +4458,10 @@ function switchEnrolTab(id, el) {
     if (typeof window.loadPendingCBIEApprovals === 'function') window.loadPendingCBIEApprovals();
   } else if (id === 'stalled') {
     if (typeof window.renderStalledLearners === 'function') window.renderStalledLearners();
+  } else if (id === 'attribution') {
+    if (typeof window.loadRevenueAttribution === 'function') window.loadRevenueAttribution();
+  } else if (id === 'query') {
+    if (typeof window.initQueryBuilder === 'function') window.initQueryBuilder();
   }
 }
 function switchPayTab(id, el) {
@@ -4997,7 +5562,7 @@ function renderEnrolmentsTable(list) {
               ${initials}
             </div>
             <div>
-              <div style="font-weight:600;color:var(--white);font-size:.82rem;">${e.user_name}</div>
+              <a href="javascript:void(0)" onclick="openStudentLifecycleDrawer('${e.user_id}')" style="font-weight:600;color:var(--white);font-size:.82rem;text-decoration:none;" onmouseover="this.style.color='#1428FF'" onmouseout="this.style.color='var(--white)'" title="View Full Student Lifecycle">${e.user_name}</a>
               <div style="font-size:.65rem;color:var(--muted);">${e.user_email}</div>
               <div style="display:flex;gap:.35rem;align-items:center;margin-top:2px;">
                 <code style="font-size:.62rem;color:var(--orange);">${e.sofian_id}</code>
@@ -5028,41 +5593,892 @@ function renderEnrolmentsTable(list) {
           ${statusBadge}
         </td>
         <td style="text-align:right;white-space:nowrap;">
-          <button class="btn btn-sm" onclick="viewUserXpLog('${e.user_id}')" style="background:rgba(20,40,255,0.18);border:1px solid rgba(20,40,255,0.45);color:#8ca5ff;padding:.2rem .5rem;font-size:.68rem;font-weight:700;" title="View Student XP Ledger">⚡ XP Log</button>
-          <button class="btn btn-sm btn-secondary" onclick="viewStudent('${e.user_id}')" style="margin-left:.25rem;padding:.2rem .5rem;font-size:.68rem;" title="Manage Sofian Roles">👁️ Manage</button>
+          <button class="btn btn-sm" onclick="openStudentLifecycleDrawer('${e.user_id}')" style="background:rgba(20,40,255,0.18);border:1px solid rgba(20,40,255,0.45);color:#8ca5ff;padding:.2rem .5rem;font-size:.68rem;font-weight:700;" title="Inspect Student Lifecycle & Progress">👤 Lifecycle</button>
+          <button class="btn btn-sm" onclick="viewUserXpLog('${e.user_id}')" style="margin-left:.25rem;background:rgba(255,138,0,0.15);border:1px solid rgba(255,138,0,0.4);color:#ffaa40;padding:.2rem .45rem;font-size:.68rem;font-weight:700;" title="View Student XP Ledger">⚡ XP</button>
+          <button class="btn btn-sm btn-secondary" onclick="viewStudent('${e.user_id}')" style="margin-left:.25rem;padding:.2rem .45rem;font-size:.68rem;" title="Manage Sofian Roles">⚙️ Roles</button>
         </td>
       </tr>
     `;
   }).join('');
 }
 
-function renderStalledLearners(enrolments) {
-  const tbody = document.getElementById('stalledLearnersTableBody');
-  if (!tbody) return;
-  const stalled = enrolments.filter(e => Number(e.progress_pct || 0) === 0);
+// ════════════════════════════════════════════════════════════════════════════
+// STALLED LEARNER 1-CLICK RE-ENGAGEMENT INTERVENTION HUB
+// ════════════════════════════════════════════════════════════════════════════
+window._stalledDurationFilter = 'all';
+window._allStalledLearners = [];
+window._filteredStalledLearners = [];
 
-  if (stalled.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--muted);">🎉 Excellent! No stalled learners. All enrolled students have started learning.</td></tr>';
+window.setStalledDurationFilter = function(filter) {
+  window._stalledDurationFilter = filter;
+  ['all','7d','14d','30d','never','nudged'].forEach(p => {
+    const el = document.getElementById('stalledFilterPill-' + p);
+    if (el) {
+      if (p === filter) el.classList.add('active');
+      else el.classList.remove('active');
+    }
+  });
+  applyStalledFilters();
+};
+
+window.renderStalledLearners = function(enrolments) {
+  const list = enrolments || window._allEnrolments || [];
+  const stalled = list.filter(e => Number(e.progress_pct || 0) === 0);
+  window._allStalledLearners = stalled;
+
+  // Compute metrics
+  const now = Date.now();
+  const total = stalled.length;
+  let inactive7d = 0;
+  let inactive14d = 0;
+  let inactive30d = 0;
+  let neverNudged = 0;
+  let nudgedRecent = 0;
+
+  const coursesMap = {};
+
+  stalled.forEach(e => {
+    const dateObj = e.dateObj || (e.enrolled_at?.toDate ? e.enrolled_at.toDate() : (e.enrolled_at ? new Date(e.enrolled_at) : null));
+    const days = dateObj ? Math.max(0, Math.floor((now - dateObj.getTime()) / (1000 * 60 * 60 * 24))) : 0;
+    e._daysInactive = days;
+
+    if (days >= 7) inactive7d++;
+    if (days >= 14) inactive14d++;
+    if (days >= 30) inactive30d++;
+
+    const lastNudge = e.last_nudged_at?.toDate ? e.last_nudged_at.toDate() : (e.last_nudged_at ? new Date(e.last_nudged_at) : null);
+    if (!lastNudge) {
+      neverNudged++;
+    } else {
+      const daysSinceNudge = Math.max(0, Math.floor((now - lastNudge.getTime()) / (1000 * 60 * 60 * 24)));
+      if (daysSinceNudge <= 7) nudgedRecent++;
+    }
+
+    if (e.course_id) {
+      coursesMap[e.course_id] = e.course_title || e.course_id;
+    }
+  });
+
+  const kpiTotal = document.getElementById('stalledKpiTotal');
+  const kpi7d = document.getElementById('stalledKpi7d');
+  const kpi14d = document.getElementById('stalledKpi14d');
+  const kpiNever = document.getElementById('stalledKpiNever');
+
+  if (kpiTotal) kpiTotal.textContent = total;
+  if (kpi7d) kpi7d.textContent = inactive7d;
+  if (kpi14d) kpi14d.textContent = inactive14d;
+  if (kpiNever) kpiNever.textContent = neverNudged;
+
+  // Populate course dropdown if needed
+  const cSel = document.getElementById('stalledCourseFilter');
+  if (cSel) {
+    const currentVal = cSel.value;
+    let opts = '<option value="all">All Stalled Courses (' + total + ')</option>';
+    Object.keys(coursesMap).forEach(cid => {
+      opts += '<option value="' + cid + '">' + coursesMap[cid] + '</option>';
+    });
+    cSel.innerHTML = opts;
+    if (currentVal && coursesMap[currentVal]) cSel.value = currentVal;
+  }
+
+  applyStalledFilters();
+};
+
+window.applyStalledFilters = function() {
+  const tbody = document.getElementById('stalledLearnersTableBody');
+  const batchBadge = document.getElementById('stalledBatchCountBadge');
+  if (!tbody) return;
+
+  const stalled = window._allStalledLearners || [];
+  const duration = window._stalledDurationFilter || 'all';
+  const courseFilter = document.getElementById('stalledCourseFilter')?.value || 'all';
+  const search = (document.getElementById('stalledSearchInput')?.value || '').toLowerCase().trim();
+
+  const filtered = stalled.filter(e => {
+    // Duration filter
+    if (duration === '7d' && (e._daysInactive || 0) < 7) return false;
+    if (duration === '14d' && (e._daysInactive || 0) < 14) return false;
+    if (duration === '30d' && (e._daysInactive || 0) < 30) return false;
+    if (duration === 'never' && e.last_nudged_at) return false;
+    if (duration === 'nudged' && !e.last_nudged_at) return false;
+
+    // Course filter
+    if (courseFilter !== 'all' && e.course_id !== courseFilter) return false;
+
+    // Search filter
+    if (search) {
+      const match = (e.user_name || '').toLowerCase().includes(search) ||
+                    (e.user_email || '').toLowerCase().includes(search) ||
+                    (e.sofian_id || '').toLowerCase().includes(search) ||
+                    (e.course_title || '').toLowerCase().includes(search);
+      if (!match) return false;
+    }
+
+    return true;
+  });
+
+  window._filteredStalledLearners = filtered;
+  if (batchBadge) batchBadge.textContent = filtered.length;
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:3rem;color:var(--muted);">' +
+      '<div style="font-size:1.8rem;margin-bottom:.5rem;">🎉</div>' +
+      '<div style="font-weight:600;color:var(--white);">No stalled learners match the selected criteria!</div>' +
+      '<div style="font-size:.75rem;margin-top:.25rem;">Try adjusting the inactivity threshold, course filter, or search term.</div>' +
+    '</td></tr>';
     return;
   }
 
-  tbody.innerHTML = stalled.map(e => `
-    <tr style="border-bottom:1px solid var(--border);">
-      <td>
-        <div style="font-weight:600;font-size:.82rem;color:var(--white);">${e.user_name}</div>
-        <div style="font-size:.65rem;color:var(--muted);">${e.user_email}</div>
-        <code style="font-size:.62rem;color:var(--orange);">${e.sofian_id}</code>
-      </td>
-      <td style="font-size:.8rem;">${e.course_title}</td>
-      <td style="font-size:.75rem;color:var(--muted);">${e.dateStr}</td>
-      <td><span class="badge" style="background:rgba(239,68,68,0.18);border:1px solid #ef4444;color:#f87171;font-weight:700;">0% Progress</span></td>
-      <td style="text-align:right;">
-        <button class="btn btn-sm" onclick="viewUserXpLog('${e.user_id}')" style="background:rgba(20,40,255,0.18);border:1px solid rgba(20,40,255,0.45);color:#8ca5ff;padding:.2rem .45rem;font-size:.68rem;font-weight:700;">⚡ XP Log</button>
-        <button class="btn btn-sm btn-secondary" onclick="viewStudent('${e.user_id}')" style="margin-left:.25rem;padding:.2rem .45rem;font-size:.68rem;">👁️ Manage</button>
-      </td>
-    </tr>
-  `).join('');
+  const now = Date.now();
+  tbody.innerHTML = filtered.map(e => {
+    const days = e._daysInactive || 0;
+    let inactBadge = '';
+    if (days >= 30) {
+      inactBadge = '<span class="badge" style="background:rgba(239,68,68,0.2);border:1px solid #ef4444;color:#f87171;font-weight:700;">🚨 ' + days + 'd Inactive</span>';
+    } else if (days >= 14) {
+      inactBadge = '<span class="badge" style="background:rgba(255,138,0,0.2);border:1px solid #ff8a00;color:#ffaa40;font-weight:700;">⚠️ ' + days + 'd Inactive</span>';
+    } else if (days >= 7) {
+      inactBadge = '<span class="badge" style="background:rgba(255,184,0,0.18);border:1px solid #ffb800;color:#fcd34d;font-weight:600;">⏱️ ' + days + 'd Inactive</span>';
+    } else {
+      inactBadge = '<span class="badge" style="background:rgba(255,255,255,0.06);color:var(--muted);">' + days + 'd Inactive</span>';
+    }
+
+    // Nudge Telemetry
+    const lastNudge = e.last_nudged_at?.toDate ? e.last_nudged_at.toDate() : (e.last_nudged_at ? new Date(e.last_nudged_at) : null);
+    let nudgeHtml = '<span class="badge" style="background:rgba(255,255,255,0.05);color:var(--muted);font-size:.68rem;">Never nudged</span>';
+    if (lastNudge) {
+      const daysSinceNudge = Math.max(0, Math.floor((now - lastNudge.getTime()) / (1000 * 60 * 60 * 24)));
+      const timeStr = daysSinceNudge === 0 ? 'Today' : (daysSinceNudge + 'd ago');
+      const countStr = (e.nudge_count || 1) > 1 ? (' (' + e.nudge_count + 'x)') : '';
+      nudgeHtml = '<span class="badge" style="background:rgba(20,40,255,0.18);border:1px solid rgba(20,40,255,0.35);color:#8ca5ff;font-size:.68rem;font-weight:600;">📢 Nudged ' + timeStr + countStr + '</span>';
+    }
+
+    const initials = (e.user_name || 'SB').split(' ').filter(Boolean).map(x => x[0]).slice(0, 2).join('').toUpperCase();
+    const safeTitle = (e.course_title || 'Course').replace(/'/g, "\'");
+    const safeName = (e.user_name || 'Sofian').replace(/'/g, "\'");
+
+    return `
+      <tr style="border-bottom:1px solid var(--border);">
+        <td>
+          <div style="display:flex;align-items:center;gap:.65rem;">
+            <div style="width:34px;height:34px;border-radius:50%;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.35);color:#f87171;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.75rem;flex-shrink:0;">
+              ${initials}
+            </div>
+            <div>
+              <a href="javascript:void(0)" onclick="openStudentLifecycleDrawer('${e.user_id}')" style="font-weight:600;font-size:.82rem;color:var(--white);text-decoration:none;" onmouseover="this.style.color='#1428FF'" onmouseout="this.style.color='var(--white)'" title="View Full Student Lifecycle">${e.user_name}</a>
+              <div style="font-size:.65rem;color:var(--muted);">${e.user_email}</div>
+              <div style="display:flex;gap:.35rem;align-items:center;margin-top:2px;">
+                <code style="font-size:.62rem;color:var(--orange);">${e.sofian_id}</code>
+                <span style="font-size:.62rem;color:var(--muted);">· ${e.node_label || 'Online'}</span>
+              </div>
+            </div>
+          </div>
+        </td>
+        <td>
+          <div style="font-weight:600;font-size:.8rem;color:var(--white);">${e.course_title}</div>
+          <div style="font-size:.65rem;color:var(--muted);margin-top:2px;">${e.cohort_id ? 'Cohort: ' + e.cohort_id : 'Self-Paced'}</div>
+        </td>
+        <td>
+          <div style="font-size:.75rem;color:var(--white);">${e.dateStr}</div>
+          <div style="margin-top:3px;">${inactBadge}</div>
+        </td>
+        <td>
+          ${nudgeHtml}
+        </td>
+        <td style="text-align:right;white-space:nowrap;">
+          <button id="nudgeBtn_${e.id}" class="btn btn-sm" onclick="nudgeSingleLearner('${e.id}', '${e.user_id}', '${e.course_id}', '${safeTitle}', '${safeName}', this)" style="background:linear-gradient(135deg,#FF8A00,#E07800);border:none;color:#fff;padding:.25rem .6rem;font-size:.7rem;font-weight:700;box-shadow:0 2px 6px rgba(255,138,0,0.3);" title="Send 1-Click Study Nudge">🚀 Nudge</button>
+          <button class="btn btn-sm" onclick="openStudentLifecycleDrawer('${e.user_id}')" style="margin-left:.3rem;background:rgba(20,40,255,0.18);border:1px solid rgba(20,40,255,0.45);color:#8ca5ff;padding:.25rem .55rem;font-size:.7rem;font-weight:700;" title="Inspect Student Lifecycle & Progress">👤 Lifecycle</button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+};
+
+window.nudgeSingleLearner = async function(enrolDocId, userId, courseId, courseTitle, userName, btn) {
+  const dbInstance = window.db || window._db;
+  const fsInstance = window._fs || window;
+  if (!dbInstance || !fsInstance) {
+    alert('Database is not ready. Please wait a moment.');
+    return;
+  }
+
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = 'Sending…';
+  }
+
+  try {
+    const firstName = (userName || 'Learner').split(' ')[0];
+    // 1. Create In-App Notification
+    await fsInstance.addDoc(fsInstance.collection(dbInstance, 'notifications'), {
+      user_id: userId,
+      title: '📚 Continue your journey in ' + courseTitle + '!',
+      message: 'Hi ' + firstName + ', you are enrolled in ' + courseTitle + ' but haven\'t started yet. Jump into Lesson 1 today to earn your first XP on Sofe Node!',
+      type: 'course_nudge',
+      link: '/course-view?course=' + courseId,
+      read: false,
+      _broadcast: false,
+      created_at: fsInstance.serverTimestamp()
+    });
+
+    // 2. Update enrolment doc with last_nudged_at and nudge_count
+    if (enrolDocId) {
+      try {
+        await fsInstance.updateDoc(fsInstance.doc(dbInstance, 'enrolments', enrolDocId), {
+          last_nudged_at: fsInstance.serverTimestamp(),
+          nudge_count: fsInstance.increment ? fsInstance.increment(1) : 1
+        });
+      } catch (docErr) {
+        console.warn('Could not update last_nudged_at on enrolment doc:', docErr);
+      }
+    }
+
+    // 3. Update local caches
+    const targetEnrol = (window._allEnrolments || []).find(x => x.id === enrolDocId || (x.user_id === userId && x.course_id === courseId));
+    if (targetEnrol) {
+      targetEnrol.last_nudged_at = new Date();
+      targetEnrol.nudge_count = (targetEnrol.nudge_count || 0) + 1;
+    }
+
+    if (btn) {
+      btn.innerHTML = '✓ Nudged Just now';
+      btn.style.background = 'rgba(16,185,129,0.2)';
+      btn.style.border = '1px solid #10b981';
+      btn.style.color = '#34d399';
+      btn.style.boxShadow = 'none';
+    }
+
+    showToast('✓ Study nudge sent to ' + firstName + '!', 'success');
+  } catch (err) {
+    console.error('nudgeSingleLearner error:', err);
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '🚀 Nudge';
+    }
+    showToast('Failed to send nudge: ' + err.message, 'error');
+  }
+};
+
+window.batchNudgeFilteredStalled = async function() {
+  const filtered = window._filteredStalledLearners || [];
+  if (filtered.length === 0) {
+    alert('No stalled learners match the current filter.');
+    return;
+  }
+
+  const ok = confirm('Send a personalized study reminder notification to all ' + filtered.length + ' stalled learners?');
+  if (!ok) return;
+
+  const btn = document.getElementById('btnBatchNudgeStalled');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = 'Sending (' + filtered.length + ')…';
+  }
+
+  const dbInstance = window.db || window._db;
+  const fsInstance = window._fs || window;
+
+  let successCount = 0;
+  for (const e of filtered) {
+    try {
+      const firstName = (e.user_name || 'Learner').split(' ')[0];
+      await fsInstance.addDoc(fsInstance.collection(dbInstance, 'notifications'), {
+        user_id: e.user_id,
+        title: '📚 Continue your journey in ' + e.course_title + '!',
+        message: 'Hi ' + firstName + ', your course is waiting for you. Complete Lesson 1 today and claim your first XP on Sofe Node!',
+        type: 'course_nudge',
+        link: '/course-view?course=' + e.course_id,
+        read: false,
+        _broadcast: false,
+        created_at: fsInstance.serverTimestamp()
+      });
+
+      if (e.id) {
+        await fsInstance.updateDoc(fsInstance.doc(dbInstance, 'enrolments', e.id), {
+          last_nudged_at: fsInstance.serverTimestamp(),
+          nudge_count: fsInstance.increment ? fsInstance.increment(1) : 1
+        });
+      }
+      e.last_nudged_at = new Date();
+      e.nudge_count = (e.nudge_count || 0) + 1;
+      successCount++;
+    } catch (err) {
+      console.warn('Batch nudge item error:', e.id, err);
+    }
+  }
+
+  if (btn) {
+    btn.disabled = false;
+    btn.innerHTML = '<span>🚀</span> Batch Nudge Filtered (' + filtered.length + ')';
+  }
+
+  showToast('✓ Successfully sent study reminders to ' + successCount + ' learners!', 'success');
+  applyStalledFilters();
+};
+
+// ════════════════════════════════════════════════════════════════════════════
+// STUDENT LIFECYCLE DRAWER & AUDIT TRAIL
+// ════════════════════════════════════════════════════════════════════════════
+window._drawerStudent = null;
+window._drawerUid = null;
+window._drawerEnrolments = [];
+
+window.openStudentLifecycleDrawer = async function(uid) {
+  if (!uid) return;
+  window._drawerUid = uid;
+
+  const overlay = document.getElementById('studentLifecycleDrawerOverlay');
+  const drawer = document.getElementById('studentLifecycleDrawer');
+  if (overlay) overlay.classList.add('open');
+  if (drawer) drawer.classList.add('open');
+
+  // Reset to default tab
+  switchDrawerTab('courses');
+
+  // Reset fields to loading
+  document.getElementById('sldName').textContent = 'Loading Sofian…';
+  document.getElementById('sldEmail').textContent = '…';
+  document.getElementById('sldSofianId').textContent = '…';
+  document.getElementById('sldNode').textContent = '…';
+  document.getElementById('sldAvatar').textContent = '…';
+  document.getElementById('sldKpiXp').textContent = '—';
+  document.getElementById('sldKpiTier').textContent = '—';
+  document.getElementById('sldKpiStreak').textContent = '—';
+  document.getElementById('sldKpiCourses').textContent = '—';
+  document.getElementById('sldKpiReferrals').textContent = '—';
+  document.getElementById('sldCoursesList').innerHTML = '<div style="text-align:center;padding:2.5rem;color:var(--muted);"><div class="spinner" style="margin:0 auto .5rem;"></div>Loading enrolments & telemetry…</div>';
+
+  const dbInstance = window.db || window._db;
+  const fsInstance = window._fs || window;
+
+  // 1. Find or load user
+  let student = (window._allStudents || []).find(x => (x.uid || x.id) === uid);
+  if (!student && dbInstance && fsInstance?.getDoc) {
+    try {
+      const uSnap = await fsInstance.getDoc(fsInstance.doc(dbInstance, 'users', uid));
+      if (uSnap.exists()) {
+        student = { id: uSnap.id, uid: uSnap.id, ...uSnap.data() };
+      }
+    } catch (e) {
+      console.warn('Could not fetch user directly:', e);
+    }
+  }
+
+  if (!student) {
+    // If still null, create placeholder from enrolment
+    const enrolMatch = (window._allEnrolments || []).find(e => e.user_id === uid);
+    student = {
+      uid: uid,
+      id: uid,
+      first_name: enrolMatch?.user_name || 'Sofian',
+      last_name: '',
+      email: enrolMatch?.user_email || '—',
+      sofian_id: enrolMatch?.sofian_id || 'unassigned',
+      node_label: enrolMatch?.node_label || 'Online / Global Node',
+      xp_total: 0,
+      xp_tier: 'Genesis',
+      current_streak: 0
+    };
+  }
+
+  window._drawerStudent = student;
+
+  const fullName = ((student.first_name || '') + ' ' + (student.last_name || '')).trim() || student.email || 'Sofian Builder';
+  const initials = fullName.split(' ').filter(Boolean).map(x => x[0]).slice(0, 2).join('').toUpperCase() || 'SB';
+
+  document.getElementById('sldName').textContent = fullName;
+  document.getElementById('sldEmail').textContent = student.email || '—';
+  document.getElementById('sldSofianId').textContent = student.sofian_id || 'unassigned';
+  document.getElementById('sldNode').textContent = student.node_label || student.node || student.chapter_name || 'Global Node';
+  document.getElementById('sldAvatar').textContent = initials;
+
+  // Badges
+  const vBadge = document.getElementById('sldVerifiedBadge');
+  if (vBadge) {
+    vBadge.style.display = (student._isVerified || student.email_verified) ? 'inline-block' : 'none';
+  }
+  const fBadge = document.getElementById('sldFoundationBadge');
+  if (fBadge) {
+    fBadge.style.display = (student._isValidated || student.foundation_complete || student.foundation_completed) ? 'inline-block' : 'none';
+  }
+
+  // KPIs
+  document.getElementById('sldKpiXp').textContent = Number(student.xp_total || 0).toLocaleString() + ' XP';
+  document.getElementById('sldKpiTier').textContent = (student.xp_tier || 'Genesis') + ' Tier';
+  document.getElementById('sldKpiStreak').textContent = (student.current_streak || 0) + ' Days 🔥';
+  document.getElementById('sldKpiReferrals').textContent = (student.referral_count || 0) + ' Referrals';
+  document.getElementById('sldKpiRefCode').textContent = student.referral_code || 'No ref code';
+
+  // 2. Load student's enrolments
+  let enrols = (window._allEnrolments || []).filter(e => e.user_id === uid);
+  if (enrols.length === 0 && dbInstance && fsInstance?.getDocs) {
+    try {
+      const q = fsInstance.query(fsInstance.collection(dbInstance, 'enrolments'), fsInstance.where('user_id', '==', uid));
+      const snap = await fsInstance.getDocs(q);
+      enrols = snap.docs.map(d => {
+        const dData = d.data();
+        const prog = Number(dData.progress_pct ?? dData.progress ?? 0);
+        return {
+          id: d.id,
+          user_id: uid,
+          course_id: dData.course_id || 'foundation',
+          course_title: dData.course_title || dData.course_id || 'Course',
+          progress_pct: prog,
+          status: dData.status || (prog >= 100 ? 'completed' : 'active'),
+          enrolled_at: dData.enrolled_at,
+          dateStr: dData.enrolled_at?.toDate ? dData.enrolled_at.toDate().toLocaleDateString('en-NG') : '—',
+          cohort_id: dData.cohort_id || ''
+        };
+      });
+    } catch (e) {
+      console.warn('Enrolments query error for user:', e);
+    }
+  }
+
+  window._drawerEnrolments = enrols;
+  document.getElementById('sldKpiCourses').textContent = enrols.length;
+  document.getElementById('sldTabCountCourses').textContent = enrols.length;
+
+  renderDrawerCourses(enrols, student);
+  renderDrawerAuditTab(student);
+};
+
+window.closeStudentLifecycleDrawer = function() {
+  const overlay = document.getElementById('studentLifecycleDrawerOverlay');
+  const drawer = document.getElementById('studentLifecycleDrawer');
+  if (overlay) overlay.classList.remove('open');
+  if (drawer) drawer.classList.remove('open');
+};
+
+window.switchDrawerTab = function(tabId) {
+  ['courses', 'activity', 'xp', 'audit'].forEach(t => {
+    const btn = document.getElementById('sldTabBtn-' + t);
+    const view = document.getElementById('sldView-' + t);
+    if (btn) {
+      if (t === tabId) btn.classList.add('active');
+      else btn.classList.remove('active');
+    }
+    if (view) {
+      view.style.display = (t === tabId) ? 'block' : 'none';
+    }
+  });
+
+  if (tabId === 'activity') loadDrawerActivity();
+  if (tabId === 'xp') reloadDrawerXpLedger();
+};
+
+function renderDrawerCourses(enrols, student) {
+  const container = document.getElementById('sldCoursesList');
+  if (!container) return;
+
+  if (enrols.length === 0) {
+    container.innerHTML = '<div style="text-align:center;padding:3rem;color:var(--muted);">' +
+      '<div style="font-size:2rem;margin-bottom:.5rem;">📚</div>' +
+      '<div style="font-weight:600;color:var(--white);">No Course Enrolments Found</div>' +
+      '<div style="font-size:.75rem;margin-top:.25rem;">This student is registered on Sofe Node but has not enrolled in any courses yet.</div>' +
+    '</div>';
+    return;
+  }
+
+  container.innerHTML = enrols.map(e => {
+    const prog = Number(e.progress_pct || 0);
+    let progColor = '#10B981';
+    if (prog === 0) progColor = '#ef4444';
+    else if (prog <= 25) progColor = '#FF8A00';
+    else if (prog <= 75) progColor = '#3B82F6';
+    else if (prog < 100) progColor = '#A855F7';
+
+    let statusBadge = '<span class="badge badge-green">Active</span>';
+    if (prog >= 100 || e.status === 'completed') {
+      statusBadge = '<span class="badge" style="background:rgba(16,185,129,0.18);border:1px solid #10b981;color:#34d399;font-weight:700;">🏆 Completed</span>';
+    } else if (prog === 0) {
+      statusBadge = '<span class="badge" style="background:rgba(239,68,68,0.18);border:1px solid #ef4444;color:#f87171;font-weight:700;">⚠️ Stalled (0%)</span>';
+    } else if (e.status === 'locked') {
+      statusBadge = '<span class="badge" style="background:rgba(239,68,68,0.18);border:1px solid #ef4444;color:#f87171;">🔒 Locked</span>';
+    }
+
+    let courseIcon = '📚';
+    if (e.course_id === 'foundation') courseIcon = '⛓️';
+    else if (e.course_id.includes('smart-contract')) courseIcon = '⚡';
+    else if (e.course_id === 'cbie') courseIcon = '💡';
+
+    const safeTitle = (e.course_title || 'Course').replace(/'/g, "\'");
+
+    return `
+      <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:10px;padding:1.1rem;margin-bottom:1rem;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:.8rem;margin-bottom:.75rem;">
+          <div>
+            <div style="font-weight:700;color:var(--white);font-size:.88rem;display:flex;align-items:center;gap:.4rem;">
+              <span>${courseIcon}</span>
+              <span>${e.course_title}</span>
+              ${statusBadge}
+            </div>
+            <div style="font-size:.68rem;color:var(--muted);margin-top:2px;">
+              Course ID: <code>${e.course_id}</code> · Enrolled: ${e.dateStr || '—'} ${e.cohort_id ? '· Cohort: ' + e.cohort_id : ''}
+            </div>
+          </div>
+          <div>
+            <button class="btn btn-sm" onclick="sendDrawerCourseNudge('${e.user_id}', '${e.course_id}', '${safeTitle}', this)" style="background:rgba(20,40,255,0.18);border:1px solid rgba(20,40,255,0.4);color:#8ca5ff;font-size:.68rem;padding:.25rem .55rem;font-weight:700;">🚀 Nudge</button>
+          </div>
+        </div>
+
+        <!-- Progress Bar Display -->
+        <div style="margin-bottom:.85rem;">
+          <div style="display:flex;justify-content:space-between;font-size:.72rem;margin-bottom:4px;">
+            <span style="color:var(--muted);">Current Completion</span>
+            <span style="font-weight:700;color:${prog >= 100 ? '#10b981' : 'var(--white)'};">${prog}%</span>
+          </div>
+          <div style="background:rgba(255,255,255,0.08);height:7px;border-radius:50px;overflow:hidden;">
+            <div style="background:${progColor};height:100%;width:${prog}%;border-radius:50px;box-shadow:0 0 8px ${progColor};"></div>
+          </div>
+        </div>
+
+        <!-- Inline Progress Adjustment -->
+        <div style="background:rgba(6,13,26,0.7);border:1px solid rgba(200,215,240,0.08);border-radius:8px;padding:.75rem;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">
+            <span style="font-size:.7rem;font-weight:600;color:var(--muted);text-transform:uppercase;">✏️ Adjust Progress %</span>
+            <div style="display:flex;gap:.3rem;">
+              <button type="button" class="btn btn-xs" onclick="setDrawerProgInput('${e.id}', 0)" style="font-size:.62rem;padding:.15rem .35rem;">0%</button>
+              <button type="button" class="btn btn-xs" onclick="setDrawerProgInput('${e.id}', 25)" style="font-size:.62rem;padding:.15rem .35rem;">25%</button>
+              <button type="button" class="btn btn-xs" onclick="setDrawerProgInput('${e.id}', 50)" style="font-size:.62rem;padding:.15rem .35rem;">50%</button>
+              <button type="button" class="btn btn-xs" onclick="setDrawerProgInput('${e.id}', 75)" style="font-size:.62rem;padding:.15rem .35rem;">75%</button>
+              <button type="button" class="btn btn-xs" onclick="setDrawerProgInput('${e.id}', 100)" style="font-size:.62rem;padding:.15rem .35rem;background:rgba(16,185,129,0.2);color:#34d399;border:1px solid #10b981;">100%</button>
+            </div>
+          </div>
+          <div style="display:flex;gap:.5rem;align-items:center;">
+            <input type="number" id="progInput_${e.id}" min="0" max="100" value="${prog}" class="form-input" style="width:85px;font-size:.78rem;padding:.3rem .5rem;" />
+            <button class="btn btn-primary btn-sm" onclick="saveDrawerCourseProgress('${e.id}', '${e.user_id}', '${e.course_id}', this)" style="font-size:.72rem;padding:.35rem .75rem;">💾 Save &amp; Recalculate</button>
+            <span id="progFeedback_${e.id}" style="font-size:.7rem;color:#34d399;display:none;">✓ Updated</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
 }
+
+window.setDrawerProgInput = function(enrolId, val) {
+  const input = document.getElementById('progInput_' + enrolId);
+  if (input) input.value = val;
+};
+
+window.saveDrawerCourseProgress = async function(enrolDocId, userId, courseId, btn) {
+  const input = document.getElementById('progInput_' + enrolDocId);
+  if (!input) return;
+  const newPct = Math.min(100, Math.max(0, parseInt(input.value || '0', 10)));
+
+  const dbInstance = window.db || window._db;
+  const fsInstance = window._fs || window;
+  if (!dbInstance || !fsInstance) {
+    alert('Database is not ready.');
+    return;
+  }
+
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = 'Saving…';
+  }
+
+  try {
+    const updateData = {
+      progress_pct: newPct,
+      progress: newPct,
+      updated_at: fsInstance.serverTimestamp()
+    };
+
+    if (newPct >= 100) {
+      updateData.status = 'completed';
+      updateData.completed_at = fsInstance.serverTimestamp();
+      if (courseId === 'foundation') {
+        await fsInstance.updateDoc(fsInstance.doc(dbInstance, 'users', userId), {
+          foundation_complete: true,
+          foundation_completed: true
+        });
+      }
+    } else {
+      updateData.status = 'active';
+      updateData.completed_at = null;
+      if (courseId === 'foundation') {
+        await fsInstance.updateDoc(fsInstance.doc(dbInstance, 'users', userId), {
+          foundation_complete: false,
+          foundation_completed: false
+        });
+      }
+    }
+
+    // Update enrolment doc
+    if (enrolDocId) {
+      await fsInstance.updateDoc(fsInstance.doc(dbInstance, 'enrolments', enrolDocId), updateData);
+    }
+
+    // Update local cache
+    const target = (window._allEnrolments || []).find(e => e.id === enrolDocId || (e.user_id === userId && e.course_id === courseId));
+    if (target) {
+      target.progress_pct = newPct;
+      target.status = updateData.status;
+    }
+
+    const drawerEnrol = (window._drawerEnrolments || []).find(e => e.id === enrolDocId || (e.user_id === userId && e.course_id === courseId));
+    if (drawerEnrol) {
+      drawerEnrol.progress_pct = newPct;
+      drawerEnrol.status = updateData.status;
+    }
+
+    // Re-render drawer courses view
+    renderDrawerCourses(window._drawerEnrolments, window._drawerStudent);
+
+    // Re-render parent dashboard analytics & tables
+    if (typeof window.applyEnrolFilters === 'function') window.applyEnrolFilters();
+    if (typeof window.renderStalledLearners === 'function') window.renderStalledLearners(window._allEnrolments);
+
+    showToast('✓ Updated progress to ' + newPct + '%!', 'success');
+  } catch (err) {
+    console.error('saveDrawerCourseProgress error:', err);
+    alert('Failed to update progress: ' + err.message);
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '💾 Save &amp; Recalculate';
+    }
+  }
+};
+
+window.sendDrawerCourseNudge = async function(userId, courseId, courseTitle, btn) {
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = 'Sending…';
+  }
+
+  const dbInstance = window.db || window._db;
+  const fsInstance = window._fs || window;
+  const student = window._drawerStudent;
+  const firstName = (student?.first_name || 'Learner').split(' ')[0];
+
+  try {
+    await fsInstance.addDoc(fsInstance.collection(dbInstance, 'notifications'), {
+      user_id: userId,
+      title: '📚 Study Reminder: ' + courseTitle,
+      message: 'Hi ' + firstName + ', keep your momentum going! Hop into ' + courseTitle + ' to continue your lessons and earn XP.',
+      type: 'course_nudge',
+      link: '/course-view?course=' + courseId,
+      read: false,
+      _broadcast: false,
+      created_at: fsInstance.serverTimestamp()
+    });
+
+    if (btn) {
+      btn.innerHTML = '✓ Nudged';
+      btn.style.color = '#34d399';
+    }
+    showToast('✓ Nudge sent to ' + firstName + '!', 'success');
+  } catch (err) {
+    console.error('sendDrawerCourseNudge error:', err);
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '🚀 Nudge';
+    }
+    showToast('Error: ' + err.message, 'error');
+  }
+};
+
+async function loadDrawerActivity() {
+  const container = document.getElementById('sldActivityList');
+  if (!container || !window._drawerUid) return;
+
+  container.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--muted);"><div class="spinner" style="margin:0 auto .5rem;"></div>Loading module sessions…</div>';
+
+  const dbInstance = window.db || window._db;
+  const fsInstance = window._fs || window;
+
+  try {
+    const q = fsInstance.query(
+      fsInstance.collection(dbInstance, 'module_progress'),
+      fsInstance.where('user_id', '==', window._drawerUid)
+    );
+    const snap = await fsInstance.getDocs(q);
+    const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    if (list.length === 0) {
+      container.innerHTML = '<div style="text-align:center;padding:2.5rem;color:var(--muted);">' +
+        '<div style="font-size:1.8rem;margin-bottom:.5rem;">🎯</div>' +
+        '<div style="font-weight:600;color:var(--white);">No Module Sessions Started Yet</div>' +
+        '<div style="font-size:.75rem;margin-top:.25rem;">This student has not yet recorded lesson reads or session completions in module_progress.</div>' +
+      '</div>';
+      return;
+    }
+
+    container.innerHTML = list.map(m => {
+      const completedSessions = Object.keys(m.sessions_completed || {});
+      const dateObj = m.updated_at?.toDate ? m.updated_at.toDate() : (m.updated_at ? new Date(m.updated_at) : null);
+      const dateStr = dateObj ? dateObj.toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+      const pct = Number(m.progress_pct || 0);
+
+      return `
+        <div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;padding:1rem;margin-bottom:.85rem;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;">
+            <div>
+              <div style="font-weight:600;color:var(--white);font-size:.82rem;">${m.module_id || m.id}</div>
+              <div style="font-size:.65rem;color:var(--muted);">Course: <code>${m.course_id || 'foundation'}</code> · Updated: ${dateStr}</div>
+            </div>
+            <span class="badge" style="background:${pct >= 100 ? 'rgba(16,185,129,0.18)' : 'rgba(20,40,255,0.18)'};color:${pct >= 100 ? '#34d399' : '#8ca5ff'};font-weight:700;">${pct}% Complete</span>
+          </div>
+
+          <div style="font-size:.72rem;color:var(--muted);margin-bottom:.4rem;">Completed Sessions (${completedSessions.length}):</div>
+          <div style="display:flex;flex-wrap:wrap;gap:.35rem;">
+            ${completedSessions.map(s => `<span class="badge" style="background:rgba(255,255,255,0.05);color:var(--white);font-size:.65rem;">✓ ${s}</span>`).join('') || '<span style="font-size:.68rem;color:var(--muted);">No specific sessions flagged</span>'}
+          </div>
+        </div>
+      `;
+    }).join('');
+  } catch (err) {
+    console.error('loadDrawerActivity error:', err);
+    container.innerHTML = `<div style="text-align:center;padding:2rem;color:#f87171;">Failed to load module activity: ${err.message}</div>`;
+  }
+}
+
+window.reloadDrawerXpLedger = async function() {
+  const tbody = document.getElementById('sldXpTableBody');
+  const countBadge = document.getElementById('sldXpCountBadge');
+  if (!tbody || !window._drawerUid) return;
+
+  tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:1.5rem;color:var(--muted);"><div class="spinner" style="margin:0 auto .5rem;"></div>Loading transaction ledger…</td></tr>';
+
+  const dbInstance = window.db || window._db;
+  const fsInstance = window._fs || window;
+
+  try {
+    const q = fsInstance.query(
+      fsInstance.collection(dbInstance, 'xp'),
+      fsInstance.where('user_id', '==', window._drawerUid)
+    );
+    const snap = await fsInstance.getDocs(q);
+    const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    // Sort descending by created_at
+    list.sort((a, b) => {
+      const ta = a.created_at?.toDate ? a.created_at.toDate().getTime() : 0;
+      const tb = b.created_at?.toDate ? b.created_at.toDate().getTime() : 0;
+      return tb - ta;
+    });
+
+    if (countBadge) countBadge.textContent = list.length;
+
+    if (list.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:2rem;color:var(--muted);">No XP transactions recorded for this user yet.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = list.map(item => {
+      const dObj = item.created_at?.toDate ? item.created_at.toDate() : (item.created_at ? new Date(item.created_at) : null);
+      const dStr = dObj ? dObj.toLocaleDateString('en-NG', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—';
+      const amt = Number(item.amount || item.xp || 0);
+      const isPositive = amt >= 0;
+
+      return `
+        <tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:.55rem .7rem;color:var(--muted);white-space:nowrap;">${dStr}</td>
+          <td style="padding:.55rem .7rem;font-weight:500;color:var(--white);">${item.description || item.reason || item.source || 'XP Award'}</td>
+          <td style="padding:.55rem .7rem;"><span class="badge" style="background:rgba(20,40,255,0.14);border:1px solid rgba(20,40,255,0.3);color:#8ca5ff;font-size:.62rem;">${item.source || 'GENERAL'}</span></td>
+          <td style="padding:.55rem .7rem;text-align:right;font-weight:700;color:${isPositive ? '#34d399' : '#f87171'};">${isPositive ? '+' : ''}${amt} XP</td>
+        </tr>
+      `;
+    }).join('');
+  } catch (err) {
+    console.error('reloadDrawerXpLedger error:', err);
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:1.5rem;color:#f87171;">Failed to load XP ledger: ${err.message}</td></tr>`;
+  }
+};
+
+window.submitDrawerManualXp = async function() {
+  const amtInput = document.getElementById('sldManualXpAmount');
+  const reasonInput = document.getElementById('sldManualXpReason');
+  if (!amtInput || !reasonInput || !window._drawerUid) return;
+
+  const amt = parseInt(amtInput.value || '0', 10);
+  const reason = (reasonInput.value || '').trim();
+
+  if (amt === 0 || isNaN(amt)) {
+    alert('Please enter a non-zero XP amount (positive or negative).');
+    return;
+  }
+  if (!reason) {
+    alert('Please specify a reason for this manual XP award/adjustment.');
+    return;
+  }
+
+  const dbInstance = window.db || window._db;
+  const fsInstance = window._fs || window;
+
+  try {
+    // 1. Add record to xp collection
+    await fsInstance.addDoc(fsInstance.collection(dbInstance, 'xp'), {
+      user_id: window._drawerUid,
+      amount: amt,
+      source: 'MANUAL_ADMIN',
+      description: reason,
+      created_at: fsInstance.serverTimestamp()
+    });
+
+    // 2. Increment user xp_total
+    await fsInstance.updateDoc(fsInstance.doc(dbInstance, 'users', window._drawerUid), {
+      xp_total: fsInstance.increment ? fsInstance.increment(amt) : amt
+    });
+
+    // Update local KPI
+    if (window._drawerStudent) {
+      window._drawerStudent.xp_total = (Number(window._drawerStudent.xp_total) || 0) + amt;
+      document.getElementById('sldKpiXp').textContent = window._drawerStudent.xp_total.toLocaleString() + ' XP';
+    }
+
+    // Reset inputs & reload ledger
+    amtInput.value = '';
+    reasonInput.value = '';
+    showToast('✓ Awarded ' + (amt > 0 ? '+' : '') + amt + ' XP successfully!', 'success');
+    reloadDrawerXpLedger();
+  } catch (err) {
+    console.error('submitDrawerManualXp error:', err);
+    showToast('Failed to award XP: ' + err.message, 'error');
+  }
+};
+
+function renderDrawerAuditTab(student) {
+  const container = document.getElementById('sldAuditDetails');
+  if (!container || !student) return;
+
+  const regDate = student.created_at?.toDate ? student.created_at.toDate().toLocaleString('en-NG') : (student.created_at ? new Date(student.created_at).toLocaleString('en-NG') : '—');
+
+  container.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:8px;padding:1.1rem;font-size:.78rem;line-height:1.8;">
+      <div><strong style="color:var(--muted);">Firebase UID:</strong> <code style="font-size:.7rem;color:#8ca5ff;">${student.uid || student.id}</code></div>
+      <div><strong style="color:var(--muted);">Account Type:</strong> <span class="badge" style="background:rgba(255,255,255,0.05);color:var(--white);">${student.account_type || 'sofian'}</span></div>
+      <div><strong style="color:var(--muted);">Registered:</strong> ${regDate}</div>
+      <div><strong style="color:var(--muted);">Email Verified:</strong> ${(student.email_verified || student._isVerified) ? '<span style="color:#34d399;">✓ Verified</span>' : '<span style="color:#f87171;">Unverified</span>'}</div>
+      <div><strong style="color:var(--muted);">Platform Role:</strong> <code>${student.role || 'student'}</code> (${student.admin_role || 'standard'})</div>
+      <div><strong style="color:var(--muted);">Campus Node / Chapter:</strong> ${student.node_label || student.chapter_name || 'Online / Global'}</div>
+      <div><strong style="color:var(--muted);">Node Lead For:</strong> ${student.node_lead_for || '—'}</div>
+      <div><strong style="color:var(--muted);">VIP / Premium:</strong> ${student.is_premium ? '⭐ Premium VIP' : 'Genesis Free'}</div>
+      <div><strong style="color:var(--muted);">Referral Code:</strong> <code style="color:var(--orange);">${student.referral_code || '—'}</code></div>
+      <div><strong style="color:var(--muted);">Referred By:</strong> <code>${student.referred_by || 'Organic'}</code></div>
+    </div>
+    <div style="margin-top:1rem;display:flex;gap:.6rem;">
+      <button class="btn btn-primary btn-sm" onclick="openDrawerStudentRoles()" style="font-size:.72rem;">👑 Open Full Role Management</button>
+      <button class="btn btn-secondary btn-sm" onclick="copyDrawerStudentUid()" style="font-size:.72rem;">📋 Copy UID</button>
+    </div>
+  `;
+}
+
+window.copyDrawerStudentUid = function() {
+  if (!window._drawerUid) return;
+  navigator.clipboard.writeText(window._drawerUid);
+  showToast('✓ Copied UID to clipboard', 'success');
+};
+
+window.openDrawerStudentRoles = function() {
+  if (!window._drawerUid) return;
+  closeStudentLifecycleDrawer();
+  if (typeof window.viewStudent === 'function') {
+    window.viewStudent(window._drawerUid);
+  }
+};
+
 
 window.exportEnrolmentsCSV = function() {
   const list = window._filteredEnrolments && window._filteredEnrolments.length > 0 ? window._filteredEnrolments : window._allEnrolments;
@@ -5274,8 +6690,9 @@ window.renderStudents = function() {
       <td><div>${xp} XP</div><div style="font-size:.65rem;color:var(--muted);">${tier}</div></td>
       <td><div style="display:flex;flex-wrap:wrap;gap:.25rem;">${badges.join(' ')}</div></td>
       <td>
-        <button class="btn btn-sm btn-secondary" onclick="viewStudent('${s.uid || s.id}')">View</button>
-        <button class="btn btn-sm" onclick="viewUserXpLog('${s.uid || s.id}')" style="background:rgba(20,40,255,0.18);border:1px solid rgba(20,40,255,0.45);color:#8ca5ff;margin-left:0.25rem;padding:.2rem .45rem;font-size:.68rem;font-weight:700;" title="View Itemized XP Log">⚡ XP Log</button>
+        <button class="btn btn-sm" onclick="openStudentLifecycleDrawer('${s.uid || s.id}')" style="background:rgba(20,40,255,0.18);border:1px solid rgba(20,40,255,0.45);color:#8ca5ff;padding:.2rem .45rem;font-size:.68rem;font-weight:700;" title="Inspect Student Lifecycle & Progress">👤 Lifecycle</button>
+        <button class="btn btn-sm btn-secondary" onclick="viewStudent('${s.uid || s.id}')" style="margin-left:0.25rem;padding:.2rem .45rem;font-size:.68rem;">⚙️ Roles</button>
+        <button class="btn btn-sm" onclick="viewUserXpLog('${s.uid || s.id}')" style="background:rgba(255,138,0,0.15);border:1px solid rgba(255,138,0,0.4);color:#ffaa40;margin-left:0.25rem;padding:.2rem .45rem;font-size:.68rem;font-weight:700;" title="View Itemized XP Log">⚡ XP Log</button>
         <button class="btn btn-sm" onclick="grantQuickBoost('${s.uid || s.id}')" style="background:rgba(255,138,0,0.18);border:1px solid #FF8A00;color:#FFB800;margin-left:0.25rem;padding:.2rem .45rem;font-size:.68rem;font-weight:700;" title="Grant 30-Day Boost">🔥 Boost</button>
       </td>
     </tr>`;
@@ -10495,6 +11912,846 @@ window.backfillReferrals = async function() {
 setTimeout(() => { if (window._auth?.currentUser && typeof window.loadStudents === 'function') window.loadStudents(); }, 2500);
 
 console.log('Students panel & backfill loaded');
+
+
+// ════════════════════════════════════════════════════════════════════════════
+// COURSE REVENUE, DISCOUNT & SCHOLARSHIP ATTRIBUTION ENGINE
+// ════════════════════════════════════════════════════════════════════════════
+window._allPayments = null;
+window._allDiscountCodes = null;
+window._allDiscountUsages = null;
+window._attributionLockedStudents = [];
+
+window.loadRevenueAttribution = async function(forceRefresh = false) {
+  const dbInstance = window.db || window._db;
+  const fsInstance = window._fs || window;
+  if (!dbInstance || !fsInstance) {
+    console.log('loadRevenueAttribution waiting for db...');
+    setTimeout(() => window.loadRevenueAttribution(forceRefresh), 400);
+    return;
+  }
+
+  const courseTbody = document.getElementById('attrCoursesTableBody');
+  const lockedTbody = document.getElementById('attrLockedTableBody');
+  const discTbody = document.getElementById('attrDiscountsTableBody');
+
+  if (courseTbody) courseTbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--muted);"><div class="spinner" style="margin:0 auto .5rem;"></div>Aggregating financial ledger &amp; tuition attribution…</td></tr>';
+
+  try {
+    // 1. Fetch payments, discounts, usages in parallel if not cached
+    if (!window._allPayments || forceRefresh) {
+      const pSnap = await fsInstance.getDocs(fsInstance.collection(dbInstance, 'payments'));
+      window._allPayments = pSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    }
+    if (!window._allDiscountCodes || forceRefresh) {
+      const dSnap = await fsInstance.getDocs(fsInstance.collection(dbInstance, 'discount_codes'));
+      window._allDiscountCodes = dSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    }
+    if (!window._allDiscountUsages || forceRefresh) {
+      const uSnap = await fsInstance.getDocs(fsInstance.collection(dbInstance, 'discount_usage'));
+      window._allDiscountUsages = uSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    }
+
+    // 2. Ensure enrolments are resolved
+    if (!window._allEnrolments || window._allEnrolments.length === 0 || forceRefresh) {
+      if (typeof window.loadEnrolmentsHub === 'function') await window.loadEnrolmentsHub(forceRefresh);
+    }
+
+    const enrols = window._allEnrolments || [];
+    const payments = window._allPayments || [];
+    const discountCodes = window._allDiscountCodes || [];
+    const discountUsages = window._allDiscountUsages || [];
+
+    // 3. Compute Confirmed Cash Collected
+    let confirmedRev = 0;
+    const coursePaidRev = { foundation: 0, cbie: 0, 'smart-contract': 0 };
+
+    payments.forEach(p => {
+      if (p.status === 'confirmed') {
+        const amt = Number(p.amount || 0);
+        confirmedRev += amt;
+        const cId = (p.course_id || 'other').toLowerCase();
+        if (cId.includes('cbie')) coursePaidRev.cbie = (coursePaidRev.cbie || 0) + amt;
+        else if (cId.includes('foundation')) coursePaidRev.foundation = (coursePaidRev.foundation || 0) + amt;
+        else if (cId.includes('smart-contract')) coursePaidRev['smart-contract'] = (coursePaidRev['smart-contract'] || 0) + amt;
+      }
+    });
+
+    // 4. Course Enrolments Breakdown
+    const courseStats = {
+      foundation: { title: 'Blockchain & Cryptocurrency Foundation', icon: '⛓️', fee: 25000, enrolled: 0, paid: 0, scholarship: 0, subsidized: 0, locked: 0, cash: coursePaidRev.foundation, waived: 0 },
+      cbie: { title: 'Certified Blockchain Industry Expert (CBIE)', icon: '💡', fee: 50000, enrolled: 0, paid: 0, scholarship: 0, subsidized: 0, locked: 0, cash: coursePaidRev.cbie, waived: 0 },
+      'smart-contract': { title: 'Smart Contract Development', icon: '⚡', fee: 120000, enrolled: 0, paid: 0, scholarship: 0, subsidized: 0, locked: 0, cash: coursePaidRev['smart-contract'], waived: 0 }
+    };
+
+    const lockedList = [];
+
+    enrols.forEach(e => {
+      let key = 'foundation';
+      if (e.course_id.includes('cbie')) key = 'cbie';
+      else if (e.course_id.includes('smart-contract')) key = 'smart-contract';
+
+      const stat = courseStats[key];
+      if (stat) {
+        stat.enrolled++;
+        const isLocked = e.status === 'locked' || e.locked_reason || e.status === 'locked_pending_foundation';
+        const isScholarship = e.isScholarship || e.granted_via === '100pct_discount' || Number(e.discount_percent || 0) === 100;
+        const isSubsidized = Number(e.discount_percent || 0) > 0 && Number(e.discount_percent || 0) < 100;
+
+        if (isLocked) {
+          stat.locked++;
+          lockedList.push(e);
+        } else if (isScholarship) {
+          stat.scholarship++;
+          stat.waived += stat.fee;
+        } else if (isSubsidized) {
+          stat.subsidized++;
+          stat.waived += (stat.fee * (Number(e.discount_percent) / 100));
+        } else {
+          stat.paid++;
+        }
+      }
+    });
+
+    window._attributionLockedStudents = lockedList;
+
+    // 5. Compute Totals for KPI Cards
+    let totalScholarshipVal = 0;
+    let totalScholarshipCount = 0;
+    let totalSubsidizedVal = 0;
+    let totalSubsidizedCount = 0;
+
+    Object.values(courseStats).forEach(s => {
+      totalScholarshipVal += (s.scholarship * s.fee);
+      totalScholarshipCount += s.scholarship;
+      totalSubsidizedVal += (s.subsidized * (s.fee * 0.4));
+      totalSubsidizedCount += s.subsidized;
+    });
+
+    // Populate Top Cards
+    const elConf = document.getElementById('attrTotalConfirmed');
+    const elSch = document.getElementById('attrTotalScholarships');
+    const elSchSub = document.getElementById('attrTotalScholarshipsSub');
+    const elDisc = document.getElementById('attrTotalDiscounts');
+    const elDiscSub = document.getElementById('attrTotalDiscountsSub');
+    const elLock = document.getElementById('attrTotalLocked');
+    const elLockBadge = document.getElementById('attrLockedBadgeCount');
+    const elUnlockAll = document.getElementById('attrUnlockAllCount');
+
+    if (elConf) elConf.textContent = '₦' + confirmedRev.toLocaleString();
+    if (elSch) elSch.textContent = '₦' + totalScholarshipVal.toLocaleString();
+    if (elSchSub) elSchSub.textContent = totalScholarshipCount + ' students sponsored';
+    if (elDisc) elDisc.textContent = '₦' + totalSubsidizedVal.toLocaleString();
+    if (elDiscSub) elDiscSub.textContent = totalSubsidizedCount + ' subsidized fee reductions';
+    if (elLock) elLock.textContent = lockedList.length;
+    if (elLockBadge) elLockBadge.textContent = lockedList.length;
+    if (elUnlockAll) elUnlockAll.textContent = lockedList.length;
+
+    // 6. Render Course Portfolio Table
+    if (courseTbody) {
+      courseTbody.innerHTML = Object.entries(courseStats).map(([cid, s]) => `
+        <tr style="border-bottom:1px solid var(--border);">
+          <td>
+            <div style="font-weight:700;color:var(--white);font-size:.84rem;display:flex;align-items:center;gap:.4rem;">
+              <span>${s.icon}</span> <span>${s.title}</span>
+            </div>
+            <code style="font-size:.65rem;color:var(--muted);">${cid}</code>
+          </td>
+          <td style="font-size:.8rem;font-weight:600;color:var(--white);">₦${s.fee.toLocaleString()}</td>
+          <td><span class="badge" style="background:rgba(20,40,255,0.18);color:#8ca5ff;font-weight:700;">${s.enrolled} Enrolled</span></td>
+          <td style="font-size:.78rem;color:#34d399;font-weight:600;">${s.paid} Paid</td>
+          <td><span class="badge" style="background:rgba(168,85,247,0.18);border:1px solid #a855f7;color:#c084fc;font-weight:700;">${s.scholarship} Full Waiver</span></td>
+          <td><span class="badge" style="background:rgba(255,138,0,0.18);border:1px solid #ff8a00;color:#ffaa40;">${s.subsidized} Subsidized</span></td>
+          <td>${s.locked > 0 ? `<span class="badge" style="background:rgba(239,68,68,0.2);border:1px solid #ef4444;color:#f87171;font-weight:700;">🔒 ${s.locked} Locked</span>` : '<span style="color:var(--muted);font-size:.75rem;">0</span>'}</td>
+          <td style="text-align:right;font-weight:700;color:#34d399;font-size:.85rem;">₦${s.cash.toLocaleString()}</td>
+          <td style="text-align:right;font-weight:700;color:#c084fc;font-size:.85rem;">₦${s.waived.toLocaleString()}</td>
+        </tr>
+      `).join('');
+    }
+
+    // 7. Render Locked Subsidized Students Intervention Table
+    if (lockedTbody) {
+      if (lockedList.length === 0) {
+        lockedTbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:1.5rem;color:#34d399;font-weight:600;">🎉 No locked accounts! All enrolled students have full active course access.</td></tr>';
+      } else {
+        lockedTbody.innerHTML = lockedList.map(e => {
+          const safeName = (e.user_name || 'Sofian').replace(/'/g, "\'");
+          return `
+            <tr style="border-bottom:1px solid var(--border);">
+              <td>
+                <a href="javascript:void(0)" onclick="openStudentLifecycleDrawer('${e.user_id}')" style="font-weight:600;font-size:.82rem;color:var(--white);text-decoration:none;" onmouseover="this.style.color='#1428FF'" onmouseout="this.style.color='var(--white)'">${e.user_name}</a>
+                <div style="font-size:.65rem;color:var(--muted);">${e.user_email}</div>
+                <code style="font-size:.62rem;color:var(--orange);">${e.sofian_id}</code>
+              </td>
+              <td style="font-size:.8rem;color:var(--white);">${e.course_title}</td>
+              <td><span class="badge" style="background:rgba(239,68,68,0.2);color:#f87171;font-size:.68rem;">${e.locked_reason || 'unpaid_subsidized_course'}</span></td>
+              <td style="font-size:.75rem;color:var(--muted);">${e.dateStr || '—'}</td>
+              <td style="text-align:right;white-space:nowrap;">
+                <button id="unlockBtn_${e.id}" class="btn btn-sm" onclick="unlockSubsidizedStudent('${e.id}', '${e.user_id}', '${e.course_id}', '${safeName}', this)" style="background:linear-gradient(135deg,#10B981,#059669);border:none;color:#fff;font-weight:700;font-size:.68rem;padding:.25rem .6rem;" title="Grant full scholarship waiver and unlock course access">
+                  🔓 Grant Waiver &amp; Unlock
+                </button>
+                <button class="btn btn-sm" onclick="openStudentLifecycleDrawer('${e.user_id}')" style="margin-left:.25rem;background:rgba(20,40,255,0.18);border:1px solid rgba(20,40,255,0.45);color:#8ca5ff;padding:.25rem .5rem;font-size:.68rem;">👤 Lifecycle</button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+    }
+
+    // 8. Render Discount Codes & Campaign Attribution Table
+    if (discTbody) {
+      if (discountCodes.length === 0) {
+        discTbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--muted);">No discount codes found in database.</td></tr>';
+      } else {
+        discTbody.innerHTML = discountCodes.map(d => {
+          const codeStr = d.code || d.id;
+          const is100 = Number(d.value || 0) === 100;
+          const usagesForCode = discountUsages.filter(u => u.code === codeStr || u.discount_id === d.id || u.discount_id === codeStr);
+          const usedCount = Math.max(Number(d.uses_count || 0), usagesForCode.length);
+          const maxUses = d.max_uses ? d.max_uses : '∞';
+
+          const studentTags = usagesForCode.map(u => {
+            const stu = (window._allStudents || []).find(s => (s.uid || s.id) === u.user_id);
+            const name = stu ? ((stu.first_name || '') + ' ' + (stu.last_name || '')).trim() : (u.user_id.slice(0, 8) + '…');
+            return `<a href="javascript:void(0)" onclick="openStudentLifecycleDrawer('${u.user_id}')" class="badge" style="background:rgba(20,40,255,0.18);color:#8ca5ff;text-decoration:none;font-size:.65rem;margin-right:2px;" title="View Student Lifecycle">${name}</a>`;
+          }).join(' ') || '<span style="color:var(--muted);font-size:.68rem;">None recorded</span>';
+
+          const targetCourse = Array.isArray(d.course_ids) ? d.course_ids.join(', ') : (d.course_ids || 'all');
+
+          return `
+            <tr style="border-bottom:1px solid var(--border);">
+              <td><code style="color:var(--orange);font-weight:700;font-size:.82rem;">${codeStr}</code></td>
+              <td>
+                <div style="font-weight:600;font-size:.8rem;color:var(--white);">${d.description || 'Campaign Promo'}</div>
+                <div style="font-size:.65rem;color:var(--muted);">Created: ${d.created_at?.toDate ? d.created_at.toDate().toLocaleDateString('en-NG') : '—'}</div>
+              </td>
+              <td>
+                <span class="badge" style="background:${is100 ? 'rgba(168,85,247,0.18)' : 'rgba(255,138,0,0.18)'};border:1px solid ${is100 ? '#a855f7' : '#ff8a00'};color:${is100 ? '#c084fc' : '#ffaa40'};font-weight:700;">
+                  ${is100 ? '🎓 100% Full Scholarship' : (d.value + '% Subsidized')}
+                </span>
+              </td>
+              <td style="font-size:.75rem;"><code>${targetCourse}</code></td>
+              <td style="font-size:.78rem;font-weight:600;color:var(--white);">${usedCount} / ${maxUses}</td>
+              <td>${studentTags}</td>
+              <td><span class="badge ${d.status === 'active' ? 'badge-green' : 'badge-orange'}">${d.status || 'active'}</span></td>
+            </tr>
+          `;
+        }).join('');
+      }
+    }
+
+  } catch (err) {
+    console.error('loadRevenueAttribution error:', err);
+    if (courseTbody) courseTbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:2rem;color:#f87171;">Failed to load attribution: ${err.message}</td></tr>`;
+  }
+};
+
+window.unlockSubsidizedStudent = async function(enrolDocId, userId, courseId, userName, btn) {
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = 'Unlocking…';
+  }
+
+  const dbInstance = window.db || window._db;
+  const fsInstance = window._fs || window;
+  if (!dbInstance || !fsInstance) {
+    alert('Database is not ready.');
+    return;
+  }
+
+  try {
+    await fsInstance.updateDoc(fsInstance.doc(dbInstance, 'enrolments', enrolDocId), {
+      status: 'active',
+      locked_reason: null,
+      is_scholarship: true,
+      isScholarship: true,
+      granted_via: 'admin_scholarship_waiver',
+      updated_at: fsInstance.serverTimestamp()
+    });
+
+    const firstName = (userName || 'Learner').split(' ')[0];
+    await fsInstance.addDoc(fsInstance.collection(dbInstance, 'notifications'), {
+      user_id: userId,
+      title: '🎉 Course Access Unlocked!',
+      message: 'Hi ' + firstName + ', an administrator has granted you a full 100% scholarship waiver. Your course access is now fully active! Jump in to continue learning.',
+      type: 'course_unlocked',
+      link: '/course-view?course=' + (courseId || 'foundation'),
+      read: false,
+      _broadcast: false,
+      created_at: fsInstance.serverTimestamp()
+    });
+
+    const target = (window._allEnrolments || []).find(e => e.id === enrolDocId);
+    if (target) {
+      target.status = 'active';
+      target.locked_reason = null;
+      target.isScholarship = true;
+    }
+
+    if (btn) {
+      btn.innerHTML = '✓ Unlocked';
+      btn.style.background = 'rgba(16,185,129,0.2)';
+      btn.style.border = '1px solid #10b981';
+      btn.style.color = '#34d399';
+    }
+
+    showToast('✓ Granted 100% scholarship waiver & unlocked course for ' + firstName + '!', 'success');
+
+    if (typeof window.applyEnrolFilters === 'function') window.applyEnrolFilters();
+    loadRevenueAttribution(true);
+
+  } catch (err) {
+    console.error('unlockSubsidizedStudent error:', err);
+    alert('Failed to unlock student: ' + err.message);
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '🔓 Grant Waiver & Unlock';
+    }
+  }
+};
+
+window.unlockAllSubsidizedStudents = async function() {
+  const list = window._attributionLockedStudents || [];
+  if (list.length === 0) {
+    alert('No locked accounts found to unlock.');
+    return;
+  }
+
+  const ok = confirm('Grant full 100% scholarship waivers and unlock all ' + list.length + ' locked subsidized students?');
+  if (!ok) return;
+
+  const dbInstance = window.db || window._db;
+  const fsInstance = window._fs || window;
+
+  let unlockedCount = 0;
+  for (const e of list) {
+    try {
+      await fsInstance.updateDoc(fsInstance.doc(dbInstance, 'enrolments', e.id), {
+        status: 'active',
+        locked_reason: null,
+        is_scholarship: true,
+        isScholarship: true,
+        granted_via: 'admin_scholarship_waiver',
+        updated_at: fsInstance.serverTimestamp()
+      });
+
+      const firstName = (e.user_name || 'Learner').split(' ')[0];
+      await fsInstance.addDoc(fsInstance.collection(dbInstance, 'notifications'), {
+        user_id: e.user_id,
+        title: '🎉 Course Access Unlocked!',
+        message: 'Hi ' + firstName + ', an administrator has granted you a full 100% scholarship waiver. Your course is now active! Happy learning.',
+        type: 'course_unlocked',
+        link: '/course-view?course=' + (e.course_id || 'foundation'),
+        read: false,
+        _broadcast: false,
+        created_at: fsInstance.serverTimestamp()
+      });
+
+      e.status = 'active';
+      e.locked_reason = null;
+      e.isScholarship = true;
+      unlockedCount++;
+    } catch (err) {
+      console.warn('Unlock item error:', e.id, err);
+    }
+  }
+
+  showToast('✓ Successfully unlocked all ' + unlockedCount + ' subsidized accounts!', 'success');
+  loadRevenueAttribution(true);
+  if (typeof window.applyEnrolFilters === 'function') window.applyEnrolFilters();
+};
+
+window.exportAttributionCSV = function() {
+  const enrols = window._allEnrolments || [];
+  if (enrols.length === 0) {
+    alert('No data to export.');
+    return;
+  }
+
+  const headers = ['Full Name', 'Email', 'Sofian ID', 'Course ID', 'Course Title', 'Progress %', 'Status', 'Locked Reason', 'Is Scholarship', 'Enrolled Date'];
+  const rows = enrols.map(e => [
+    `"${(e.user_name || '').replace(/"/g, '""')}"`,
+    `"${(e.user_email || '').replace(/"/g, '""')}"`,
+    `"${(e.sofian_id || '').replace(/"/g, '""')}"`,
+    `"${(e.course_id || '').replace(/"/g, '""')}"`,
+    `"${(e.course_title || '').replace(/"/g, '""')}"`,
+    e.progress_pct || 0,
+    `"${(e.status || '').replace(/"/g, '""')}"`,
+    `"${(e.locked_reason || '').replace(/"/g, '""')}"`,
+    e.isScholarship ? 'Yes' : 'No',
+    `"${(e.dateStr || '').replace(/"/g, '""')}"`
+  ]);
+
+  const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\r\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `sofe_revenue_attribution_${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+};
+
+// ════════════════════════════════════════════════════════════════════════════
+// CROSS-COLLECTION QUERY BUILDER & DATA EXPLORER
+// ════════════════════════════════════════════════════════════════════════════
+window._qbConditions = [];
+window._qbResults = [];
+
+const QB_FIELDS_MAP = {
+  enrolments: [
+    { id: 'progress_pct', label: 'Progress Percentage (%)', type: 'number' },
+    { id: 'course_id', label: 'Course Identifier', type: 'select', options: ['foundation', 'cbie', 'smart-contract'] },
+    { id: 'status', label: 'Enrolment Status', type: 'select', options: ['active', 'completed', 'locked', 'pending'] },
+    { id: 'isScholarship', label: 'Scholarship / 100% Waiver', type: 'boolean' },
+    { id: '_daysInactive', label: 'Inactivity (Days Since Enrolled)', type: 'number' },
+    { id: 'user_name', label: 'Student Full Name', type: 'text' },
+    { id: 'user_email', label: 'Student Email', type: 'text' },
+    { id: 'sofian_id', label: 'Sofian ID (SN-xxxxx)', type: 'text' },
+    { id: 'node_label', label: 'Campus Node / Chapter', type: 'text' }
+  ],
+  students: [
+    { id: 'xp_total', label: 'Verified XP Total', type: 'number' },
+    { id: 'current_streak', label: 'Daily Streak (Days)', type: 'number' },
+    { id: 'referral_count', label: 'Referrals Count', type: 'number' },
+    { id: 'role', label: 'Platform Role', type: 'select', options: ['student', 'tutor', 'admin'] },
+    { id: '_isVerified', label: 'Email Verified', type: 'boolean' },
+    { id: '_isValidated', label: 'Foundation Graduate (Validated)', type: 'boolean' },
+    { id: 'node_label', label: 'Campus Node / Chapter', type: 'text' },
+    { id: 'email', label: 'Email Address', type: 'text' },
+    { id: 'sofian_id', label: 'Sofian ID', type: 'text' }
+  ],
+  payments: [
+    { id: 'amount', label: 'Payment Amount (₦)', type: 'number' },
+    { id: 'course_id', label: 'Course Identifier', type: 'text' },
+    { id: 'payment_type', label: 'Payment Type', type: 'select', options: ['enrolment', 'application_fee'] },
+    { id: 'method', label: 'Payment Method', type: 'select', options: ['bank_transfer', 'paystack'] },
+    { id: 'status', label: 'Payment Status', type: 'select', options: ['confirmed', 'pending', 'rejected'] }
+  ]
+};
+
+window.initQueryBuilder = function() {
+  if (window._qbConditions.length === 0) {
+    window._qbConditions = [
+      { id: 1, field: 'progress_pct', op: '<', val: '50' }
+    ];
+  }
+  renderQbConditionRows();
+  executeCurrentQuery();
+};
+
+window.onQbCollectionChange = function() {
+  const col = document.getElementById('qbCollectionSelect')?.value || 'enrolments';
+  const fields = QB_FIELDS_MAP[col] || QB_FIELDS_MAP.enrolments;
+  window._qbConditions = [
+    { id: Date.now(), field: fields[0].id, op: '=', val: '' }
+  ];
+  renderQbConditionRows();
+  executeCurrentQuery();
+};
+
+window.addQbConditionRow = function(field, op, val) {
+  const col = document.getElementById('qbCollectionSelect')?.value || 'enrolments';
+  const fields = QB_FIELDS_MAP[col] || QB_FIELDS_MAP.enrolments;
+  window._qbConditions.push({
+    id: Date.now() + Math.random(),
+    field: field || fields[0].id,
+    op: op || '=',
+    val: val !== undefined ? val : ''
+  });
+  renderQbConditionRows();
+};
+
+window.removeQbConditionRow = function(rowId) {
+  window._qbConditions = window._qbConditions.filter(c => c.id !== rowId);
+  if (window._qbConditions.length === 0) {
+    addQbConditionRow();
+  } else {
+    renderQbConditionRows();
+  }
+};
+
+function renderQbConditionRows() {
+  const container = document.getElementById('qbConditionsContainer');
+  if (!container) return;
+
+  const col = document.getElementById('qbCollectionSelect')?.value || 'enrolments';
+  const fields = QB_FIELDS_MAP[col] || QB_FIELDS_MAP.enrolments;
+
+  container.innerHTML = window._qbConditions.map((cond, idx) => {
+    const fObj = fields.find(f => f.id === cond.field) || fields[0];
+    const isNum = fObj.type === 'number';
+    const isBool = fObj.type === 'boolean';
+    const isSelect = fObj.type === 'select';
+
+    let opOpts = '';
+    if (isNum) {
+      opOpts = `
+        <option value="=" ${cond.op === '=' ? 'selected' : ''}>equals (=)</option>
+        <option value=">" ${cond.op === '>' ? 'selected' : ''}>greater than (&gt;)</option>
+        <option value="<" ${cond.op === '<' ? 'selected' : ''}>less than (&lt;)</option>
+        <option value=">=" ${cond.op === '>=' ? 'selected' : ''}>greater or equal (&gt;=)</option>
+        <option value="<=" ${cond.op === '<=' ? 'selected' : ''}>less or equal (&lt;=)</option>
+      `;
+    } else if (isBool) {
+      opOpts = `
+        <option value="is_true" ${cond.op === 'is_true' ? 'selected' : ''}>is TRUE</option>
+        <option value="is_false" ${cond.op === 'is_false' ? 'selected' : ''}>is FALSE</option>
+      `;
+    } else {
+      opOpts = `
+        <option value="equals" ${cond.op === 'equals' ? 'selected' : ''}>equals</option>
+        <option value="contains" ${cond.op === 'contains' ? 'selected' : ''}>contains</option>
+        <option value="starts_with" ${cond.op === 'starts_with' ? 'selected' : ''}>starts with</option>
+        <option value="!=" ${cond.op === '!=' ? 'selected' : ''}>not equals</option>
+      `;
+    }
+
+    let valInput = '';
+    if (isBool) {
+      valInput = '<span style="font-size:.72rem;color:var(--muted);padding:.35rem .5rem;">Boolean toggle</span>';
+    } else if (isSelect) {
+      valInput = `
+        <select class="form-select" onchange="updateQbVal(${cond.id}, this.value)" style="font-size:.75rem;padding:.35rem .6rem;background:var(--deep);color:var(--white);min-width:140px;">
+          <option value="">— Select —</option>
+          ${fObj.options.map(opt => `<option value="${opt}" ${cond.val === opt ? 'selected' : ''}>${opt}</option>`).join('')}
+        </select>
+      `;
+    } else if (isNum) {
+      valInput = `<input type="number" class="form-input" value="${cond.val}" oninput="updateQbVal(${cond.id}, this.value)" placeholder="Number value" style="font-size:.75rem;padding:.35rem .6rem;background:var(--deep);width:130px;" />`;
+    } else {
+      valInput = `<input type="text" class="form-input" value="${cond.val}" oninput="updateQbVal(${cond.id}, this.value)" placeholder="Search string…" style="font-size:.75rem;padding:.35rem .6rem;background:var(--deep);min-width:180px;" />`;
+    }
+
+    return `
+      <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;">
+        <span style="font-size:.68rem;color:var(--muted);font-weight:700;width:24px;">#${idx + 1}</span>
+        <select class="form-select" onchange="updateQbField(${cond.id}, this.value)" style="font-size:.75rem;padding:.35rem .6rem;background:var(--deep);color:var(--white);min-width:180px;">
+          ${fields.map(f => `<option value="${f.id}" ${cond.field === f.id ? 'selected' : ''}>${f.label}</option>`).join('')}
+        </select>
+        <select class="form-select" onchange="updateQbOp(${cond.id}, this.value)" style="font-size:.75rem;padding:.35rem .6rem;background:var(--deep);color:var(--white);min-width:120px;">
+          ${opOpts}
+        </select>
+        ${valInput}
+        <button class="btn btn-ghost btn-sm" onclick="removeQbConditionRow(${cond.id})" style="color:#f87171;padding:.25rem .5rem;margin-left:auto;" title="Remove Condition">✕</button>
+      </div>
+    `;
+  }).join('');
+}
+
+window.updateQbField = function(id, val) {
+  const c = window._qbConditions.find(x => x.id === id);
+  if (c) {
+    c.field = val;
+    c.op = '=';
+    c.val = '';
+    renderQbConditionRows();
+  }
+};
+window.updateQbOp = function(id, val) {
+  const c = window._qbConditions.find(x => x.id === id);
+  if (c) c.op = val;
+};
+window.updateQbVal = function(id, val) {
+  const c = window._qbConditions.find(x => x.id === id);
+  if (c) c.val = val;
+};
+
+window.executeCurrentQuery = function() {
+  const t0 = performance.now();
+  const col = document.getElementById('qbCollectionSelect')?.value || 'enrolments';
+  const logic = document.getElementById('qbLogicSelect')?.value || 'AND';
+  const tbody = document.getElementById('qbResultsTbody');
+  const thead = document.getElementById('qbResultsThead');
+  const countBadge = document.getElementById('qbResultCountBadge');
+  const timeBadge = document.getElementById('qbExecutionTime');
+  const nudgeBtn = document.getElementById('btnQbBatchNudge');
+
+  let dataset = [];
+  if (col === 'enrolments') dataset = window._allEnrolments || [];
+  else if (col === 'students') dataset = window._allStudents || [];
+  else if (col === 'payments') dataset = window._allPayments || [];
+
+  const results = dataset.filter(item => {
+    if (window._qbConditions.length === 0) return true;
+
+    const matches = window._qbConditions.map(cond => {
+      let rawVal = item[cond.field];
+      if (rawVal === undefined || rawVal === null) rawVal = '';
+
+      if (cond.op === 'is_true') return Boolean(rawVal) === true;
+      if (cond.op === 'is_false') return Boolean(rawVal) === false;
+
+      const numItem = Number(rawVal);
+      const numTarget = Number(cond.val);
+      if (!isNaN(numItem) && !isNaN(numTarget) && cond.val !== '') {
+        if (cond.op === '=') return numItem === numTarget;
+        if (cond.op === '>') return numItem > numTarget;
+        if (cond.op === '<') return numItem < numTarget;
+        if (cond.op === '>=') return numItem >= numTarget;
+        if (cond.op === '<=') return numItem <= numTarget;
+      }
+
+      const strItem = String(rawVal).toLowerCase();
+      const strTarget = String(cond.val || '').toLowerCase().trim();
+      if (cond.op === 'equals' || cond.op === '=') return strItem === strTarget;
+      if (cond.op === 'contains') return strItem.includes(strTarget);
+      if (cond.op === 'starts_with') return strItem.startsWith(strTarget);
+      if (cond.op === '!=') return strItem !== strTarget;
+
+      return true;
+    });
+
+    if (logic === 'AND') return matches.every(Boolean);
+    else return matches.some(Boolean);
+  });
+
+  const duration = Math.round(performance.now() - t0);
+  window._qbResults = results;
+
+  if (countBadge) countBadge.textContent = results.length + ' Matches Found';
+  if (timeBadge) timeBadge.textContent = '(queried in ' + duration + 'ms)';
+  if (nudgeBtn) {
+    nudgeBtn.style.display = (col === 'enrolments' && results.length > 0) ? 'inline-block' : 'none';
+    nudgeBtn.textContent = '🚀 Batch Nudge Filtered (' + results.length + ')';
+  }
+
+  if (!tbody) return;
+
+  if (results.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:3rem;color:var(--muted);">' +
+      '<div style="font-size:1.8rem;margin-bottom:.5rem;">🔍</div>' +
+      '<div style="font-weight:600;color:var(--white);">No records match these compound query conditions</div>' +
+      '<div style="font-size:.75rem;margin-top:.25rem;">Try relaxing operators, switching AND/OR, or clearing some conditions.</div>' +
+    '</td></tr>';
+    return;
+  }
+
+  if (col === 'enrolments') {
+    if (thead) thead.innerHTML = '<tr><th>Sofian / Builder</th><th>Course</th><th>Progress %</th><th>Status / Scholarship</th><th style="text-align:right;">Actions</th></tr>';
+    tbody.innerHTML = results.map(e => `
+      <tr style="border-bottom:1px solid var(--border);">
+        <td>
+          <a href="javascript:void(0)" onclick="openStudentLifecycleDrawer('${e.user_id}')" style="font-weight:600;font-size:.82rem;color:var(--white);text-decoration:none;" onmouseover="this.style.color='#1428FF'" onmouseout="this.style.color='var(--white)'">${e.user_name}</a>
+          <div style="font-size:.65rem;color:var(--muted);">${e.user_email}</div>
+          <code style="font-size:.62rem;color:var(--orange);">${e.sofian_id}</code>
+        </td>
+        <td>
+          <div style="font-size:.8rem;color:var(--white);font-weight:600;">${e.course_title}</div>
+          <div style="font-size:.65rem;color:var(--muted);">Enrolled: ${e.dateStr || '—'}</div>
+        </td>
+        <td>
+          <div style="font-weight:700;color:${e.progress_pct === 100 ? '#10b981' : (e.progress_pct === 0 ? '#ef4444' : '#38bdf8')};font-size:.82rem;">${e.progress_pct}%</div>
+        </td>
+        <td>
+          <span class="badge ${e.status === 'completed' ? 'badge-green' : (e.status === 'locked' ? 'badge-red' : 'badge-blue')}">${e.status}</span>
+          ${e.isScholarship ? '<span class="badge badge-purple" style="margin-left:3px;">Scholarship</span>' : ''}
+        </td>
+        <td style="text-align:right;white-space:nowrap;">
+          <button class="btn btn-sm" onclick="openStudentLifecycleDrawer('${e.user_id}')" style="background:rgba(20,40,255,0.18);border:1px solid rgba(20,40,255,0.45);color:#8ca5ff;font-size:.68rem;padding:.25rem .5rem;">👤 Lifecycle</button>
+          <button class="btn btn-sm" onclick="viewUserXpLog('${e.user_id}')" style="margin-left:.25rem;background:rgba(255,138,0,0.15);border:1px solid rgba(255,138,0,0.4);color:#ffaa40;font-size:.68rem;padding:.25rem .45rem;">⚡ XP</button>
+        </td>
+      </tr>
+    `).join('');
+  } else if (col === 'students') {
+    if (thead) thead.innerHTML = '<tr><th>Sofian</th><th>Campus Node</th><th>XP / Tier</th><th>Verification</th><th style="text-align:right;">Actions</th></tr>';
+    tbody.innerHTML = results.map(s => {
+      const name = ((s.first_name || '') + ' ' + (s.last_name || '')).trim() || s.email || 'Sofian';
+      const uid = s.uid || s.id;
+      return `
+        <tr style="border-bottom:1px solid var(--border);">
+          <td>
+            <a href="javascript:void(0)" onclick="openStudentLifecycleDrawer('${uid}')" style="font-weight:600;font-size:.82rem;color:var(--white);text-decoration:none;" onmouseover="this.style.color='#1428FF'" onmouseout="this.style.color='var(--white)'">${name}</a>
+            <div style="font-size:.65rem;color:var(--muted);">${s.email}</div>
+            <code style="font-size:.62rem;color:var(--orange);">${s.sofian_id || 'unassigned'}</code>
+          </td>
+          <td style="font-size:.78rem;">${s.node_label || s.node || 'Online'}</td>
+          <td><strong style="color:#FFB800;">${s.xp_total || 0} XP</strong> <span style="font-size:.65rem;color:var(--muted);">(${s.xp_tier || 'Genesis'})</span></td>
+          <td>
+            ${s._isVerified ? '<span class="badge badge-green">Verified</span>' : '<span class="badge badge-orange">Unverified</span>'}
+            ${s.foundation_complete ? '<span class="badge badge-purple" style="margin-left:3px;">Graduate</span>' : ''}
+          </td>
+          <td style="text-align:right;white-space:nowrap;">
+            <button class="btn btn-sm" onclick="openStudentLifecycleDrawer('${uid}')" style="background:rgba(20,40,255,0.18);border:1px solid rgba(20,40,255,0.45);color:#8ca5ff;font-size:.68rem;padding:.25rem .5rem;">👤 Lifecycle</button>
+            <button class="btn btn-sm btn-secondary" onclick="viewStudent('${uid}')" style="margin-left:.25rem;font-size:.68rem;padding:.25rem .45rem;">⚙️ Roles</button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  } else if (col === 'payments') {
+    if (thead) thead.innerHTML = '<tr><th>Payer / Student</th><th>Course</th><th>Type / Method</th><th>Amount (₦)</th><th style="text-align:right;">Status</th></tr>';
+    tbody.innerHTML = results.map(p => {
+      const uid = p.user_id;
+      const stu = (window._allStudents || []).find(s => (s.uid || s.id) === uid);
+      const name = stu ? ((stu.first_name || '') + ' ' + (stu.last_name || '')).trim() : (uid ? (uid.slice(0, 10) + '…') : 'Anonymous');
+      return `
+        <tr style="border-bottom:1px solid var(--border);">
+          <td>
+            <a href="javascript:void(0)" onclick="openStudentLifecycleDrawer('${uid}')" style="font-weight:600;font-size:.82rem;color:var(--white);text-decoration:none;" onmouseover="this.style.color='#1428FF'" onmouseout="this.style.color='var(--white)'">${name}</a>
+            <div style="font-size:.65rem;color:var(--muted);">${p.id}</div>
+          </td>
+          <td style="font-size:.8rem;color:var(--white);font-weight:600;">${p.course_id || 'cbie'}</td>
+          <td style="font-size:.75rem;"><span class="badge" style="background:rgba(255,255,255,0.05);">${p.payment_type || 'enrolment'}</span> <span style="color:var(--muted);font-size:.68rem;">· ${p.method}</span></td>
+          <td style="font-size:.85rem;font-weight:700;color:#34d399;">₦${Number(p.amount || 0).toLocaleString()}</td>
+          <td style="text-align:right;"><span class="badge ${p.status === 'confirmed' ? 'badge-green' : 'badge-yellow'}">${p.status}</span></td>
+        </tr>
+      `;
+    }).join('');
+  }
+};
+
+window.applyQueryPreset = function(presetKey) {
+  const colSelect = document.getElementById('qbCollectionSelect');
+  const logicSelect = document.getElementById('qbLogicSelect');
+
+  if (presetKey === 'stalled_foundation') {
+    if (colSelect) colSelect.value = 'enrolments';
+    if (logicSelect) logicSelect.value = 'AND';
+    window._qbConditions = [
+      { id: 1, field: 'course_id', op: 'equals', val: 'foundation' },
+      { id: 2, field: 'progress_pct', op: '=', val: '0' },
+      { id: 3, field: '_daysInactive', op: '>=', val: '14' }
+    ];
+  } else if (presetKey === 'cbie_paid') {
+    if (colSelect) colSelect.value = 'payments';
+    if (logicSelect) logicSelect.value = 'AND';
+    window._qbConditions = [
+      { id: 1, field: 'course_id', op: 'equals', val: 'cbie' },
+      { id: 2, field: 'status', op: 'equals', val: 'confirmed' }
+    ];
+  } else if (presetKey === 'scholarship_students') {
+    if (colSelect) colSelect.value = 'enrolments';
+    if (logicSelect) logicSelect.value = 'AND';
+    window._qbConditions = [
+      { id: 1, field: 'isScholarship', op: 'is_true', val: '' }
+    ];
+  } else if (presetKey === 'locked_accounts') {
+    if (colSelect) colSelect.value = 'enrolments';
+    if (logicSelect) logicSelect.value = 'AND';
+    window._qbConditions = [
+      { id: 1, field: 'status', op: 'equals', val: 'locked' }
+    ];
+  } else if (presetKey === 'high_xp') {
+    if (colSelect) colSelect.value = 'students';
+    if (logicSelect) logicSelect.value = 'AND';
+    window._qbConditions = [
+      { id: 1, field: 'xp_total', op: '>=', val: '20' }
+    ];
+  } else if (presetKey === 'unverified') {
+    if (colSelect) colSelect.value = 'students';
+    if (logicSelect) logicSelect.value = 'AND';
+    window._qbConditions = [
+      { id: 1, field: '_isVerified', op: 'is_false', val: '' }
+    ];
+  }
+
+  renderQbConditionRows();
+  executeCurrentQuery();
+};
+
+window.resetQueryBuilder = function() {
+  const colSelect = document.getElementById('qbCollectionSelect');
+  if (colSelect) colSelect.value = 'enrolments';
+  window._qbConditions = [
+    { id: 1, field: 'progress_pct', op: '<', val: '50' }
+  ];
+  renderQbConditionRows();
+  executeCurrentQuery();
+};
+
+window.exportQueryResultsCSV = function() {
+  const results = window._qbResults || [];
+  if (results.length === 0) {
+    alert('No query results to export.');
+    return;
+  }
+  const col = document.getElementById('qbCollectionSelect')?.value || 'enrolments';
+  let headers = [];
+  let rows = [];
+
+  if (col === 'enrolments') {
+    headers = ['Name', 'Email', 'Sofian ID', 'Course ID', 'Course Title', 'Progress %', 'Status', 'Is Scholarship'];
+    rows = results.map(e => [
+      `"${(e.user_name || '').replace(/"/g, '""')}"`,
+      `"${(e.user_email || '').replace(/"/g, '""')}"`,
+      `"${(e.sofian_id || '').replace(/"/g, '""')}"`,
+      `"${e.course_id || ''}"`,
+      `"${(e.course_title || '').replace(/"/g, '""')}"`,
+      e.progress_pct || 0,
+      `"${e.status || ''}"`,
+      e.isScholarship ? 'Yes' : 'No'
+    ]);
+  } else if (col === 'students') {
+    headers = ['Full Name', 'Email', 'Sofian ID', 'Campus Node', 'XP Total', 'Tier', 'Email Verified', 'Foundation Graduate'];
+    rows = results.map(s => [
+      `"${(((s.first_name || '') + ' ' + (s.last_name || '')).trim() || s.email || '').replace(/"/g, '""')}"`,
+      `"${(s.email || '').replace(/"/g, '""')}"`,
+      `"${(s.sofian_id || '').replace(/"/g, '""')}"`,
+      `"${(s.node_label || s.node || '').replace(/"/g, '""')}"`,
+      s.xp_total || 0,
+      `"${s.xp_tier || 'Genesis'}"`,
+      s._isVerified ? 'Yes' : 'No',
+      s.foundation_complete ? 'Yes' : 'No'
+    ]);
+  } else {
+    headers = ['Payment ID', 'User ID', 'Course', 'Type', 'Method', 'Amount', 'Status'];
+    rows = results.map(p => [
+      `"${p.id}"`,
+      `"${p.user_id || ''}"`,
+      `"${p.course_id || ''}"`,
+      `"${p.payment_type || ''}"`,
+      `"${p.method || ''}"`,
+      p.amount || 0,
+      `"${p.status || ''}"`
+    ]);
+  }
+
+  const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\r\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `sofe_query_${col}_${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+};
+
+window.batchNudgeQueryResults = async function() {
+  const list = window._qbResults || [];
+  if (list.length === 0) return;
+
+  const ok = confirm('Send personalized study reminders to all ' + list.length + ' students matched by this query?');
+  if (!ok) return;
+
+  const dbInstance = window.db || window._db;
+  const fsInstance = window._fs || window;
+  let count = 0;
+
+  for (const e of list) {
+    if (e.user_id) {
+      try {
+        const firstName = (e.user_name || 'Learner').split(' ')[0];
+        await fsInstance.addDoc(fsInstance.collection(dbInstance, 'notifications'), {
+          user_id: e.user_id,
+          title: '📚 Continue your journey in ' + (e.course_title || 'your course') + '!',
+          message: 'Hi ' + firstName + ', don\'t lose momentum. Jump in today, complete your next lesson, and level up your XP!',
+          type: 'course_nudge',
+          link: '/course-view?course=' + (e.course_id || 'foundation'),
+          read: false,
+          _broadcast: false,
+          created_at: fsInstance.serverTimestamp()
+        });
+        count++;
+      } catch (err) {
+        console.warn('Query nudge item error:', err);
+      }
+    }
+  }
+
+  showToast('✓ Successfully sent ' + count + ' study reminders!', 'success');
+};
 
 </script>
 </body>

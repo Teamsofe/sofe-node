@@ -57,6 +57,7 @@ section, footer, #trust, .stats-wrap { position: relative; z-index: 1; }
   .sofe-nav-cta-group { display: flex !important; visibility: visible !important; opacity: 1 !important; }
   .sofe-nav-avatar,
   .sofe-nav-theme-btn,
+  .sofe-nav-bell-wrap,
   #sofeNavSignIn { visibility: visible !important; opacity: 1 !important; }
   #sofeNavSignIn { display: inline-block !important; }
 }
@@ -961,9 +962,33 @@ body.light .hamburger span { background: var(--white); }
 
       <!-- LEFT: Welcome + Referral -->
       <div style="min-width:0;">
-        <div class="dash-greeting">Welcome Back, <span>Sofian!</span></div>
-        <div style="font-size:.98rem;font-weight:700;color:var(--white);margin-top:.15rem;" id="welcomeName">—</div>
-        <div class="dash-date" id="dashDate"></div>
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+          <div>
+            <div class="dash-greeting">Welcome Back, <span>Sofian!</span></div>
+            <div style="font-size:.98rem;font-weight:700;color:var(--white);margin-top:.15rem;" id="welcomeName">—</div>
+            <div class="dash-date" id="dashDate"></div>
+          </div>
+          <!-- Restored Notification Icon -->
+          <div class="notif-wrap" id="dashNotifWrap" style="position:relative;">
+            <button class="notif-btn" id="dashNotifBtn" onclick="toggleDashboardNotifs(event)" aria-label="Notifications" title="Notifications" type="button" style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.4rem 0.85rem;border-radius:20px;width:auto;height:auto;background:rgba(20,40,255,0.08);">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+              </svg>
+              <span style="font-size:0.75rem;font-weight:600;">Notifications</span>
+              <span class="notif-badge" id="notifBadge" style="display:none;position:static;width:auto;min-width:16px;height:16px;padding:0 5px;border-radius:10px;font-size:0.58rem;">0</span>
+            </button>
+            <div class="notif-dropdown" id="notifDropdown" style="left:0;right:auto;width:340px;">
+              <div class="notif-head">
+                <span class="notif-head-title">Notifications</span>
+                <button class="notif-head-clear" onclick="markAllNotificationsRead(event)" type="button">Mark all read</button>
+              </div>
+              <div id="notifList">
+                <div class="notif-empty" id="notifEmpty">No notifications yet</div>
+              </div>
+            </div>
+          </div>
+        </div>
         <!-- Referral Link Quick Copy -->
         <div id="quickReferralLink" style="margin-top:1rem;padding:0.75rem 1rem;background:rgba(255,138,0,0.08);border:1px solid rgba(255,138,0,0.3);border-radius:8px;display:none;">
           <div style="font-size:0.7rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:var(--orange);margin-bottom:0.5rem;">📢 Your Referral Link:</div>
@@ -2331,6 +2356,45 @@ onAuthStateChanged(auth, async function(user) {
         }
       }
     } catch(e){}
+
+    window._currentUser = user;
+    window.toggleDashboardNotifs = function(e) {
+      if (e) e.stopPropagation();
+      var dd = document.getElementById('notifDropdown');
+      if (dd) dd.classList.toggle('open');
+    };
+    window.markAllNotificationsRead = async function(e) {
+      if (e) e.stopPropagation();
+      try {
+        var nb = document.getElementById('notifBadge');
+        if (nb) nb.style.display = 'none';
+        document.querySelectorAll('#notifList .notif-item.unread').forEach(function(el) {
+          el.classList.remove('unread');
+          var dot = el.querySelector('.notif-dot');
+          if (dot) dot.className = 'notif-dot read';
+        });
+        if (window._currentUser) {
+          var unreadSnap = await getDocs(query(collection(db,'notifications'), where('user_id','==',window._currentUser.uid)));
+          unreadSnap.forEach(function(d) {
+            if (d.data().read !== true) {
+              try { updateDoc(doc(db,'notifications',d.id), { read: true }); } catch(_) {}
+            }
+          });
+        }
+      } catch(err) {
+        console.warn('markAllNotificationsRead error:', err);
+      }
+    };
+    if (!window._dashNotifClickBound) {
+      window._dashNotifClickBound = true;
+      document.addEventListener('click', function(e) {
+        var wrap = document.getElementById('dashNotifWrap');
+        var dd = document.getElementById('notifDropdown');
+        if (wrap && dd && !wrap.contains(e.target)) {
+          dd.classList.remove('open');
+        }
+      });
+    }
 
     // Transactions
     try {
