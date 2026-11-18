@@ -2916,7 +2916,7 @@ async function loadOverview() {
     const activeUids = new Set(activeEnrols.map(d => d.data().user_id));
     const foundationDoneUids = new Set(
       enrolSnap.docs
-        .filter(d => d.data().course_id === 'foundation' && (d.data().progress_pct === 100 || d.data().completed_at != null))
+        .filter(d => d.data().course_id === 'foundation' && Number(d.data().progress_pct ?? 0) >= 100)
         .map(d => d.data().user_id)
     );
 
@@ -4472,7 +4472,7 @@ window.loadEnrolmentsHub = async function(forceRefresh = false) {
       rawEnrols = await resolveEnrolmentUsers(rawEnrols);
 
       window._allEnrolments = rawEnrols.map(e => {
-        const prog = (e.completed_at != null || e.status === 'completed' || Number(e.progress_pct) === 100)
+        const prog = (e.status === 'completed' || Number(e.progress_pct) >= 100)
           ? 100
           : Math.min(100, Math.max(0, Math.round(Number(e.progress_pct ?? e.progress ?? 0))));
         const courseId = (e.course_id || 'foundation').toLowerCase();
@@ -5132,7 +5132,7 @@ window.loadStudents = async function() {
     const activeUids = new Set(activeEnrolSnap.docs.map(d => d.data().user_id));
     const foundationDoneUids = new Set(
       foundSnap.docs
-        .filter(d => d.data().progress_pct === 100 || d.data().completed_at != null)
+        .filter(d => Number(d.data().progress_pct ?? 0) >= 100)
         .map(d => d.data().user_id)
     );
 
