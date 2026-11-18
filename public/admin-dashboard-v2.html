@@ -816,16 +816,57 @@
 
     <!-- SUB-TAB 1: ANALYTICS & ENROLMENTS -->
     <div id="enrol-tab-analytics">
+      <!-- ═══ TOP: GENERAL STUDENT PROGRESS DISTRIBUTION BAR CHART ═══ -->
+      <div class="card" style="margin-bottom:1.3rem;padding:1.3rem 1.4rem;background:linear-gradient(135deg, rgba(6,13,26,0.95), rgba(10,22,40,0.85));border:1px solid rgba(200,215,240,0.12);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.25);">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:.75rem;margin-bottom:1rem;">
+          <div>
+            <div style="display:flex;align-items:center;gap:.6rem;">
+              <span style="font-size:1.15rem;">📊</span>
+              <span style="font-size:1.02rem;font-weight:800;color:var(--white);letter-spacing:-0.01em;">General Student Progress Distribution</span>
+              <span class="badge" style="background:rgba(20,40,255,0.18);border:1px solid rgba(20,40,255,0.4);color:#8ca5ff;font-size:.65rem;font-weight:700;">Platform Overview</span>
+            </div>
+            <div style="font-size:.72rem;color:var(--muted);margin-top:.25rem;">
+              Platform-wide completion breakdown across all enrolled students, published courses, and active cohorts. Click any tier below to filter the student list.
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:1.2rem;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;padding:.5rem 1rem;">
+            <div style="text-align:right;">
+              <div style="font-size:.6rem;text-transform:uppercase;color:var(--muted);font-weight:700;">Total Enrolled</div>
+              <div style="font-size:1.15rem;font-weight:800;color:var(--white);" id="generalProgressTotalCount">—</div>
+            </div>
+            <div style="width:1px;height:24px;background:var(--border);"></div>
+            <div style="text-align:right;">
+              <div style="font-size:.6rem;text-transform:uppercase;color:var(--muted);font-weight:700;">Avg Progress</div>
+              <div style="font-size:1.15rem;font-weight:800;color:#34d399;" id="generalProgressAvgPct">—%</div>
+            </div>
+            <div style="width:1px;height:24px;background:var(--border);"></div>
+            <div style="text-align:right;">
+              <div style="font-size:.6rem;text-transform:uppercase;color:var(--muted);font-weight:700;">Graduated</div>
+              <div style="font-size:1.15rem;font-weight:800;color:#10b981;" id="generalProgressGradPct">—%</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Macro Segmented Bar (Proportional Progress Spectrum) -->
+        <div style="margin-bottom:1.1rem;">
+          <div id="generalProgressBarSpectrum" style="height:14px;background:rgba(255,255,255,0.06);border-radius:50px;overflow:hidden;display:flex;width:100%;box-shadow:inset 0 1px 3px rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.05);">
+            <!-- Rendered dynamically as proportional colored segments -->
+          </div>
+        </div>
+
+        <!-- Cohort Breakdown Tiers (5 Interactive Cards) -->
+        <div id="generalCohortGrid" style="display:grid;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));gap:.75rem;">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+
       <!-- Controls & Filter Toolbar -->
       <div class="card" style="margin-bottom:1.2rem;padding:1rem 1.2rem;background:var(--deep);border:1px solid var(--border);border-radius:10px;">
         <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:.85rem;align-items:end;">
           <div>
-            <label class="form-label" style="font-size:.68rem;text-transform:uppercase;color:var(--muted);font-weight:700;">Filter by Course</label>
+            <label class="form-label" style="font-size:.68rem;text-transform:uppercase;color:var(--muted);font-weight:700;">Filter by Course or Cohort</label>
             <select class="form-select" id="enrolCourseFilter" onchange="onEnrolFilterChange()" style="font-size:.82rem;">
-              <option value="all">All Courses</option>
-              <option value="foundation">⛓️ Blockchain &amp; Crypto Foundation</option>
-              <option value="smart-contract-developer">⚡ Smart Contract Development</option>
-              <option value="cbie">💡 CBIE (Innovation &amp; Entrepreneurship)</option>
+              <option value="all">🌐 Loading Published Courses &amp; Cohorts…</option>
             </select>
           </div>
           <div>
@@ -2836,6 +2877,7 @@ window.showPanel = function(id, el) {
   if (id === 'enrolments') {
     if (typeof window.loadEnrolmentsHub === 'function') window.loadEnrolmentsHub();
     else if (typeof window.loadActiveEnrolments === 'function') window.loadActiveEnrolments();
+    else setTimeout(() => { if (typeof window.loadEnrolmentsHub === 'function') window.loadEnrolmentsHub(); }, 400);
   }
   if (id === 'payments' && typeof window.loadPayments === 'function') window.loadPayments();
   if (id === 'discounts' && typeof window.loadDiscounts === 'function') window.loadDiscounts();
@@ -4376,24 +4418,30 @@ async function resolveEnrolmentUsers(enrolments) {
 
   const uniqueMissing = [...new Set(missingUids)];
   if (uniqueMissing.length > 0) {
-    await Promise.all(uniqueMissing.map(async uid => {
-      try {
-        const uSnap = await getDoc(doc(db, 'users', uid));
-        if (uSnap.exists()) {
-          const u = uSnap.data();
-          const name = ((u.first_name || '') + ' ' + (u.last_name || '')).trim() || u.full_name || u.email || 'Sofian';
-          enrolments.forEach(e => {
-            if (e.user_id === uid) {
-              e.user_name = name;
-              e.user_email = u.email || e.user_email || '—';
-              e.sofian_id = u.sofian_id || '—';
-              e.referral_code = u.referral_code || '—';
-              e.node_label = u.node_label || u.node || u.chapter_name || 'Online / Global Node';
-            }
-          });
-        }
-      } catch (e) {}
-    }));
+    const dbInstance = window.db || window._db;
+    const fsInstance = window._fs || window;
+    const getDocFn = fsInstance?.getDoc || window.getDoc;
+    const docFn = fsInstance?.doc || window.doc;
+    if (dbInstance && getDocFn && docFn) {
+      await Promise.all(uniqueMissing.map(async uid => {
+        try {
+          const uSnap = await getDocFn(docFn(dbInstance, 'users', uid));
+          if (uSnap.exists()) {
+            const u = uSnap.data();
+            const name = ((u.first_name || '') + ' ' + (u.last_name || '')).trim() || u.full_name || u.email || 'Sofian';
+            enrolments.forEach(e => {
+              if (e.user_id === uid) {
+                e.user_name = name;
+                e.user_email = u.email || e.user_email || '—';
+                e.sofian_id = u.sofian_id || '—';
+                e.referral_code = u.referral_code || '—';
+                e.node_label = u.node_label || u.node || u.chapter_name || 'Online / Global Node';
+              }
+            });
+          }
+        } catch (e) {}
+      }));
+    }
   }
 
   return enrolments;
@@ -4403,15 +4451,30 @@ window.loadEnrolmentsHub = async function(forceRefresh = false) {
   const tbody = document.getElementById('enrolmentsAnalyticsTableBody');
   if (!tbody) return;
 
+  const dbInstance = window.db || window._db;
+  const fsInstance = window._fs || window;
+
+  if (!dbInstance || !fsInstance?.getDocs) {
+    console.log('loadEnrolmentsHub waiting for Firebase initialization...');
+    setTimeout(() => window.loadEnrolmentsHub(forceRefresh), 400);
+    return;
+  }
+
   if (window._allEnrolments.length === 0 || forceRefresh) {
+    // If not rendered yet, show empty/zero state structure immediately
+    renderGeneralStudentProgressDistribution(window._allEnrolments);
     tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2.5rem;color:var(--muted);"><div class="spinner" style="margin:0 auto .75rem;"></div>Loading verified course enrolments &amp; telemetry…</td></tr>';
     try {
-      const snap = await getDocs(collection(db, 'enrolments'));
+      const getDocsFn = fsInstance.getDocs;
+      const colFn = fsInstance.collection;
+      const snap = await getDocsFn(colFn(dbInstance, 'enrolments'));
       let rawEnrols = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       rawEnrols = await resolveEnrolmentUsers(rawEnrols);
 
       window._allEnrolments = rawEnrols.map(e => {
-        const prog = Math.min(100, Math.max(0, Math.round(Number(e.progress_pct ?? e.progress ?? 0))));
+        const prog = (e.completed_at != null || e.status === 'completed' || Number(e.progress_pct) === 100)
+          ? 100
+          : Math.min(100, Math.max(0, Math.round(Number(e.progress_pct ?? e.progress ?? 0))));
         const courseId = (e.course_id || 'foundation').toLowerCase();
         let courseTitle = e.course_title;
         if (!courseTitle || courseTitle === courseId) {
@@ -4442,7 +4505,11 @@ window.loadEnrolmentsHub = async function(forceRefresh = false) {
         };
       });
 
-      populateCourseFilterOptions(window._allEnrolments);
+      // Render General Student Progress Distribution (Platform Overview at the Top)
+      renderGeneralStudentProgressDistribution(window._allEnrolments);
+
+      // Populate all published courses and cohorts
+      await populateCourseFilterOptions(window._allEnrolments);
 
     } catch (err) {
       console.error('loadEnrolmentsHub error:', err);
@@ -4454,29 +4521,211 @@ window.loadEnrolmentsHub = async function(forceRefresh = false) {
   applyEnrolFilters();
 };
 
-function populateCourseFilterOptions(enrolments) {
+function enrolsCountForCourse(enrolments, courseId) {
+  const cLower = (courseId || '').toLowerCase();
+  return enrolments.filter(e => {
+    if (cLower === 'foundation') return e.course_id.includes('foundation');
+    if (cLower === 'smart-contract-developer' || cLower === 'smart-contract-development') return e.course_id.includes('smart-contract');
+    if (cLower === 'cbie') return e.course_id.includes('cbie');
+    return e.course_id === cLower;
+  }).length;
+}
+
+async function populateCourseFilterOptions(enrolments) {
   const select = document.getElementById('enrolCourseFilter');
   if (!select) return;
   const currentVal = select.value || 'all';
 
-  const coursesMap = {};
+  const dbInstance = window.db || window._db;
+  const fsInstance = window._fs || window;
+  const getDocsFn = fsInstance?.getDocs || window.getDocs;
+  const colFn = fsInstance?.collection || window.collection;
+
+  // 1. Fetch published courses from 'courses' collection
+  if (!window._cachedPublishedCourses && dbInstance && getDocsFn && colFn) {
+    try {
+      const cSnap = await getDocsFn(colFn(dbInstance, 'courses'));
+      const list = [];
+      cSnap.forEach(d => {
+        const cData = d.data() || {};
+        if (cData.status === 'published' || cData.published === true || !cData.status) {
+          list.push({
+            id: d.id,
+            title: cData.title || cData.name || d.id,
+            tier: cData.tier || ''
+          });
+        }
+      });
+      window._cachedPublishedCourses = list;
+    } catch (e) {
+      console.warn('Could not fetch published courses:', e);
+      window._cachedPublishedCourses = [];
+    }
+  }
+
+  // 2. Fetch cohorts from 'cohorts' collection
+  if (!window._cachedCohorts && dbInstance && getDocsFn && colFn) {
+    try {
+      const chSnap = await getDocsFn(colFn(dbInstance, 'cohorts'));
+      const list = [];
+      chSnap.forEach(d => {
+        const chData = d.data() || {};
+        const cleanName = (chData.name || chData.title || d.id).replace(/[()']/g, '').trim();
+        list.push({
+          id: d.id,
+          name: cleanName,
+          course_id: (chData.course_id || chData.course || '').replace(/"/g, '').trim(),
+          status: chData.status || 'open'
+        });
+      });
+      window._cachedCohorts = list;
+    } catch (e) {
+      console.warn('Could not fetch cohorts:', e);
+      window._cachedCohorts = [];
+    }
+  }
+
+  // 3. Build map of all courses (published courses + any courses in enrolments)
+  const allCoursesMap = {};
+  (window._cachedPublishedCourses || []).forEach(c => {
+    allCoursesMap[c.id] = c.title;
+  });
   enrolments.forEach(e => {
-    if (!coursesMap[e.course_id]) {
-      coursesMap[e.course_id] = e.course_title;
+    if (!allCoursesMap[e.course_id]) {
+      allCoursesMap[e.course_id] = e.course_title;
     }
   });
 
-  let opts = '<option value="all">All Courses (' + enrolments.length + ')</option>';
-  for (const [cId, title] of Object.entries(coursesMap)) {
-    const count = enrolments.filter(e => e.course_id === cId).length;
+  // Sort course keys: Foundation first, then Smart Contract Developer, then CBIE, then alphabetical
+  const courseKeys = Object.keys(allCoursesMap).sort((a, b) => {
+    if (a === 'foundation') return -1;
+    if (b === 'foundation') return 1;
+    if (a.includes('smart-contract')) return -1;
+    if (b.includes('smart-contract')) return 1;
+    if (a === 'cbie') return -1;
+    if (b === 'cbie') return 1;
+    return (allCoursesMap[a] || a).localeCompare(allCoursesMap[b] || b);
+  });
+
+  let opts = `<option value="all">🌐 All Courses &amp; Cohorts (${enrolments.length} Enrolled)</option>`;
+
+  // Optgroup: Published Courses
+  opts += `<optgroup label="🎓 Published Courses (${courseKeys.length})">`;
+  courseKeys.forEach(cId => {
+    const title = allCoursesMap[cId];
+    const count = enrolsCountForCourse(enrolments, cId);
     let icon = '📚';
     if (cId === 'foundation') icon = '⛓️';
     else if (cId.includes('smart-contract')) icon = '⚡';
     else if (cId === 'cbie') icon = '💡';
-    opts += `<option value="${cId}">${icon} ${title} (${count})</option>`;
+    else if (cId.includes('app')) icon = '📱';
+    else if (cId.includes('cyber')) icon = '🛡️';
+    else if (cId.includes('design')) icon = '🎨';
+    else if (cId.includes('trading') || cId.includes('crypto')) icon = '📈';
+    else if (cId.includes('marketing')) icon = '📣';
+    else if (cId.includes('data')) icon = '📊';
+
+    opts += `<option value="${cId}">${icon} ${title} (${count} enrolled)</option>`;
+  });
+  opts += `</optgroup>`;
+
+  // Optgroup: Active Cohorts
+  const cohortsList = window._cachedCohorts || [];
+  if (cohortsList.length > 0) {
+    opts += `<optgroup label="👥 Active Cohorts (${cohortsList.length})">`;
+    cohortsList.forEach(ch => {
+      const count = enrolments.filter(e => e.cohort_id === ch.id || e.cohort === ch.id || (ch.course_id && e.course_id === ch.course_id)).length;
+      opts += `<option value="cohort:${ch.id}">👥 ${ch.name} (${count} enrolled)</option>`;
+    });
+    opts += `</optgroup>`;
   }
+
   select.innerHTML = opts;
-  select.value = currentVal;
+  if (currentVal) select.value = currentVal;
+}
+
+function renderGeneralStudentProgressDistribution(allEnrolments) {
+  const total = allEnrolments.length;
+  let sumProg = 0;
+  let completed = 0;
+  const cohorts = { '0': 0, '1-25': 0, '26-75': 0, '76-99': 0, '100': 0 };
+
+  allEnrolments.forEach(e => {
+    const prog = e.progress_pct || 0;
+    sumProg += prog;
+    if (prog === 0) cohorts['0']++;
+    else if (prog <= 25) cohorts['1-25']++;
+    else if (prog <= 75) cohorts['26-75']++;
+    else if (prog < 100) cohorts['76-99']++;
+    else {
+      completed++;
+      cohorts['100']++;
+    }
+  });
+
+  const avgProg = total > 0 ? Math.round(sumProg / total) : 0;
+  const gradRate = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+  const elTotal = document.getElementById('generalProgressTotalCount');
+  const elAvg = document.getElementById('generalProgressAvgPct');
+  const elGrad = document.getElementById('generalProgressGradPct');
+  if (elTotal) elTotal.textContent = total + ' Students';
+  if (elAvg) elAvg.textContent = avgProg + '%';
+  if (elGrad) elGrad.textContent = gradRate + '%';
+
+  const spectrumEl = document.getElementById('generalProgressBarSpectrum');
+  if (spectrumEl) {
+    if (total === 0) {
+      spectrumEl.innerHTML = '<div style="width:100%;height:100%;background:rgba(255,255,255,0.05);text-align:center;font-size:.65rem;color:var(--muted);line-height:14px;">No student records found</div>';
+    } else {
+      const p100 = (cohorts['100'] / total) * 100;
+      const p76 = (cohorts['76-99'] / total) * 100;
+      const p26 = (cohorts['26-75'] / total) * 100;
+      const p1 = (cohorts['1-25'] / total) * 100;
+      const p0 = (cohorts['0'] / total) * 100;
+
+      spectrumEl.innerHTML = `
+        <div style="flex:${cohorts['100']};min-width:${cohorts['100'] > 0 ? '8px' : '0'};height:100%;background:#10B981;box-shadow:0 0 8px rgba(16,185,129,0.4);" title="Certified (100%): ${cohorts['100']} students (${Math.round(p100)}%)"></div>
+        <div style="flex:${cohorts['76-99']};min-width:${cohorts['76-99'] > 0 ? '8px' : '0'};height:100%;background:#A855F7;box-shadow:0 0 8px rgba(168,85,247,0.4);" title="Advanced (76-99%): ${cohorts['76-99']} students (${Math.round(p76)}%)"></div>
+        <div style="flex:${cohorts['26-75']};min-width:${cohorts['26-75'] > 0 ? '8px' : '0'};height:100%;background:#3B82F6;box-shadow:0 0 8px rgba(59,130,246,0.4);" title="Mid-Flight (26-75%): ${cohorts['26-75']} students (${Math.round(p26)}%)"></div>
+        <div style="flex:${cohorts['1-25']};min-width:${cohorts['1-25'] > 0 ? '8px' : '0'};height:100%;background:#FF8A00;box-shadow:0 0 8px rgba(255,138,0,0.4);" title="Getting Started (1-25%): ${cohorts['1-25']} students (${Math.round(p1)}%)"></div>
+        <div style="flex:${cohorts['0']};min-width:${cohorts['0'] > 0 ? '8px' : '0'};height:100%;background:#EF4444;opacity:0.85;" title="Not Started (0%): ${cohorts['0']} students (${Math.round(p0)}%)"></div>
+      `;
+    }
+  }
+
+  const gridEl = document.getElementById('generalCohortGrid');
+  if (gridEl) {
+    const activeCohortFilter = document.getElementById('enrolProgressTierFilter')?.value || 'all';
+
+    const tiers = [
+      { key: '100', label: '🏆 Certified', range: '100% Progress', color: '#10B981', glow: 'rgba(16,185,129,0.25)', count: cohorts['100'] },
+      { key: '76-99', label: '⚡ Advanced', range: '76% – 99%', color: '#A855F7', glow: 'rgba(168,85,247,0.25)', count: cohorts['76-99'] },
+      { key: '26-75', label: '🚀 Mid-Flight', range: '26% – 75%', color: '#3B82F6', glow: 'rgba(59,130,246,0.25)', count: cohorts['26-75'] },
+      { key: '1-25', label: '🌱 Early Stage', range: '1% – 25%', color: '#FF8A00', glow: 'rgba(255,138,0,0.25)', count: cohorts['1-25'] },
+      { key: '0', label: '⚠️ Not Started', range: '0% Progress', color: '#EF4444', glow: 'rgba(239,68,68,0.25)', count: cohorts['0'] },
+    ];
+
+    gridEl.innerHTML = tiers.map(t => {
+      const pct = total > 0 ? Math.round((t.count / total) * 100) : 0;
+      const isSelected = activeCohortFilter === t.key;
+      return `
+        <div onclick="quickFilterCohort('${isSelected ? 'all' : t.key}')" style="cursor:pointer;padding:.75rem .9rem;border-radius:10px;background:${isSelected ? 'rgba(20,40,255,0.18)' : 'rgba(255,255,255,0.02)'};border:1px solid ${isSelected ? 'var(--blue)' : 'var(--border)'};transition:all .18s;display:flex;flex-direction:column;justify-content:space-between;" title="Filter by ${t.range}">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.35rem;">
+            <span style="font-size:.75rem;font-weight:700;color:var(--white);">${t.label}</span>
+            <span style="font-size:.65rem;color:var(--muted);">${t.range}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.4rem;">
+            <span style="font-size:1.35rem;font-weight:800;color:${t.color};">${t.count}</span>
+            <span style="font-size:.7rem;font-weight:700;color:var(--muted);">${pct}% of all</span>
+          </div>
+          <div style="background:rgba(255,255,255,0.06);height:5px;border-radius:50px;overflow:hidden;">
+            <div style="background:${t.color};width:${pct}%;height:100%;border-radius:50px;box-shadow:0 0 6px ${t.glow};"></div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
 }
 
 window.onEnrolFilterChange = function() {
@@ -4493,19 +4742,34 @@ window.quickFilterCohort = function(cohort) {
 };
 
 function applyEnrolFilters() {
-  const courseFilter = (document.getElementById('enrolCourseFilter')?.value || 'all').toLowerCase();
+  const courseFilter = document.getElementById('enrolCourseFilter')?.value || 'all';
   const statusFilter = (document.getElementById('enrolStatusFilter')?.value || 'all').toLowerCase();
   const cohortFilter = document.getElementById('enrolProgressTierFilter')?.value || 'all';
   const search = (document.getElementById('enrolSearchInput')?.value || '').toLowerCase().trim();
 
+  // Always keep general top chart populated with platform-wide totals
+  renderGeneralStudentProgressDistribution(window._allEnrolments);
+
   let courseEnrols = window._allEnrolments;
   if (courseFilter !== 'all') {
-    courseEnrols = window._allEnrolments.filter(e => {
-      if (courseFilter === 'foundation') return e.course_id.includes('foundation');
-      if (courseFilter === 'smart-contract-developer') return e.course_id.includes('smart-contract');
-      if (courseFilter === 'cbie') return e.course_id.includes('cbie');
-      return e.course_id === courseFilter;
-    });
+    if (courseFilter.startsWith('cohort:')) {
+      const cohortId = courseFilter.slice('cohort:'.length);
+      const cohortObj = (window._cachedCohorts || []).find(c => c.id === cohortId);
+      const chCourse = (cohortObj?.course_id || '').toLowerCase();
+      courseEnrols = window._allEnrolments.filter(e => {
+        return (e.cohort_id && e.cohort_id === cohortId) ||
+               (e.cohort && e.cohort === cohortId) ||
+               (chCourse && e.course_id === chCourse);
+      });
+    } else {
+      const cLower = courseFilter.toLowerCase();
+      courseEnrols = window._allEnrolments.filter(e => {
+        if (cLower === 'foundation') return e.course_id.includes('foundation');
+        if (cLower === 'smart-contract-developer' || cLower === 'smart-contract-development') return e.course_id.includes('smart-contract');
+        if (cLower === 'cbie') return e.course_id.includes('cbie');
+        return e.course_id === cLower;
+      });
+    }
   }
 
   renderEnrolmentKPIsAndCharts(courseEnrols, courseFilter);
@@ -7497,6 +7761,7 @@ onAuthStateChanged(auth, async (user) => {
     if (typeof window.loadOverview === 'function') window.loadOverview();
     if (typeof window.loadStudents === 'function') window.loadStudents();
     if (typeof window.loadAdminUsers === 'function') window.loadAdminUsers();
+    if (typeof window.loadEnrolmentsHub === 'function') window.loadEnrolmentsHub();
     if (typeof window.loadBountiesData === 'function') setTimeout(loadBountiesData, 500);
 
   } catch (err) {
