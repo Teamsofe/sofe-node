@@ -2394,6 +2394,7 @@
         </label>
         <div class="form-group"><label class="form-label">Status</label><select class="form-select" id="newBountyStatus"><option value="open">Publish now</option><option value="draft">Save as draft</option></select></div>
       </div>
+    </div>
     <div class="modal-foot"><button class="btn btn-ghost" onclick="closeModal('modal-add-bounty')">Cancel</button><button class="btn btn-primary" onclick="saveBounty()">Post bounty</button></div>
   </div>
 </div>
@@ -6161,6 +6162,145 @@ window.closeModal = function(id) {
   }
 };
 function closeModal(id) { window.closeModal(id); }
+
+// Fallback & early-binding for Sofian XP Log Viewer
+window._currentXpLogUid = null;
+window.viewUserXpLog = async function(uid) {
+  try {
+    if (!uid) {
+      console.warn('[XP Log] viewUserXpLog called without UID');
+      return;
+    }
+    window._currentXpLogUid = uid;
+
+    // Immediately open modal directly and ensure top-level visibility
+    const modal = document.getElementById('modalSofianXpLog');
+    if (modal) {
+      modal.classList.add('open');
+      modal.style.display = 'flex';
+      modal.style.zIndex = '99999';
+    }
+    if (typeof window.openModal === 'function') window.openModal('modalSofianXpLog');
+
+    let s = (window._allStudents || []).find(x => (x.uid || x.id) === uid);
+    const titleEl = document.getElementById('xpLogModalTitle');
+    const summaryEl = document.getElementById('xpLogUserSummary');
+    const pillsEl = document.getElementById('xpLogStatsPills');
+    const tbody = document.getElementById('xpLogTableBody');
+    const countLabel = document.getElementById('xpLogCountLabel');
+
+    if (titleEl) titleEl.textContent = '📜 Sofian XP Transaction History';
+    if (summaryEl) summaryEl.innerHTML = '<span style="color:var(--muted);">Loading student profile...</span>';
+    if (pillsEl) pillsEl.innerHTML = '';
+    if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:2rem;color:var(--muted);">Loading verified ledger records...</td></tr>';
+
+    const res = await fetch('/api/xp?userId=' + encodeURIComponent(uid));
+    const data = await res.json();
+
+    if (!data || !data.success) {
+      throw new Error(data?.error || 'Failed to fetch XP logs');
+    }
+
+    const u = data.user || s || {};
+    const stats = data.stats || {};
+    const logs = data.logs || [];
+
+    const fullName = ((u.first_name || '') + ' ' + (u.last_name || '')).trim() || (s ? ((s.first_name || '') + ' ' + (s.last_name || '')).trim() : 'Sofian');
+    const sofId = u.sofian_id || (s ? s.sofian_id : '') || 'unassigned';
+    const refCode = u.referral_code || (s ? s.referral_code : '') || '—';
+    const streak = u.daily_streak || (s ? s.daily_streak : 1);
+
+    if (titleEl) {
+      titleEl.textContent = '📜 XP Transaction History — ' + fullName;
+    }
+
+    if (summaryEl) {
+      summaryEl.innerHTML = `
+        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));gap:.5rem;">
+          <div><strong style="color:var(--muted);">Sofian:</strong> <span style="font-weight:700;color:var(--white);margin-left:4px;">${fullName}</span></div>
+          <div><strong style="color:var(--muted);">Sofian ID:</strong> <code style="color:var(--orange);margin-left:4px;">${sofId}</code></div>
+          <div><strong style="color:var(--muted);">Referral Code:</strong> <code style="margin-left:4px;">${refCode}</code></div>
+          <div><strong style="color:var(--muted);">Streak:</strong> <span style="margin-left:4px;">🔥 ${streak} Days</span></div>
+        </div>
+      `;
+    }
+
+    if (pillsEl) {
+      const totalXp = stats.computedFromLogs_totalXp !== undefined ? stats.computedFromLogs_totalXp : (stats.userDoc_xp_total || 0);
+      const monthXp = stats.computedFromLogs_thisMonthXp !== undefined ? stats.computedFromLogs_thisMonthXp : (stats.userDoc_monthly_xp || 0);
+      const wins = u.leaderboard_wins_count || u.leaderboardWinsCount || (s ? (s.leaderboard_wins_count || s.leaderboardWinsCount || 0) : 0);
+
+      pillsEl.innerHTML = `
+        <div style="background:rgba(20,40,255,0.08);border:1px solid rgba(20,40,255,0.2);border-radius:6px;padding:.5rem .75rem;">
+          <div style="font-size:.62rem;text-transform:uppercase;color:var(--muted);font-weight:700;">All-Time Verified XP</div>
+          <div style="font-size:1.05rem;font-weight:800;color:var(--white);margin-top:.15rem;">${totalXp.toLocaleString()} XP</div>
+        </div>
+        <div style="background:rgba(255,138,0,0.08);border:1px solid rgba(255,138,0,0.25);border-radius:6px;padding:.5rem .75rem;">
+          <div style="font-size:.62rem;text-transform:uppercase;color:var(--muted);font-weight:700;">This Month (Nov)</div>
+          <div style="font-size:1.05rem;font-weight:800;color:var(--orange);margin-top:.15rem;">${monthXp.toLocaleString()} XP</div>
+        </div>
+        <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);border-radius:6px;padding:.5rem .75rem;">
+          <div style="font-size:.62rem;text-transform:uppercase;color:var(--muted);font-weight:700;">Total Claims</div>
+          <div style="font-size:1.05rem;font-weight:800;color:#34d399;margin-top:.15rem;">${logs.length} Entries</div>
+        </div>
+        <div style="background:rgba(168,85,247,0.08);border:1px solid rgba(168,85,247,0.25);border-radius:6px;padding:.5rem .75rem;">
+          <div style="font-size:.62rem;text-transform:uppercase;color:var(--muted);font-weight:700;">Leaderboard Wins</div>
+          <div style="font-size:1.05rem;font-weight:800;color:#c084fc;margin-top:.15rem;">🏆 ${wins}X Winner</div>
+        </div>
+      `;
+    }
+
+    if (countLabel) {
+      countLabel.textContent = 'Itemized Ledger (' + logs.length + ' Transactions)';
+    }
+
+    if (logs.length === 0) {
+      if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:2rem;color:var(--muted);">No XP transactions recorded yet for this student.</td></tr>';
+      return;
+    }
+
+    if (tbody) {
+      tbody.innerHTML = logs.map(l => {
+        const dStr = l.claimed_at ? new Date(l.claimed_at).toLocaleDateString('en-NG', {
+          day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+        }) : '—';
+        const isMilestone = l.bonus_xp > 0 || (l.bonus_label && l.bonus_label.includes('Bonus'));
+        const earned = Number(l.xp_earned || 0);
+
+        return `
+          <tr style="border-bottom:1px solid var(--border);">
+            <td style="padding:.55rem .65rem;color:var(--muted);white-space:nowrap;">${dStr}</td>
+            <td style="padding:.55rem .65rem;font-weight:600;color:var(--white);">
+              <span style="margin-right:.3rem;">${isMilestone ? '🎉' : '⚡'}</span>
+              ${l.bonus_label || 'Daily Claim'}
+              ${l.streak_day ? '<span style="font-size:.65rem;color:var(--muted);margin-left:.35rem;">(Day ' + l.streak_day + ')</span>' : ''}
+            </td>
+            <td style="padding:.55rem .65rem;">
+              <span class="badge" style="background:rgba(20,40,255,0.12);color:#8ca5ff;border:1px solid rgba(20,40,255,0.3);font-size:.65rem;">
+                ${l.source === 'streak_auto' ? 'Daily Streak' : (l.source || 'Standard')}
+              </span>
+            </td>
+            <td style="padding:.55rem .65rem;text-align:right;">
+              <span class="badge" style="background:${isMilestone ? 'rgba(255,138,0,0.18)' : 'rgba(255,255,255,0.06)'};color:${isMilestone ? 'var(--orange)' : 'var(--white)'};border:1px solid ${isMilestone ? 'var(--orange)' : 'var(--border)'};font-weight:800;">
+                +${earned} XP
+              </span>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+  } catch(err) {
+    console.error('viewUserXpLog error:', err);
+    if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:2rem;color:#ff7070;">Failed to load XP log: ' + err.message + '</td></tr>';
+  }
+};
+function viewUserXpLog(uid) {
+  if (typeof window.viewUserXpLog === 'function') {
+    window.viewUserXpLog(uid);
+  }
+}
+
 document.querySelectorAll('.modal-overlay').forEach(o => o.addEventListener('click', e => { if(e.target===o) o.classList.remove('open'); }));
 function showToast(msg, type='success') {
   const t = document.getElementById('toast');
