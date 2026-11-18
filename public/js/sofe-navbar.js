@@ -759,13 +759,17 @@ body.light .sofe-nav-mobile-label {
             <div class="sofe-nav-profile-name" id="sofeNavProfileName">Sofian</div>
             <div class="sofe-nav-profile-email" id="sofeNavProfileEmail">—</div>
           </div>
-          <a href="./dashboard.html" class="sofe-nav-profile-item">
+          <a href="/dashboard" class="sofe-nav-profile-item">
             <span class="profile-item-icon">◈</span>
-            <span>My Dashboard</span>
+            <span>Dashboard</span>
           </a>
-          <a href="./dashboard#tab-profile" class="sofe-nav-profile-item">
-            <span class="profile-item-icon">◫</span>
-            <span>Account Settings</span>
+          <a href="/dashboard?tab=profile" class="sofe-nav-profile-item">
+            <span class="profile-item-icon">👤</span>
+            <span>Profile</span>
+          </a>
+          <a href="/dashboard?tab=settings" class="sofe-nav-profile-item">
+            <span class="profile-item-icon">⚙️</span>
+            <span>Settings</span>
           </a>
           <button id="sofeInstallBtn" class="sofe-nav-profile-item" onclick="sofeTriggerInstall()" type="button" style="display:none;">
             <span class="profile-item-icon">📱</span>

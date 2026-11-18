@@ -29,6 +29,20 @@ export default function Nav() {
   const [user, setUser] = useState(null);
   const [profileOpen, setProfileOpen] = useState(false);
 
+  // Helper for Profile & Dashboard Tab Navigation
+  const handleNavProfileClick = (e, targetTab, href) => {
+    e.preventDefault();
+    setProfileOpen(false);
+    if (pathname === '/dashboard') {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('sofe-switch-tab', { detail: targetTab }));
+        window.history.pushState(null, '', href);
+      }
+    } else {
+      router.push(href);
+    }
+  };
+
   // Notifications State
   const [notifsOpen, setNotifsOpen] = useState(false);
   const [notifTab, setNotifTab] = useState('all'); // 'all' | 'personal' | 'broadcast'
@@ -469,11 +483,31 @@ export default function Nav() {
               </button>
               {profileOpen && (
                 <div className="nav-profile-menu">
-                  <Link href="/dashboard" className="nav-profile-item" onClick={() => setProfileOpen(false)}>Dashboard</Link>
-                  <Link href="/dashboard?tab=profile" className="nav-profile-item" onClick={() => setProfileOpen(false)}>Profile</Link>
-                  <Link href="/dashboard?tab=settings" className="nav-profile-item" onClick={() => setProfileOpen(false)}>Settings</Link>
+                  <a
+                    href="/dashboard"
+                    className="nav-profile-item"
+                    onClick={(e) => handleNavProfileClick(e, 'classroom', '/dashboard')}
+                  >
+                    <span style={{ marginRight: 8, opacity: 0.85 }}>📚</span> Dashboard
+                  </a>
+                  <a
+                    href="/dashboard?tab=profile"
+                    className="nav-profile-item"
+                    onClick={(e) => handleNavProfileClick(e, 'profile', '/dashboard?tab=profile')}
+                  >
+                    <span style={{ marginRight: 8, opacity: 0.85 }}>👤</span> Profile
+                  </a>
+                  <a
+                    href="/dashboard?tab=settings"
+                    className="nav-profile-item"
+                    onClick={(e) => handleNavProfileClick(e, 'settings', '/dashboard?tab=settings')}
+                  >
+                    <span style={{ marginRight: 8, opacity: 0.85 }}>⚙️</span> Settings
+                  </a>
                   <div className="nav-profile-sep" />
-                  <button className="nav-profile-logout" onClick={() => { signOut(auth); setProfileOpen(false); }}>Logout</button>
+                  <button className="nav-profile-logout" onClick={() => { signOut(auth); setProfileOpen(false); }}>
+                    <span style={{ marginRight: 8, opacity: 0.85 }}>🚪</span> Logout
+                  </button>
                 </div>
               )}
             </div>
@@ -551,24 +585,96 @@ export default function Nav() {
           </li>
           <li><Link href="/bounties" onClick={closeMenu} className={isLinkActive('/bounties') ? 'active-pill' : ''}>Bounties</Link></li>
         </ul>
-        <div className="mob-bottom">
+        <div className="mob-bottom" style={{ flexDirection: 'column', gap: '0.6rem', alignItems: 'stretch' }}>
           {user ? (
-            <Link href="/dashboard" className="btn-primary" style={{ flex: 1, textAlign: 'center' }} onClick={closeMenu}>
-              Dashboard →
-            </Link>
+            <>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                <a
+                  href="/dashboard?tab=profile"
+                  style={{
+                    textAlign: 'center',
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
+                    padding: '0.55rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.35rem',
+                    textDecoration: 'none',
+                    borderRadius: 8,
+                    background: 'rgba(20,40,255,0.15)',
+                    border: '1px solid rgba(20,40,255,0.4)',
+                    color: '#fff'
+                  }}
+                  onClick={(e) => {
+                    closeMenu();
+                    handleNavProfileClick(e, 'profile', '/dashboard?tab=profile');
+                  }}
+                >
+                  <span>👤</span> Profile
+                </a>
+                <a
+                  href="/dashboard?tab=settings"
+                  style={{
+                    textAlign: 'center',
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
+                    padding: '0.55rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.35rem',
+                    textDecoration: 'none',
+                    borderRadius: 8,
+                    background: 'rgba(255,138,0,0.12)',
+                    border: '1px solid rgba(255,138,0,0.4)',
+                    color: '#fff'
+                  }}
+                  onClick={(e) => {
+                    closeMenu();
+                    handleNavProfileClick(e, 'settings', '/dashboard?tab=settings');
+                  }}
+                >
+                  <span>⚙️</span> Settings
+                </a>
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <a
+                  href="/dashboard"
+                  className="btn-primary"
+                  style={{ flex: 1, textAlign: 'center', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  onClick={(e) => {
+                    closeMenu();
+                    handleNavProfileClick(e, 'classroom', '/dashboard');
+                  }}
+                >
+                  Dashboard →
+                </a>
+                <button
+                  className="theme-toggle"
+                  onClick={toggleTheme}
+                  title={isLight ? 'Switch to dark mode' : 'Switch to light mode'}
+                  aria-label="Toggle light mode"
+                >
+                  {isLight ? '🌙' : '☀️'}
+                </button>
+              </div>
+            </>
           ) : (
-            <Link href="/login" className="btn-primary" style={{ flex: 1, textAlign: 'center' }} onClick={closeMenu}>
-              Sign In →
-            </Link>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              <Link href="/login" className="btn-primary" style={{ flex: 1, textAlign: 'center' }} onClick={closeMenu}>
+                Sign In →
+              </Link>
+              <button
+                className="theme-toggle"
+                onClick={toggleTheme}
+                title={isLight ? 'Switch to dark mode' : 'Switch to light mode'}
+                aria-label="Toggle light mode"
+              >
+                {isLight ? '🌙' : '☀️'}
+              </button>
+            </div>
           )}
-          <button
-            className="theme-toggle"
-            onClick={toggleTheme}
-            title={isLight ? 'Switch to dark mode' : 'Switch to light mode'}
-            aria-label="Toggle light mode"
-          >
-            {isLight ? '🌙' : '☀️'}
-          </button>
         </div>
       </div>
     </>

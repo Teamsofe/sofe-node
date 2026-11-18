@@ -51,9 +51,62 @@ export default function DashboardClient() {
   const [userData, setUserData] = useState(null);
   const [activeTab, setActiveTab] = useState(() => {
     const tabParam = searchParams?.get('tab');
+    if (tabParam === 'profile') return 'profile';
+    if (tabParam === 'settings') return 'settings';
     return tabParam || 'classroom';
   });
+  const [settingsSubTab, setSettingsSubTab] = useState(() => {
+    const tabParam = searchParams?.get('tab');
+    if (tabParam === 'profile') return 'profile';
+    if (tabParam === 'settings') return 'settings';
+    return 'all';
+  });
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // ── Sync activeTab & subTab with URL search params ──
+  useEffect(() => {
+    const tabParam = searchParams?.get('tab');
+    if (tabParam) {
+      if (tabParam === 'profile') {
+        setActiveTab('profile');
+        setSettingsSubTab('profile');
+        setActiveWorkspace('learner');
+      } else if (tabParam === 'settings') {
+        setActiveTab('settings');
+        setSettingsSubTab('settings');
+        setActiveWorkspace('learner');
+      } else {
+        setActiveTab(tabParam);
+      }
+    } else {
+      if (activeTab === 'profile' || activeTab === 'settings') {
+        setActiveTab('classroom');
+      }
+    }
+  }, [searchParams]);
+
+  // ── Instant in-page tab switching from global navbar ──
+  useEffect(() => {
+    const handleSwitchTab = (e) => {
+      const target = e.detail;
+      if (!target) return;
+      if (target === 'profile') {
+        setActiveTab('profile');
+        setSettingsSubTab('profile');
+        setActiveWorkspace('learner');
+      } else if (target === 'settings') {
+        setActiveTab('settings');
+        setSettingsSubTab('settings');
+        setActiveWorkspace('learner');
+      } else if (target === 'classroom' || target === 'dashboard') {
+        setActiveTab('classroom');
+      } else {
+        setActiveTab(target);
+      }
+    };
+    window.addEventListener('sofe-switch-tab', handleSwitchTab);
+    return () => window.removeEventListener('sofe-switch-tab', handleSwitchTab);
+  }, []);
 
 
   // ── WORKSPACE CONTEXT SWITCHER ──
@@ -1557,12 +1610,22 @@ export default function DashboardClient() {
               { id: 'leaderboard', icon: '🏆', label: 'Leaderboard' },
               { id: 'settings', icon: '⚙️', label: 'Settings' }
             ]).map((tab) => {
-              const isActive = activeTab === tab.id;
+              const isActive = tab.id === 'settings'
+                ? (activeTab === 'settings' || activeTab === 'profile')
+                : activeTab === tab.id;
               return (
                 <button
                   key={tab.id}
                   onClick={() => {
                     setActiveTab(tab.id);
+                    if (tab.id === 'settings') {
+                      setSettingsSubTab('all');
+                      if (typeof window !== 'undefined') window.history.replaceState(null, '', '/dashboard?tab=settings');
+                    } else if (tab.id === 'classroom') {
+                      if (typeof window !== 'undefined') window.history.replaceState(null, '', '/dashboard');
+                    } else {
+                      if (typeof window !== 'undefined') window.history.replaceState(null, '', `/dashboard?tab=${tab.id}`);
+                    }
                     if (tab.id === 'leaderboard') loadLeaderboardData(lbTab);
                   }}
                   title={!sidebarOpen ? tab.label : undefined}
@@ -3313,14 +3376,116 @@ export default function DashboardClient() {
             </section>
           )}
 
-          {/* TAB 6: SETTINGS */}
-          {activeTab === 'settings' && (
+          {/* TAB 6: SETTINGS & PROFILE */}
+          {(activeTab === 'settings' || activeTab === 'profile') && (
             <section>
               <div style={{ marginBottom: '1.5rem' }}>
-                <h2 style={{ fontSize: '1.15rem', fontWeight: 700 }}>Profile & Account Settings</h2>
-                <p style={{ color: 'rgba(200,215,240,0.7)', fontSize: '0.78rem', marginTop: '0.2rem' }}>
-                  Manage personal details, Nigerian bank settlement info, and security credentials.
-                </p>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+                  <div>
+                    <h2 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      {settingsSubTab === 'profile' ? '👤 Personal Profile & Details' : settingsSubTab === 'settings' ? '⚙️ Account & Security Settings' : '👤 Profile & ⚙️ Account Settings'}
+                    </h2>
+                    <p style={{ color: 'rgba(200,215,240,0.7)', fontSize: '0.78rem', marginTop: '0.35rem', margin: '0.35rem 0 0 0' }}>
+                      {settingsSubTab === 'profile'
+                        ? 'Manage your personal details, campus node affiliation, social handles, and Nigerian bank settlement info.'
+                        : settingsSubTab === 'settings'
+                        ? 'Manage your login methods, connected Google account, password credentials, and security preferences.'
+                        : 'Manage personal details, Nigerian bank settlement info, and security credentials.'}
+                    </p>
+                  </div>
+
+                  {/* Public Web3 CV Button */}
+                  <Link
+                    href={`/u/${userData?.username || userData?.referral_code || currentUser?.uid || 'builder'}`}
+                    target="_blank"
+                    style={{
+                      background: 'rgba(0, 229, 255, 0.1)',
+                      border: '1px solid #00E5FF',
+                      color: '#00E5FF',
+                      borderRadius: 8,
+                      padding: '0.5rem 1rem',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      textDecoration: 'none',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      boxShadow: '0 2px 10px rgba(0, 229, 255, 0.15)'
+                    }}
+                  >
+                    <span>🌐</span> View Public Web3 CV ↗
+                  </Link>
+                </div>
+
+                {/* Sub-tab Pills */}
+                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1.1rem', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSettingsSubTab('profile');
+                      if (typeof window !== 'undefined') window.history.replaceState(null, '', '/dashboard?tab=profile');
+                    }}
+                    style={{
+                      padding: '0.45rem 1rem',
+                      borderRadius: 20,
+                      border: settingsSubTab === 'profile' ? '1px solid #1428FF' : '1px solid rgba(255,255,255,0.12)',
+                      background: settingsSubTab === 'profile' ? 'linear-gradient(135deg, #1428FF, #001280)' : 'rgba(255,255,255,0.04)',
+                      color: '#fff',
+                      fontSize: '0.78rem',
+                      fontWeight: settingsSubTab === 'profile' ? 700 : 500,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <span>👤</span> Profile Information
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSettingsSubTab('settings');
+                      if (typeof window !== 'undefined') window.history.replaceState(null, '', '/dashboard?tab=settings');
+                    }}
+                    style={{
+                      padding: '0.45rem 1rem',
+                      borderRadius: 20,
+                      border: settingsSubTab === 'settings' ? '1px solid #FF8A00' : '1px solid rgba(255,255,255,0.12)',
+                      background: settingsSubTab === 'settings' ? 'linear-gradient(135deg, #FF8A00, #B35C00)' : 'rgba(255,255,255,0.04)',
+                      color: '#fff',
+                      fontSize: '0.78rem',
+                      fontWeight: settingsSubTab === 'settings' ? 700 : 500,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.4rem',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <span>⚙️</span> Account &amp; Security
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSettingsSubTab('all');
+                      if (typeof window !== 'undefined') window.history.replaceState(null, '', '/dashboard?tab=settings');
+                    }}
+                    style={{
+                      padding: '0.45rem 0.9rem',
+                      borderRadius: 20,
+                      border: settingsSubTab === 'all' ? '1px solid rgba(200,215,240,0.4)' : '1px solid rgba(255,255,255,0.08)',
+                      background: settingsSubTab === 'all' ? 'rgba(200,215,240,0.15)' : 'rgba(255,255,255,0.03)',
+                      color: settingsSubTab === 'all' ? '#fff' : 'rgba(200,215,240,0.6)',
+                      fontSize: '0.78rem',
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    Show All
+                  </button>
+                </div>
               </div>
 
               {/* Administrative Workspace Switcher Card (for Admins) */}
@@ -3382,9 +3547,14 @@ export default function DashboardClient() {
                 </div>
               )}
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: settingsSubTab === 'all' ? 'repeat(auto-fit, minmax(320px, 1fr))' : '1fr',
+                gap: '1.5rem'
+              }}>
                 {/* Profile Form */}
-                <form
+                {(settingsSubTab === 'profile' || settingsSubTab === 'all') && (
+                  <form
                   onSubmit={handleSaveSettings}
                   style={{
                     background: '#0D1526',
@@ -3779,8 +3949,10 @@ export default function DashboardClient() {
                     {savingSettings ? 'Saving...' : 'Save Settings'}
                   </button>
                 </form>
+                )}
 
                 {/* Sign-in Methods & Password Form */}
+                {(settingsSubTab === 'settings' || settingsSubTab === 'all') && (
                 <div
                   style={{
                     background: '#0D1526',
@@ -4050,41 +4222,44 @@ export default function DashboardClient() {
                     </div>
                   </form>
                 </div>
+                )}
               </div>
 
               {/* Danger Zone (Delete Account - MUST BE LAST) */}
-              <div style={{
-                marginTop: '2rem',
-                background: 'rgba(255,60,60,0.05)',
-                border: '1px solid rgba(255,80,80,0.3)',
-                borderRadius: 10,
-                padding: '1.5rem'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#ff6060', fontWeight: 800, fontSize: '0.95rem' }}>
-                  <span>⚠️</span> Danger Zone
+              {(settingsSubTab === 'settings' || settingsSubTab === 'all') && (
+                <div style={{
+                  marginTop: '2rem',
+                  background: 'rgba(255,60,60,0.05)',
+                  border: '1px solid rgba(255,80,80,0.3)',
+                  borderRadius: 10,
+                  padding: '1.5rem'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#ff6060', fontWeight: 800, fontSize: '0.95rem' }}>
+                    <span>⚠️</span> Danger Zone
+                  </div>
+                  <p style={{ fontSize: '0.78rem', color: 'rgba(200,215,240,0.7)', marginTop: '0.4rem', lineHeight: 1.55 }}>
+                    Deleting your account is permanent and cannot be undone. All your course progress, certificates, rewards, and affiliate earnings will be permanently erased.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleDeleteAccount}
+                    style={{
+                      marginTop: '1rem',
+                      background: 'rgba(255,60,60,0.15)',
+                      border: '1px solid rgba(255,80,80,0.5)',
+                      color: '#ff7070',
+                      borderRadius: 6,
+                      padding: '0.55rem 1.25rem',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    🗑️ Delete My Account
+                  </button>
                 </div>
-                <p style={{ fontSize: '0.78rem', color: 'rgba(200,215,240,0.7)', marginTop: '0.4rem', lineHeight: 1.55 }}>
-                  Deleting your account is permanent and cannot be undone. All your course progress, certificates, rewards, and affiliate earnings will be permanently erased.
-                </p>
-                <button
-                  type="button"
-                  onClick={handleDeleteAccount}
-                  style={{
-                    marginTop: '1rem',
-                    background: 'rgba(255,60,60,0.15)',
-                    border: '1px solid rgba(255,80,80,0.5)',
-                    color: '#ff7070',
-                    borderRadius: 6,
-                    padding: '0.55rem 1.25rem',
-                    fontSize: '0.78rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  🗑️ Delete My Account
-                </button>
-              </div>
+              )}
             </section>
           )}
           {/* ═══════════════════════════════════════════ */}
@@ -5350,12 +5525,22 @@ export default function DashboardClient() {
       {/* ── MOBILE FLOATING BOTTOM DOCK WITH TRACKING PILL ── */}
       <div className="dash-mobile-dock">
         {getDockItems().map((item) => {
-          const isActive = activeTab === item.id;
+          const isActive = item.id === 'settings'
+            ? (activeTab === 'settings' || activeTab === 'profile')
+            : activeTab === item.id;
           return (
             <button
               key={item.id}
               onClick={() => {
                 setActiveTab(item.id);
+                if (item.id === 'settings') {
+                  setSettingsSubTab('all');
+                  if (typeof window !== 'undefined') window.history.replaceState(null, '', '/dashboard?tab=settings');
+                } else if (item.id === 'classroom') {
+                  if (typeof window !== 'undefined') window.history.replaceState(null, '', '/dashboard');
+                } else {
+                  if (typeof window !== 'undefined') window.history.replaceState(null, '', `/dashboard?tab=${item.id}`);
+                }
                 if (item.id === 'leaderboard') loadLeaderboardData(lbTab);
               }}
               className={`dash-dock-item ${isActive ? 'active' : ''}`}

@@ -2713,6 +2713,18 @@ window.handleDailyClaim = async function() {
 
     var el = document.getElementById('lbPeriodLabel');
     if (el) el.textContent = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) + ' leaderboard · resets on the 1st of each month';
+
+    try {
+      var p = new URLSearchParams(window.location.search);
+      var initTab = p.get('tab') || window.location.hash.replace('#tab-', '').replace('#', '');
+      if (initTab) {
+        var mappedTab = (initTab === 'settings') ? 'profile' : initTab;
+        var targetNav = document.querySelector('.dash-nav-item[onclick*="\'' + mappedTab + '\'"]');
+        if (document.getElementById('tab-' + mappedTab)) {
+          showTab(mappedTab, targetNav);
+        }
+      }
+    } catch (_) {}
   });
 
   window.switchBizTab = function(tabId, el) {
