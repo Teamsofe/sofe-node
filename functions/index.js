@@ -4021,7 +4021,7 @@ exports.repairLeaderboard = onRequest({ timeoutSeconds: 300, memory: '512MiB', c
         xp_this_period: periodXp,
         tier: tier.name,
         current_period: periodId,
-        daily_streak: Math.max(1, Number(u.daily_streak || 1)),
+        daily_streak: Number(u.daily_streak) || 0,
         average_score: Number(u.average_score || u.exam_score || 95),
         completed_assessments_count: Number(u.completed_assessments_count || 1),
         leaderboard_wins_count: winsCount,

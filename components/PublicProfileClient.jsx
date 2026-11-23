@@ -106,7 +106,7 @@ export default function PublicProfileClient({ usernameParam }) {
             monthly_xp: monthlyXp,
             xp_tier: foundUser.xp_tier || 'Genesis Scout',
             season_rank: foundUser.season_rank || foundUser.rank || 12,
-            daily_streak: Math.max(1, Number(foundUser.daily_streak || 1)),
+            daily_streak: Number(foundUser.daily_streak) || 0,
             average_score: Number(foundUser.average_score || foundUser.exam_score || (foundUser.foundation_score ? parseInt(foundUser.foundation_score, 10) : 95)),
             completed_assessments_count: Number(foundUser.completed_assessments_count || 1),
             leaderboard_wins_count: Number(foundUser.leaderboardWinsCount || foundUser.leaderboard_wins_count || 0),
@@ -319,7 +319,7 @@ export default function PublicProfileClient({ usernameParam }) {
           <div className="profile-stat-box">
             <div className="stat-label">Active Learning Streak</div>
             <div className="stat-val streak-val">
-              🔥 {profile?.daily_streak || 6} Days
+              🔥 {profile?.daily_streak ?? 0} Days
             </div>
             <div className="stat-sub">Continuous commitment</div>
           </div>

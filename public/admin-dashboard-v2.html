@@ -8489,7 +8489,16 @@ window.viewUserXpLog = async function(uid) {
     const fullName = ((u.first_name || '') + ' ' + (u.last_name || '')).trim() || (s ? ((s.first_name || '') + ' ' + (s.last_name || '')).trim() : 'Sofian');
     const sofId = u.sofian_id || (s ? s.sofian_id : '') || 'unassigned';
     const refCode = u.referral_code || (s ? s.referral_code : '') || '—';
-    const streak = u.daily_streak || (s ? s.daily_streak : 1);
+    const rawStreak = u.daily_streak !== undefined && u.daily_streak !== null ? Number(u.daily_streak) : (s && s.daily_streak !== undefined ? Number(s.daily_streak) : 0);
+    let streak = rawStreak;
+    if (streak > 0 && u.last_daily_claim) {
+      try {
+        const lastWat = new Date(new Date(u.last_daily_claim.toDate ? u.last_daily_claim.toDate() : u.last_daily_claim).getTime() + 3600000).toISOString().slice(0, 10);
+        const nowWat = new Date(Date.now() + 3600000).toISOString().slice(0, 10);
+        const yestWat = new Date(Date.now() + 3600000 - 86400000).toISOString().slice(0, 10);
+        if (lastWat !== nowWat && lastWat !== yestWat) streak = 0;
+      } catch (e) {}
+    }
 
     if (titleEl) {
       titleEl.textContent = '📜 XP Transaction History — ' + fullName;
@@ -11617,7 +11626,16 @@ window.viewUserXpLog = async function(uid) {
     const fullName = ((u.first_name || '') + ' ' + (u.last_name || '')).trim() || (s ? ((s.first_name || '') + ' ' + (s.last_name || '')).trim() : 'Sofian');
     const sofId = u.sofian_id || (s ? s.sofian_id : '') || 'unassigned';
     const refCode = u.referral_code || (s ? s.referral_code : '') || '—';
-    const streak = u.daily_streak || (s ? s.daily_streak : 1);
+    const rawStreak = u.daily_streak !== undefined && u.daily_streak !== null ? Number(u.daily_streak) : (s && s.daily_streak !== undefined ? Number(s.daily_streak) : 0);
+    let streak = rawStreak;
+    if (streak > 0 && u.last_daily_claim) {
+      try {
+        const lastWat = new Date(new Date(u.last_daily_claim.toDate ? u.last_daily_claim.toDate() : u.last_daily_claim).getTime() + 3600000).toISOString().slice(0, 10);
+        const nowWat = new Date(Date.now() + 3600000).toISOString().slice(0, 10);
+        const yestWat = new Date(Date.now() + 3600000 - 86400000).toISOString().slice(0, 10);
+        if (lastWat !== nowWat && lastWat !== yestWat) streak = 0;
+      } catch (e) {}
+    }
 
     if (titleEl) {
       titleEl.textContent = '📜 XP Transaction History — ' + fullName;
