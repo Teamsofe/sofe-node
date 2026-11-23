@@ -2877,6 +2877,8 @@ exports.submitQuizAnswers = onCall(async (request) => {
 
   const examTopic = session.topic || session.module_topic || (session.title ? session.title.toLowerCase().replace(/[^a-z0-9]+/g, '-') : 'blockchain-fundamentals');
 
+  const batch = db.batch();
+
   let correctCount = 0;
   correctAnswers.forEach((correctIdx, i) => {
     if (answers[i] === correctIdx) {
@@ -2896,8 +2898,6 @@ exports.submitQuizAnswers = onCall(async (request) => {
   const score = totalQuestions > 0 ? Math.round((correctCount / totalQuestions) * 100) : 0;
   const passThreshold = session.passing_score || session.pass_threshold || 70;
   const passed = score >= passThreshold;
-
-  const batch = db.batch();
 
   batch.set(subRef, {
     user_id:    uid,

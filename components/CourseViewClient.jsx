@@ -1326,10 +1326,19 @@ export default function CourseViewClient() {
 
   const handleQuizSubmit = async (isAuto = false) => {
     if (quizTimer) clearInterval(quizTimer);
+
+    const questions = activeSession?.questions || [];
+    const unansweredCount = questions.filter((_, idx) => quizAnswers[idx] === undefined).length;
+    if (unansweredCount > 0 && !isAuto) {
+      const confirmSubmit = window.confirm(`You have ${unansweredCount} unanswered question(s). Unanswered questions will be scored as incorrect. Do you want to submit anyway?`);
+      if (!confirmSubmit) {
+        return;
+      }
+    }
+
     setQuizSubmitting(true);
 
     // Unanswered questions are sent as -1 (counted wrong)
-    const questions = activeSession?.questions || [];
     const answers = questions.map((_, idx) => (quizAnswers[idx] === undefined ? -1 : Number(quizAnswers[idx])));
 
     try {
@@ -1349,6 +1358,13 @@ export default function CourseViewClient() {
 
       if (passed) {
         setProgress((prev) => ({ ...prev, [activeSessionId]: { completed: true } }));
+        setModuleProgress((prev) => ({
+          ...prev,
+          [activeModuleId]: {
+            ...(prev[activeModuleId] || {}),
+            completed_at: new Date()
+          }
+        }));
       }
       setQuizResult({ scorePct, passed, passMark, attempts: result.attempts, maxAttempts: result.maxAttempts });
 
@@ -1799,7 +1815,7 @@ export default function CourseViewClient() {
               width: '100%'
             }}
           >
-            {quizSubmitting ? 'Submitting Answers...' : 'Submit Exam'}
+            {quizSubmitting ? 'Submitting Answers...' : 'Submit Quiz'}
           </button>
         </div>
       )}

@@ -2179,13 +2179,25 @@ onAuthStateChanged(auth, async function(user) {
     if (xb) xb.style.width = (nextT ? Math.round((xp-tier.min)/(nextT.min-tier.min)*100) : 100) + '%';
 
     var alreadyClaimedToday = false;
+    var activeStreak = 0;
     if (u.last_daily_claim) {
-      var todayUTC = new Date().toISOString().slice(0, 10);
+      var nowWat = new Date(Date.now() + 60 * 60 * 1000);
+      var yestWat = new Date(Date.now() + 60 * 60 * 1000 - 24 * 60 * 60 * 1000);
+      var todayWatStr = nowWat.toISOString().slice(0, 10);
+      var yestWatStr = yestWat.toISOString().slice(0, 10);
       var lastClaimRaw = u.last_daily_claim;
-      var lastClaimUTC = lastClaimRaw.toDate ? lastClaimRaw.toDate().toISOString().slice(0,10) : new Date(lastClaimRaw).toISOString().slice(0,10);
-      alreadyClaimedToday = (lastClaimUTC === todayUTC);
+      var lastClaimDate = lastClaimRaw.toDate ? lastClaimRaw.toDate() : new Date(lastClaimRaw);
+      var lastClaimWatStr = !isNaN(lastClaimDate.getTime()) ? new Date(lastClaimDate.getTime() + 60 * 60 * 1000).toISOString().slice(0, 10) : null;
+
+      alreadyClaimedToday = (lastClaimWatStr === todayWatStr);
+      var claimedYesterday = (lastClaimWatStr === yestWatStr);
+      if (alreadyClaimedToday || claimedYesterday) {
+        activeStreak = Number(u.daily_streak) || 0;
+      } else {
+        activeStreak = 0;
+      }
     }
-    if (typeof window.updateXpWidget === 'function') window.updateXpWidget(xp, Number(u.daily_streak)||0, alreadyClaimedToday);
+    if (typeof window.updateXpWidget === 'function') window.updateXpWidget(xp, activeStreak, alreadyClaimedToday);
 
     var bal=document.getElementById('walletBalanceAmt'); if(bal) bal.textContent='₦'+(window._walletBalance).toLocaleString('en-NG');
 

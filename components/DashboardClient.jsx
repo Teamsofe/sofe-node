@@ -213,6 +213,22 @@ export default function DashboardClient() {
   const [dailyStreak, setDailyStreak] = useState(0);
   const [claimedToday, setClaimedToday] = useState(false);
 
+  // WAT (UTC+1) Date helpers for accurate daily claim and streak tracking
+  const getWatDateString = (dateInput) => {
+    if (!dateInput) return null;
+    const d = dateInput instanceof Date
+      ? dateInput
+      : (dateInput.toDate ? dateInput.toDate() : new Date(dateInput));
+    if (isNaN(d.getTime())) return null;
+    const watMs = d.getTime() + 60 * 60 * 1000;
+    return new Date(watMs).toISOString().slice(0, 10);
+  };
+
+  const getWatYesterdayString = () => {
+    const watYesterdayMs = Date.now() + 60 * 60 * 1000 - 24 * 60 * 60 * 1000;
+    return new Date(watYesterdayMs).toISOString().slice(0, 10);
+  };
+
   // Business & Referrals
   const [referrals, setReferrals] = useState([]);
   const [totalEarned, setTotalEarned] = useState(0);
@@ -326,7 +342,25 @@ export default function DashboardClient() {
       setUserData(u);
       setWalletBalance(Number(u.wallet_balance) || 0);
       setXpTotal(Number(u.xp_total) || 0);
-      setDailyStreak(Number(u.daily_streak) || 0);
+
+      // Daily streak claim check in WAT (UTC+1)
+      const todayWat = getWatDateString(new Date());
+      const yesterdayWat = getWatYesterdayString();
+      const lastClaimWat = u.last_daily_claim ? getWatDateString(u.last_daily_claim) : null;
+
+      const isClaimedToday = lastClaimWat === todayWat;
+      const isClaimedYesterday = lastClaimWat === yesterdayWat;
+
+      setClaimedToday(isClaimedToday);
+
+      // If claimed today, streak is current daily_streak.
+      // If claimed yesterday, streak is currently active awaiting today's claim.
+      // If missed yesterday (neither today nor yesterday), streak is broken -> display 0.
+      if (isClaimedToday || isClaimedYesterday) {
+        setDailyStreak(Number(u.daily_streak) || 0);
+      } else {
+        setDailyStreak(0);
+      }
 
       // Unblock initial dashboard rendering immediately (<400ms)
       setLoading(false);
@@ -360,15 +394,6 @@ export default function DashboardClient() {
 
         // Clear pending celebration flag atomically so modal does not repeat on refresh
         updateDoc(doc(db, 'users', user.uid), { pendingCelebration: null }).catch(() => {});
-      }
-
-      // Daily streak claim check
-      if (u.last_daily_claim) {
-        const todayUTC = new Date().toISOString().slice(0, 10);
-        const lastUTC = u.last_daily_claim.toDate
-          ? u.last_daily_claim.toDate().toISOString().slice(0, 10)
-          : new Date(u.last_daily_claim).toISOString().slice(0, 10);
-        setClaimedToday(lastUTC === todayUTC);
       }
 
       setSettingsForm({
@@ -637,7 +662,20 @@ export default function DashboardClient() {
   const handleDailyClaim = async () => {
     if (claimedToday || !currentUser) return;
     try {
-      const newStreak = dailyStreak + 1;
+      const todayWat = getWatDateString(new Date());
+      const yesterdayWat = getWatYesterdayString();
+      const lastClaimWat = userData?.last_daily_claim ? getWatDateString(userData.last_daily_claim) : null;
+
+      if (lastClaimWat === todayWat) {
+        setClaimedToday(true);
+        return;
+      }
+
+      // If user claimed yesterday, continue streak. If missed a day (or claiming for first time), reset to 1!
+      const isYesterday = lastClaimWat === yesterdayWat;
+      const currentStoredStreak = Number(userData?.daily_streak) || 0;
+      const newStreak = isYesterday ? currentStoredStreak + 1 : 1;
+
       let bonusXp = 0;
       let bonusLabel = 'Daily Login';
       if (newStreak % 100 === 0) {
