@@ -2160,7 +2160,8 @@ export default function DashboardClient() {
                         <span>💎</span> Become a Sofe Node Premium Member ($100 One-time)
                       </div>
                       <p className="dash-premium-subtext" style={{ fontSize: '0.78rem', color: 'rgba(200,215,240,0.8)', marginTop: '0.3rem', maxWidth: 720, lineHeight: 1.6 }}>
-                        Elevate your standing in the ecosystem. As a Premium Member, you receive unlimited investment opportunies and market insight from our research team, a VIP badge, Premium WhatsApp community, Foundational Course Access and 10% affiliate commision. (Note: Foundation course completion is still required to earn referral commissions).
+                        {/* [COMPLIANCE_MODE]: Temporary educational framing for Cryptomus review */}
+                        Elevate your learning experience in the ecosystem. As a Premium Member, you receive exclusive educational content and Web3 technology insights from our research team, a VIP badge, Premium WhatsApp community access, Foundational Course Access, and 10% referral commission. (Educational &amp; community membership only. Note: Foundation course completion is still required to earn referral commissions).
                       </p>
                     </div>
                     <Link

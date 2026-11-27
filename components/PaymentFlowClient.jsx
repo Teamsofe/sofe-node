@@ -128,7 +128,8 @@ export default function PaymentFlowClient() {
         setCourse({
           id: 'premium_membership',
           title: 'Sofe Node Premium Membership ($100 VIP)',
-          description: 'Lifetime VIP status, distinguished badge, exclusive executive mastermind WhatsApp group, and prioritized career bounties.',
+          // [COMPLIANCE_MODE]: Temporary educational framing for Cryptomus review
+          description: 'Lifetime VIP educational membership, exclusive Web3 technology insights, distinguished badge, executive community WhatsApp group, and prioritized career bounties.',
           tier: 'executive',
           price: 150000 // ~$100 in NGN equivalent
         });
