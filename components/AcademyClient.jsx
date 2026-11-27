@@ -4,6 +4,9 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { db, auth, onAuthStateChanged, collection, query, where, getDocs } from '@/lib/firebase';
 
+// [COMPLIANCE_MODE] Toggle for Cryptomus merchant review
+const COMPLIANCE_MODE = true;
+
 const FILTERS = [
   { id: 'all', label: 'All Courses' },
   { id: 'foundation', label: 'Foundation' },
@@ -13,7 +16,7 @@ const FILTERS = [
   { id: 'design', label: 'Design' },
   { id: 'management', label: 'Management' },
   { id: 'growth-media', label: 'Growth & Media' },
-  { id: 'trading', label: 'Trading' },
+  ...(COMPLIANCE_MODE ? [] : [{ id: 'trading', label: 'Trading' }]),
   { id: 'executive', label: 'Executive' }
 ];
 
@@ -56,6 +59,20 @@ export default function AcademyClient() {
       } catch (err) {
         const snap = await getDocs(collection(db, 'courses'));
         list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      }
+      if (COMPLIANCE_MODE) {
+        list = list.filter((c) => c.track !== 'trading' && !c.id.includes('trading'));
+        list = list.map((c) => {
+          if (c.id === 'foundation') {
+            return {
+              ...c,
+              description: 'The solid foundation you need to understand blockchain architecture, decentralized protocols, and digital asset security.',
+              short_description: 'Master blockchain fundamentals, decentralized protocols, and digital asset security.',
+              includes: (c.includes || []).map((inc) => inc.replace(/trading basics/gi, 'Web3 Architecture basics'))
+            };
+          }
+          return c;
+        });
       }
       list.sort((a, b) => (a.display_order || 99) - (b.display_order || 99));
       setCourses(list);

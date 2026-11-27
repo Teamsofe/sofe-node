@@ -20,7 +20,7 @@ export default function BceClient() {
 
   const tracks = [
     { icon: '💻', title: 'Engineering & Dev', desc: 'Smart contracts, dApp security, architecture workshops with leading protocol core devs.' },
-    { icon: '📈', title: 'DeFi & Trading', desc: 'Market making, on-chain liquidity, derivatives trading, and algorithmic models.' },
+    { icon: '📊', title: 'DeFi & Protocols', desc: 'On-chain liquidity, decentralized lending, smart contract architecture, and automated market makers.' },
     { icon: '🤝', title: 'Community & Ecosystem', desc: 'Growth strategies, developer relations, campus node leadership in African markets.' },
     { icon: '🏛', title: 'Governance & DAOs', desc: 'Decentralized decision-making, tokenomics, legal frameworks, and treasury management.' },
   ];

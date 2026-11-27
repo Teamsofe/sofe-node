@@ -52,8 +52,8 @@ export default function AboutClient() {
       institution: 'University of Jos',
       loc: 'Jos, Plateau State',
       img: '/images/Nodes/SofeNodeUniJOS.png',
-      students: '300+ Verified Traders',
-      focus: 'Trading Bootcamps & DeFi Liquidity'
+      students: '300+ Verified Talents',
+      focus: 'Developer Bootcamps & Ecosystem Growth'
     },
     {
       name: 'UniBen Node',
@@ -192,12 +192,12 @@ export default function AboutClient() {
               Each campus chapter is a live, operational node in our distribution network. Sofe Node coordinates and routes value across higher institutions — conducting IRL developer bootcamps, student talent validation, protocol market entry, and Web3 activations.
             </p>
             <p className="body-text" style={{ color: 'var(--muted)', lineHeight: 1.75, marginBottom: '2rem' }}>
-              From Lagos to Nsukka and Jos, our campus node leads manage on-the-ground communities, ensuring continuous onboarding, active trading education, and career acceleration.
+              From Lagos to Nsukka and Jos, our campus node leads manage on-the-ground communities, ensuring continuous onboarding, practical blockchain education, and career acceleration.
             </p>
 
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '.6rem', marginBottom: '2.2rem' }}>
               <span style={{ background: 'rgba(20,40,255,.12)', color: '#6b8cff', padding: '.35rem .85rem', borderRadius: '6px', fontSize: '.75rem', fontWeight: 600 }}>Campus Activation</span>
-              <span style={{ background: 'rgba(20,40,255,.12)', color: '#6b8cff', padding: '.35rem .85rem', borderRadius: '6px', fontSize: '.75rem', fontWeight: 600 }}>Trading Bootcamps</span>
+              <span style={{ background: 'rgba(20,40,255,.12)', color: '#6b8cff', padding: '.35rem .85rem', borderRadius: '6px', fontSize: '.75rem', fontWeight: 600 }}>Technical Bootcamps</span>
               <span style={{ background: 'rgba(20,40,255,.12)', color: '#6b8cff', padding: '.35rem .85rem', borderRadius: '6px', fontSize: '.75rem', fontWeight: 600 }}>User Acquisition</span>
               <span style={{ background: 'rgba(20,40,255,.12)', color: '#6b8cff', padding: '.35rem .85rem', borderRadius: '6px', fontSize: '.75rem', fontWeight: 600 }}>Community Retention</span>
               <span style={{ background: 'rgba(255,138,0,.12)', color: 'var(--orange)', padding: '.35rem .85rem', borderRadius: '6px', fontSize: '.75rem', fontWeight: 600 }}>Talent Validation</span>

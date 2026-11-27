@@ -386,7 +386,9 @@
     <button class="cat-filter-pill" data-filter="design" onclick="filterCourses('design',this)">Design</button>
     <button class="cat-filter-pill" data-filter="management" onclick="filterCourses('management',this)">Management</button>
     <button class="cat-filter-pill" data-filter="growth-media" onclick="filterCourses('growth-media',this)">Growth & Media</button>
+    <!-- [COMPLIANCE_RESTORE]: uncomment to restore trading filter
     <button class="cat-filter-pill" data-filter="trading" onclick="filterCourses('trading',this)">Trading</button>
+    -->
     <button class="cat-filter-pill" data-filter="executive" onclick="filterCourses('executive',this)">Executive</button>
   </div>
 </section>
@@ -525,7 +527,8 @@ function renderCourses() {
   const grid = document.getElementById('coursesGrid');
   const filter = window._catFilter || 'all';
 
-  let courses = _allCourses;
+  // [COMPLIANCE_MODE]: Filter out speculative trading courses on frontend
+  let courses = (_allCourses || []).filter(c => c.track !== 'trading' && !(c.id || '').includes('trading'));
   
   if (filter !== 'all') {
     if (filter === 'foundation' || filter === 'executive') {

@@ -9,7 +9,7 @@ const services = [
     badge: 'Distribution',
     title: 'Ecosystem Distribution',
     desc: 'Plug your product into our node networks for instant market penetration, liquidity, user adoption, and retention. We activate our full campus and community network around your protocol — creating real demand, not just awareness.',
-    features: ['Campus Campaigns', 'Trading Challenges', 'Community Building', 'On-chain Volume', 'Retention Programs'],
+    features: ['Campus Campaigns', 'Builder Hackathons', 'Community Building', 'Protocol Volume', 'Retention Programs'],
     cta: 'Contact Us',
     ctaHref: '/contact'
   },
@@ -121,20 +121,20 @@ export default function PartnersClient() {
               </div>
               <div className="cs-block" style={{ marginBottom: 0 }}>
                 <div className="cs-block-label">&#9632; Strategy Deployed</div>
-                <p>3 IRL Campus Activations &bull; Trading Bootcamps &bull; Ambassador Seeding &bull; Community Retention</p>
+                <p>3 IRL Campus Activations &bull; Technical Bootcamps &bull; Ambassador Seeding &bull; Community Retention</p>
               </div>
             </div>
             <div className="cs-right">
               <div className="cs-block-label" style={{ marginBottom: '1.2rem' }}>&#9632; The Results</div>
               <div className="cs-results-grid">
                 <div className="cs-result"><span className="r-num">800+</span><div className="r-lbl">New Active Users</div></div>
-                <div className="cs-result"><span className="r-num">$12M+</span><div className="r-lbl">Trading Volume</div></div>
+                <div className="cs-result"><span className="r-num">$12M+</span><div className="r-lbl">Protocol Volume</div></div>
                 <div className="cs-result"><span className="r-num">$30K+</span><div className="r-lbl">New Liquidity</div></div>
-                <div className="cs-result"><span className="r-num">100+</span><div className="r-lbl">Traders Trained</div></div>
+                <div className="cs-result"><span className="r-num">500+</span><div className="r-lbl">Builders Trained</div></div>
               </div>
               <div className="cs-retention">
                 <span className="cs-retention-icon">&#128279;</span>
-                <p>Sustained community engagement well beyond the activation period &mdash; users remained active traders months after the initial event.</p>
+                <p>Sustained community engagement well beyond the activation period &mdash; users remained active protocol participants months after the initial event.</p>
               </div>
               <div style={{ marginTop: '1.8rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border)' }}>
                 <p style={{ fontFamily: 'Poppins,sans-serif', fontSize: '.8rem', fontWeight: 300, color: 'var(--muted)', marginBottom: '1rem', lineHeight: 1.7 }}>
@@ -160,7 +160,7 @@ export default function PartnersClient() {
           <div className="why-card reveal">
             <div className="why-icon">&#128200;</div>
             <h3>Measurable Outcomes, Not Vanity Metrics</h3>
-            <p>Every engagement we run is measured in active wallets, trading volume, and user retention. We report what actually matters to your protocol.</p>
+            <p>Every engagement we run is measured in active wallets, on-chain transactions, and user retention. We report what actually matters to your protocol.</p>
           </div>
           <div className="why-card reveal">
             <div className="why-icon">&#127979;</div>
@@ -170,7 +170,7 @@ export default function PartnersClient() {
           <div className="why-card reveal">
             <div className="why-icon">&#9989;</div>
             <h3>Validated Talent Pipeline</h3>
-            <p>We don&rsquo;t just onboard users. We train and verify them through our bootcamps &mdash; so you get developers and traders who actually understand your product.</p>
+            <p>We don&rsquo;t just onboard users. We train and verify them through our bootcamps &mdash; so you get developers, analysts, and specialists who actually understand your product.</p>
           </div>
         </div>
       </section>

@@ -77,7 +77,7 @@ export default function TalentClient() {
               </div>
               <h3>Blockchain &amp; Cryptocurrency Bootcamp</h3>
               <p>
-                From newbie to intermediate — get a solid foundation on how to position and profit from blockchain and crypto from day one. No prior experience needed.
+                From newbie to intermediate — get a solid foundation on blockchain architecture, decentralized systems, and Web3 skills. No prior experience needed.
               </p>
             </div>
             <div className="course-card-body">
@@ -85,11 +85,11 @@ export default function TalentClient() {
                 <li>Introduction to Blockchain and its Applications</li>
                 <li>Cryptocurrency, types and trends</li>
                 <li>Wallet and Security</li>
-                <li>Crypto Incentives: Airdrop, Testnets &amp; Bounties</li>
+                <li>Web3 Community Incentives &amp; Protocol Bounties</li>
                 <li>Crypto Research and Analytics</li>
                 <li>DeFi and DAO</li>
-                <li>Risk Management &amp; Portfolio Building</li>
-                <li>Spot and Futures Trading Basics</li>
+                <li>Digital Asset Security &amp; Risk Governance</li>
+                <li>Decentralized Finance (DeFi) &amp; Protocol Architecture</li>
                 <li>Career Opportunities and How to Get Started</li>
               </ul>
               <div className="course-meta">
@@ -268,7 +268,7 @@ export default function TalentClient() {
           <em>Unlock Your Rewards.</em>
         </h2>
         <p className="body-text">
-          XP is earned across every action on the platform. Your score determines your tier, your bounty access, and your share of partner airdrops and Sofe Node token rewards.
+          XP is earned across every action on the platform. Your score determines your tier, your bounty access, and your access to ecosystem bounties, grants, and verified tech credentials.
         </p>
 
         <div className="xp-grid">
@@ -389,7 +389,7 @@ export default function TalentClient() {
         <div className="proof-grid">
           <div className="proof-card reveal">
             <div className="proof-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
-            <p>&ldquo;Before Sofe Node I had zero understanding of crypto. After the bootcamp I was actively trading, earning, and I&rsquo;ve already referred 4 friends. The affiliate commission paid for my entire course.&rdquo;</p>
+            <p>&ldquo;Before Sofe Node I had zero understanding of blockchain. After the bootcamp I built and deployed my first dApp project, earned my certificate, and landed a technical internship in Web3.&rdquo;</p>
             <div className="proof-author">
               <div className="proof-avatar">&#128100;</div>
               <div className="proof-author-info">

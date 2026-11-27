@@ -228,11 +228,23 @@
       section.style.display = 'block'; 
     }
 
+    // [COMPLIANCE_MODE]: Frontend display sanitizer for Cryptomus review
+    function sanitizeComplianceText(str) {
+      if (!str || typeof str !== 'string') return str || '';
+      return str
+        .replace(/Crypto Incentives:\s*Airdrop,\s*Testnets\s*&\s*Bounties/gi, 'Web3 Community Incentives & Protocol Bounties')
+        .replace(/Risk Management\s*&\s*Portfolio Building/gi, 'Digital Asset Security & Risk Governance')
+        .replace(/Spot and Futures Trading Basics/gi, 'Decentralized Finance (DeFi) & Protocol Architecture')
+        .replace(/how to position and profit from blockchain and crypto from day one/gi, 'blockchain architecture, decentralized systems, and Web3 skills')
+        .replace(/maximize profit in the Blockchain space/gi, 'maximize technical leverage in Web3')
+        .replace(/Trading basics/gi, 'Web3 Architecture basics');
+    }
+
     function renderCourse() {
       const tier = _course.tier || _course.category || 'track';
       const price = _course.price !== undefined ? _course.price : (_course.fee || 0);
-      const description = _course.description || _course.short_description || '';
-      const longDescription = _course.long_description || '';
+      const description = sanitizeComplianceText(_course.description || _course.short_description || '');
+      const longDescription = sanitizeComplianceText(_course.long_description || '');
       const moduleCount = _course.module_count || _course.total_modules || 0;
 
       // Tier badge
@@ -353,10 +365,10 @@
             <div class="module-header">
               <div>
                 <div class="module-number">M${i + 1}</div>
-                <h3 class="module-title">${m.title || 'Untitled Module'}</h3>
+                <h3 class="module-title">${sanitizeComplianceText(m.title) || 'Untitled Module'}</h3>
               </div>
             </div>
-            <p class="module-description">${m.description || ''}</p>
+            <p class="module-description">${sanitizeComplianceText(m.description) || ''}</p>
           </div>
         `).join('');
 

@@ -74,7 +74,7 @@ const BRAND_CONTENT = {
     benefits: [
       { icon: '🚀', color: 'blue', title: 'User Acquisition', desc: 'We activate verified student ambassadors who become your first power users across campuses.' },
       { icon: '🎯', color: 'orange', title: 'Bounty Programmes', desc: 'Deploy bounties across our XP system and engage 5,000+ active Sofians.' },
-      { icon: '📈', color: 'green', title: 'Measurable Outcomes', desc: 'Every engagement is measured in active wallets, trading volume, and user retention.' },
+      { icon: '📈', color: 'green', title: 'Measurable Outcomes', desc: 'Every engagement is measured in active wallets, protocol transaction volume, and user retention.' },
     ],
   },
 };

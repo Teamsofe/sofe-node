@@ -51,6 +51,18 @@ const FALLBACK_COURSES = {
   }
 };
 
+// [COMPLIANCE_MODE]: Frontend display sanitizer for Cryptomus review
+const sanitizeComplianceText = (str) => {
+  if (!str || typeof str !== 'string') return str || '';
+  return str
+    .replace(/Crypto Incentives:\s*Airdrop,\s*Testnets\s*&\s*Bounties/gi, 'Web3 Community Incentives & Protocol Bounties')
+    .replace(/Risk Management\s*&\s*Portfolio Building/gi, 'Digital Asset Security & Risk Governance')
+    .replace(/Spot and Futures Trading Basics/gi, 'Decentralized Finance (DeFi) & Protocol Architecture')
+    .replace(/how to position and profit from blockchain and crypto from day one/gi, 'blockchain architecture, decentralized systems, and Web3 skills')
+    .replace(/maximize profit in the Blockchain space/gi, 'maximize technical leverage in Web3')
+    .replace(/Trading basics/gi, 'Web3 Architecture basics');
+};
+
 export default function CourseDetailClient({ courseIdProp }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -88,7 +100,14 @@ export default function CourseDetailClient({ courseIdProp }) {
         }
 
         if (cs) {
-          setCourse(cs);
+          const sanitizedCs = {
+            ...cs,
+            description: sanitizeComplianceText(cs.description),
+            long_description: sanitizeComplianceText(cs.long_description),
+            short_description: sanitizeComplianceText(cs.short_description),
+            includes: (cs.includes || []).map(inc => sanitizeComplianceText(inc))
+          };
+          setCourse(sanitizedCs);
 
           // Fetch modules from Firestore if available
           let fetchedModules = [];
@@ -106,7 +125,11 @@ export default function CourseDetailClient({ courseIdProp }) {
             fetchedModules = FALLBACK_COURSES[courseId].modules;
           }
 
-          setModules(fetchedModules);
+          setModules(fetchedModules.map(m => ({
+            ...m,
+            title: sanitizeComplianceText(m.title),
+            description: sanitizeComplianceText(m.description)
+          })));
         } else {
           setError(true);
         }

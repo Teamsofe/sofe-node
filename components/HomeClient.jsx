@@ -79,25 +79,25 @@ export default function HomeClient() {
       <section id="case-study">
         <div className="section-tag">Live Case Study</div>
         <h2>How We Delivered for <em>CoinW</em></h2>
-        <p className="body-text">Targeted campus activation and trading bootcamps as the distribution layer for real market penetration in Nigeria.</p>
+        <p className="body-text">Targeted campus activation and technical workshops as the distribution layer for real market penetration in Nigeria.</p>
         <div className="cs-grid reveal">
           <div className="cs-card">
             <div className="cs-logo">CoinW</div>
             <div className="cs-title">Exchange &times; Sofe Node &middot; Nigeria</div>
             <div className="cs-block">
               <h4>The Challenge</h4>
-              <p>Breaking into the competitive Nigerian market and acquiring high-quality active traders at scale.</p>
+              <p>Breaking into the competitive Nigerian market and acquiring high-quality active users and builders at scale.</p>
             </div>
             <div className="cs-block">
               <h4>The Sofe Solution</h4>
-              <p>Campus activation across university nodes + structured trading bootcamps turning raw talent into verified traders.</p>
+              <p>Campus activation across university nodes + structured technical bootcamps turning raw talent into verified tech professionals.</p>
             </div>
             <div className="cs-results">
               {[
                 { num: '800+', lbl: 'New Active Users' },
-                { num: '$12M+', lbl: 'Trading Volume' },
+                { num: '$12M+', lbl: 'Protocol Volume' },
                 { num: '$30K+', lbl: 'New Liquidity' },
-                { num: '100+', lbl: 'Traders Trained' },
+                { num: '500+', lbl: 'Builders Trained' },
               ].map(({ num, lbl }) => (
                 <div className="cs-result" key={lbl}>
                   <span className="num">{num}</span>
@@ -209,7 +209,7 @@ export default function HomeClient() {
             <p className="body-text" style={{ marginBottom: '1.8rem' }}>High-quality blockchain education, heavily subsidized by our global partners.</p>
             <div className="feature-grid">
               {[
-                { icon: '🎓', title: 'Industry-Standard Skills', body: 'From DeFi trading to Smart Contract development. Learn skills that are actually in demand globally.' },
+                { icon: '🎓', title: 'Industry-Standard Skills', body: 'From Decentralized Finance protocols to Smart Contract development. Learn skills that are actually in demand globally.' },
                 { icon: '💰', title: 'Subsidized Tuition', body: 'Our partners cover up to 80% of your fees. World-class training at a fraction of the real cost.' },
                 { icon: '🔗', title: 'Sofian Partner Program', body: 'Earn 10–20% cash commissions by referring friends. Fund your education while you study.' },
               ].map(({ icon, title, body }) => (
@@ -237,8 +237,8 @@ export default function HomeClient() {
             <div className="feature-grid">
               {[
                 { icon: '🌍', title: 'Market Distribution Nodes', body: 'Plug your product into our campus node networks for instant market penetration, liquidity, and user adoption.' },
-                { icon: '✅', title: 'Verified Talent Pipeline', body: 'We process raw talent through our bootcamps, outputting verified developers and traders ready for your ecosystem.' },
-                { icon: '📊', title: 'Proven Track Record', body: '$12M+ trading volume, 800+ users, $30K+ liquidity delivered for CoinW in one activation cycle.' },
+                { icon: '✅', title: 'Verified Talent Pipeline', body: 'We process raw talent through our bootcamps, outputting verified developers and technical specialists ready for your ecosystem.' },
+                { icon: '📊', title: 'Proven Track Record', body: '$12M+ protocol volume, 800+ users, $30K+ liquidity delivered for CoinW in one activation cycle.' },
               ].map(({ icon, title, body }) => (
                 <div className="feat-card" key={title}>
                   <div className="feat-icon">{icon}</div>
